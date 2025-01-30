@@ -7,7 +7,7 @@ import Register from 'features/auth/components/register/Register';
 import { ThemeProvider } from '@emotion/react';
 import theme from '../shared/components/colors'; 
 import {AppProvider} from 'shared/context/AppContext'
-import Layout from 'shared/components/Layout';
+import Layout from 'shared/components/layout/Layout';
 import Loader from 'shared/components/loaders/Loader';
 
 const Dashboard =  lazy (() => import('../features/dashboard/components/Index'))
