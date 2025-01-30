@@ -62,8 +62,10 @@ const Drawer = styled(MuiDrawer, { shouldForwardProp: (prop) => prop !== 'open' 
 );
 
 export default function Sidebar() {
+  
   const { open, openSubMenu, handleDrawer, handleSubMenu } = useDrawer();
-
+  console.log('Sidebar rendered - Open state:', open);
+  console.log('NAVIGATION items:', NAVIGATION.length);
   return (
     <Box sx={{ display: 'flex' }}>
       <Drawer variant="permanent" open={open}>
@@ -88,7 +90,8 @@ export default function Sidebar() {
             msOverflowStyle: 'none'
           }}>
             {NAVIGATION.map((item) => 
-              RenderDrawer(item, open, openSubMenu, handleSubMenu)
+           RenderDrawer(item, open, openSubMenu, handleSubMenu) 
+          
             )}
           </List>
 
@@ -104,6 +107,10 @@ export default function Sidebar() {
           }}>
             <ListItemButton 
               sx={{
+                transition: 'all 0.2s ease',
+                '&:hover':{
+                  backgroundColor: 'action.hover'
+                },
                 minHeight: 48,
                 justifyContent: open ? 'initial' : 'center',
                 px: 2.5,

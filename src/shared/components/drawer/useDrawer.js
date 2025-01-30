@@ -1,9 +1,15 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 const useDrawer = () => {
     const [open, setOpen] = useState(true)
     const [openSubMenu, setOpenSubMenu] = useState({})
 
+    useEffect(() =>{
+        if(!open){
+            setOpenSubMenu({})
+        }
+    },[open])
+    
     const handleDrawer = () =>{
         setOpen(prev =>!prev)
     }
@@ -13,6 +19,7 @@ const useDrawer = () => {
             ...prev,
             [segment] : !prev[segment]
         }))
+       
     }
 
     return{

@@ -2,10 +2,20 @@ import {List, ListItem, ListItemButton, ListItemIcon, ListItemText, Collapse} fr
 import { ExpandLess, ExpandMore} from '@mui/icons-material'
 import React from 'react'
 import { useTheme } from '@emotion/react'
-
+import { useNavigate } from 'react-router-dom'
 
 const RenderDrawer =(item, open, openSubMenu, handleSubMenu) =>{
-    const theme = useTheme()
+    const theme = useTheme();
+    const navigate = useNavigate();
+
+    const handleItemClick = () => {
+        if (item.path && !item.children) {
+          navigate(item.path);
+        } else if (item.children) {
+          handleSubMenu(item.segment);
+        }
+      };
+    
     if(item.kind ==='header'){
         return open && (
             <ListItem key={item.title} sx={{py: 2, px: 3, color:theme.palette.text.secondary}}>
@@ -28,12 +38,13 @@ const RenderDrawer =(item, open, openSubMenu, handleSubMenu) =>{
         <React.Fragment key={item.segment}>
             <ListItem disablePadding sx={{ display: 'block'}}>
             <ListItemButton
+                
                 sx={{
                     minHeight: 48,
                     justifyContent: open ? 'initial' : 'center',
                     px: 2.5,
                 }}
-                onClick={() => hasChildren && handleSubMenu(item.segment)}
+                onClick={handleItemClick}
             >
                 <ListItemIcon
                     sx={{
@@ -60,11 +71,13 @@ const RenderDrawer =(item, open, openSubMenu, handleSubMenu) =>{
                             <ListItemButton
                                 key={child.segment}
                                 sx={{pl: 4}}
+                                onClick={() => navigate(child.path)}
                             >
                                 <ListItemIcon>
                                     {child.icon}
                                 </ListItemIcon>
                                 <ListItemText primary = {child.title} />
+                                
                             </ListItemButton>
                         ))}
                     </List>

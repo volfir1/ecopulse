@@ -11,6 +11,13 @@ import Layout from 'shared/components/Layout';
 import Loader from 'shared/components/loaders/Loader';
 
 const Dashboard =  lazy (() => import('../features/dashboard/components/Index'))
+const EnergySharing = lazy(()=> import('../features/energy-sharing/components/Dashboard'))
+const Solar = lazy(()=>import('features/modules/components/Solar/Solar') )
+const Wind = lazy(() =>import('features/modules/components/Wind/Wind'))
+const Geo = lazy(()=> import('features/modules/components/Geo/Geothermal') )
+const Hydro = lazy(()=> import('features/modules/components/Hydro/Hydropower'))
+const Biomass = lazy(()=>import('features/modules/components/Biomass/Biomass'))
+const Recommendations = lazy(() => import('features/recommendations/components/Dashboard'))
 
 function App() {
   return (
@@ -29,6 +36,14 @@ function App() {
               {/* Layout for authenticated Routes */}
               <Route element={<Layout />}>
                 <Route path="/dashboard" element={<Dashboard />} />
+                <Route path="/energy-share" element={<EnergySharing />} />
+                <Route path="/modules/solar" element={<Solar />} />
+                <Route path="/modules/wind" element={<Wind />} />
+                <Route path="/modules/geothermal" element={<Geo />} />
+                <Route path="/modules/geothermal" element={<Geo />} />
+                <Route path="/modules/hydropower" element={<Hydro />} />
+                <Route path="/modules/biomass" element={<Biomass />} />
+                <Route path="/recommendations" element={<Recommendations/>} />
               </Route>
              
             </Routes>
