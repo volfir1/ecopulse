@@ -1,25 +1,25 @@
-// Sidebar.jsx
 import * as React from 'react';
 import { styled } from '@mui/material/styles';
 import Box from '@mui/material/Box';
 import MuiDrawer from '@mui/material/Drawer';
 import List from '@mui/material/List';
 import { NAVIGATION } from './data';
-import useDrawer from './useDrawer'; // Update path if needed
-import RenderDrawer from './renderDrawer'; // Update path if needed
+import useDrawer from './useDrawer';
+import RenderDrawer from './renderDrawer';
 import Logo from '../logo';
 import { 
   ListItemButton,
   ListItemIcon,
   ListItemText,
-
- } from '@mui/material';
-
+} from '@mui/material';
 import { Logout } from '@mui/icons-material';
-const drawerWidth = 240;
 
+// Constants
+const DRAWER_WIDTH = 240;
+
+// Styled components moved outside
 const openedMixin = (theme) => ({
-  width: drawerWidth,
+  width: DRAWER_WIDTH,
   transition: theme.transitions.create('width', {
     easing: theme.transitions.easing.sharp,
     duration: theme.transitions.duration.enteringScreen,
@@ -36,17 +36,9 @@ const closedMixin = (theme) => ({
   width: `calc(${theme.spacing(7)} + 1px)`,
 });
 
-const DrawerHeader = styled('div')(({ theme }) => ({
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'flex-end',
-  padding: theme.spacing(0, 1),
-  ...theme.mixins.toolbar,
-}));
-
-const Drawer = styled(MuiDrawer, { shouldForwardProp: (prop) => prop !== 'open' })(
+const StyledDrawer = styled(MuiDrawer, { shouldForwardProp: (prop) => prop !== 'open' })(
   ({ theme, open }) => ({
-    width: drawerWidth,
+    width: DRAWER_WIDTH,
     flexShrink: 0,
     whiteSpace: 'nowrap',
     boxSizing: 'border-box',
@@ -61,78 +53,99 @@ const Drawer = styled(MuiDrawer, { shouldForwardProp: (prop) => prop !== 'open' 
   }),
 );
 
-export default function Sidebar() {
-  
+// Extracted reusable styles
+const scrollableListStyles = {
+  flex: 1,
+  overflowY: 'auto',
+  pb: 7,
+  scrollbarWidth: 'none',
+  '&::-webkit-scrollbar': {
+    display: 'none'
+  },
+  msOverflowStyle: 'none'
+};
+
+const logoutContainerStyles = {
+  position: 'sticky',
+  bottom: 0,
+  width: '100%',
+  bgcolor: 'background.paper',
+  borderTop: '1px solid',
+  borderColor: 'divider',
+  zIndex: 1
+};
+
+const logoutButtonStyles = {
+  minHeight: 48,
+  px: 2.5,
+  transition: 'all 0.2s ease',
+  '&:hover': { backgroundColor: 'action.hover' }
+};
+
+// Memoized logout button component
+const LogoutButton = React.memo(({ open }) => (
+  <ListItemButton 
+    sx={{
+      ...logoutButtonStyles,
+      justifyContent: open ? 'initial' : 'center',
+    }}
+    onClick={() => console.log('Logout clicked')}
+  >
+    <ListItemIcon sx={{
+      minWidth: 0,
+      mr: open ? 3 : 'auto',
+      justifyContent: 'center',
+    }}>
+      <Logout />
+    </ListItemIcon>
+    <ListItemText
+      primary="Logout"
+      sx={{ opacity: open ? 1 : 0 }}
+    />
+  </ListItemButton>
+));
+
+// Memoized navigation items
+const NavigationItems = React.memo(({ open, openSubMenu, handleSubMenu }) => (
+  <>
+    {NAVIGATION.map((item) => 
+      RenderDrawer(item, open, openSubMenu, handleSubMenu)
+    )}
+  </>
+));
+
+const Sidebar = () => {
   const { open, openSubMenu, handleDrawer, handleSubMenu } = useDrawer();
-  console.log('Sidebar rendered - Open state:', open);
-  console.log('NAVIGATION items:', NAVIGATION.length);
+  
+  // Memoize the main container styles
+  const mainContainerStyles = React.useMemo(() => ({
+    display: 'flex',
+    flexDirection: 'column',
+    height: '100%',
+    minHeight: '100vh'
+  }), []);
+
   return (
     <Box sx={{ display: 'flex' }}>
-      <Drawer variant="permanent" open={open}>
-        {/* Main container with flex column */}
-        <Box sx={{ 
-          display: 'flex',
-          flexDirection: 'column',
-          height: '100%', // Take full height of drawer
-          minHeight: '100vh' // Ensure full viewport height
-        }}>
-          <Logo open={open} onToggle={handleDrawer}/>
+      <StyledDrawer variant="permanent" open={open}>
+        <Box sx={mainContainerStyles}>
+          <Logo open={open} onToggle={handleDrawer} />
           
-          {/* Scrollable content area */}
-          <List sx={{ 
-            flex: 1, // Take remaining space
-            overflowY: 'auto', // Enable scrolling
-            pb: 7, // Padding for logout button height
-            scrollbarWidth: 'none',
-            '&::-webkit-scrollbar':{
-              display: 'none'
-            },
-            msOverflowStyle: 'none'
-          }}>
-            {NAVIGATION.map((item) => 
-           RenderDrawer(item, open, openSubMenu, handleSubMenu) 
-          
-            )}
+          <List sx={scrollableListStyles}>
+            <NavigationItems 
+              open={open}
+              openSubMenu={openSubMenu}
+              handleSubMenu={handleSubMenu}
+            />
           </List>
 
-          {/* Fixed logout button */}
-          <Box sx={{
-            position: 'sticky',
-            bottom: 0,
-            width: '100%',
-            bgcolor: 'background.paper',
-            borderTop: '1px solid',
-            borderColor: 'divider',
-            zIndex: 1
-          }}>
-            <ListItemButton 
-              sx={{
-                transition: 'all 0.2s ease',
-                '&:hover':{
-                  backgroundColor: 'action.hover'
-                },
-                minHeight: 48,
-                justifyContent: open ? 'initial' : 'center',
-                px: 2.5,
-                '&:hover': { backgroundColor: 'action.hover' }
-              }}
-              onClick={() => console.log('Logout clicked')}
-            >
-              <ListItemIcon sx={{
-                minWidth: 0,
-                mr: open ? 3 : 'auto',
-                justifyContent: 'center',
-              }}>
-                <Logout/>
-              </ListItemIcon>
-              <ListItemText
-                primary="Logout"
-                sx={{ opacity: open ? 1 : 0 }}
-              />
-            </ListItemButton>
+          <Box sx={logoutContainerStyles}>
+            <LogoutButton open={open} />
           </Box>
         </Box>
-      </Drawer>
+      </StyledDrawer>
     </Box>
   );
-}
+};
+
+export default React.memo(Sidebar);
