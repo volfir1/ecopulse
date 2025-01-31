@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
 import { User, Lock } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
-import logo from 'shared/components/logo';
+import logo from '@shared/components/logo';
 import crosswalk from '../../../../assets/images/vectors/crosswalk.jpg'
-import Loader from 'shared/components/loaders/Loader';
-import { useLoader } from 'shared/components/loaders/useLoader';
+import Loader from '@shared/components/loaders/Loader';
+import { useLoader } from '@components/loaders/useLoader';
 
 
 const Login = () => {

@@ -1,7 +1,7 @@
 import React from 'react';
 import { Card, CardContent, Typography, Box, Grid } from '@mui/material';
 import { LineChart, Line, XAxis, YAxis, Tooltip, BarChart, Bar, ResponsiveContainer } from 'recharts';
-import YearPicker from 'shared/components/datepicker/YearPicker';
+import YearPicker from '@components/datepicker/YearPicker';
 const generationData = Array.from({ length: 100 }, (_, i) => ({
   date: `2014-${i}`,
   value: 0.5 + Math.random() * 0.5

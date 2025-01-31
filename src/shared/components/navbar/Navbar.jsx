@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { AppBar, Box, Toolbar, IconButton, Typography, Avatar, Tooltip, useTheme, alpha } from '@mui/material';
 import { MenuIcon } from "lucide-react";
 import NavMenu from './menu';
-import { useApp } from "shared/context/AppContext";
+import { useApp } from '@context/AppContext';
 import { AppIcon } from '../icons';
 import SearchBar from '../searchbar/searchbar';
 

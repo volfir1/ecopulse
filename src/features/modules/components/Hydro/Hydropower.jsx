@@ -2,7 +2,8 @@ import React from 'react';
 import { LineChart, Line, XAxis, YAxis, Tooltip, BarChart, Bar, AreaChart, Area, ResponsiveContainer } from 'recharts';
 import { Droplets } from 'lucide-react';
 import { Card, CardContent, Box, Typography, Button, useTheme } from '@mui/material';
-import YearPicker from 'shared/components/datepicker/YearPicker';
+import YearPicker from '@components/datepicker/YearPicker';
+
 
 const HydroPower = () => {
   // Color palette based on 1C556F

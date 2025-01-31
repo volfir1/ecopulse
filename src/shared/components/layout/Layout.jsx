@@ -2,7 +2,7 @@ import { Box } from "@mui/material";
 import { Outlet } from "react-router-dom";
 import Sidebar from "../drawer/Sidebar";
 import Navbar from "../navbar/Navbar";
-import { useApp } from "shared/context/AppContext";
+import { useApp } from '@context/AppContext'
 
 export default function Layout() {
   const { sidebarOpen } = useApp();

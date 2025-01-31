@@ -1,7 +1,7 @@
 import { Box, IconButton } from '@mui/material';
 import { ChevronLeft, Menu } from '@mui/icons-material';
 import { useTheme } from '@emotion/react';
-import logo from 'assets/images/logo.png'; // Adjust path based on your structure
+import logo from '@assets/images/logo.png'; // Adjust path based on your structure
 
 const Logo = ({ open, onToggle }) => {
   const theme = useTheme();

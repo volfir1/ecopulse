@@ -2,7 +2,7 @@ import React from 'react';
 import { LineChart, Line, XAxis, YAxis, Tooltip, BarChart, Bar, AreaChart, Area, ResponsiveContainer } from 'recharts';
 import { Thermometer } from 'lucide-react';
 import { Card, CardContent, Box, Typography, Button, useTheme } from '@mui/material';
-import YearPicker from 'shared/components/datepicker/YearPicker';
+import YearPicker from '@components/datepicker/YearPicker';
 
 const Geothermal = () => {
   // Color palette based on #FF7F7F with complementary colors

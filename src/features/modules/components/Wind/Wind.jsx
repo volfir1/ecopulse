@@ -2,7 +2,7 @@ import React from 'react';
 import { LineChart, Line, XAxis, YAxis, Tooltip, BarChart, Bar, AreaChart, Area, ResponsiveContainer } from 'recharts';
 import { Wind } from 'lucide-react';
 import { Card, CardContent, Box, Typography, Button, useTheme } from '@mui/material';
-import YearPicker from 'shared/components/datepicker/YearPicker';
+import YearPicker from '@components/datepicker/YearPicker';
 
 const WindEnergy = () => {
   // Color palette based on #38BDF8

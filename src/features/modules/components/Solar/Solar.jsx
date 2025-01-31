@@ -2,7 +2,7 @@
   import { LineChart, Line, XAxis, YAxis, Tooltip, BarChart, Bar, AreaChart, Area, ResponsiveContainer } from 'recharts';
   import { Sun } from 'lucide-react';
   import { Card, CardContent, Box, Typography, Button } from '@mui/material';
-  import YearPicker from 'shared/components/datepicker/YearPicker';
+  import YearPicker from '@components/datepicker/YearPicker';
 
   const SolarEnergy = () => {
     // Color palette based on warm solar colors

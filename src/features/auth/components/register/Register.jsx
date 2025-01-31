@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { User, Lock, Phone } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import logo from 'shared/components/logo';
+import {logo} from '../../../../shared/index'
 
 const Register = () => {
   const [email, setEmail] = useState('');
