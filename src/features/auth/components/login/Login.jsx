@@ -2,129 +2,126 @@ import React, { useState } from 'react';
 import { User, Lock } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import logo from '@shared/components/logo';
-import crosswalk from '../../../../assets/images/vectors/crosswalk.jpg'
+import crosswalk from '../../../../assets/images/vectors/crosswalk.jpg';
 import Loader from '@shared/components/loaders/Loader';
 import { useLoader } from '@components/loaders/useLoader';
-
+import ToastNotification from '@shared/components/toast-notif/ToastNotification';
 
 const Login = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const {startLoading, stopLoading} = useLoader()
-  const navigate = useNavigate()
+  const { startLoading, stopLoading } = useLoader();
+  const navigate = useNavigate();
+  const [toastMessage, setToastMessage] = useState('');
+  const [toastType, setToastType] = useState('');
 
-  const handleSubmit = async (e) =>{
-    e.preventDefault()
-    startLoading()
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    startLoading();
 
-    try{
-      // API call here
+    try {
+      // Show success toast
+      setToastMessage('Successfully Logged In!');
+      setToastType('success');
+
+      // Simulated API call (Replace with actual API request)
       await new Promise((resolve) => setTimeout(resolve, 3000));
-      // Logic here
-      navigate('/dashboard')
-    }catch(error){
-      console.error('Login failed:', error)
-    }finally{
-      stopLoading()
+
+      // Redirect to dashboard after login
+      setTimeout(() => {
+        navigate('/dashboard');
+      }, 800);
+    } catch (error) {
+      console.error('Login failed:', error);
+      setToastMessage('Login failed. Please try again.');
+      setToastType('error');
+    } finally {
+      stopLoading();
     }
-  }
+  };
 
   return (
     <>
-    <Loader />
-    <div className="min-h-screen flex">
-      {/* Left Side - Green Background */}
-      <div className="flex-1 bg-gradient-to-br from-green-400 to-green-500 p-12 flex flex-col justify-center items-start">
-        {/* Logo and Content Container */}
-        <div className="max-w-xl">
-          {/* Logo */}
-          <img src={logo} alt="EcoPulse Logo" className="w-32 h-32 mb-6" />
-          
-          {/* Brand Text */}
-          <h1 className="text-5xl font-bold text-white mb-8">EcoPulse</h1>
-          
-          {/* Description */}
-          <p className="text-white/80 text-lg leading-relaxed max-w-md">
-            Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. 
-            Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris 
-            nisi ut aliquip ex ea commodo consequat.
-          </p>
-        </div>
-      </div>
-
-      {/* Right Side - Background Image */}
-      <div 
-        className="w-1/2 flex items-center justify-center relative bg-cover bg-center"
-        style={{
-          backgroundImage: `url(${crosswalk})`,
-          backgroundSize: 'cover',
-          backgroundPosition: 'center'
-        }}
-      >
-        {/* Overlay to ensure form visibility */}
-        <div className="absolute inset-0 bg-white/90"></div>
-        
-        {/* Login Card */}
-        <div className="bg-white rounded-3xl shadow-xl w-full max-w-md p-8 mx-12 relative z-10">
-          {/* User Icon */}
-          <div className="flex justify-center mb-6">
-            <div className="w-20 h-20 rounded-full border-2 border-olive-600">
-              <User className="w-full h-full p-4 text-olive-600" />
-            </div>
+      <Loader />
+      {/* Make sure ToastNotification is called here */}
+      {toastMessage && <ToastNotification message={toastMessage} type={toastType} />}
+      
+      <div className="flex min-h-screen">
+        {/* Left Side - Green Background */}
+        <div className="flex flex-col items-start justify-center flex-1 p-12 bg-gradient-to-br from-green-400 to-green-500">
+          <div className="max-w-xl">
+            <img src={logo} alt="EcoPulse Logo" className="w-32 h-32 mb-6" />
+            <h1 className="mb-8 text-5xl font-bold text-white">EcoPulse</h1>
+            <p className="max-w-md text-lg leading-relaxed text-white/80">
+              Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.
+              Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.
+            </p>
           </div>
+        </div>
 
-          {/* Login Text */}
-          <h2 className="text-3xl font-bold text-center text-gray-800 mb-8">Login</h2>
-
-          {/* Login Form */}
-          <form onSubmit={handleSubmit} className="space-y-6">
-            {/* Email Input */}
-            <div className="relative">
-              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                <User className="h-5 w-5 text-gray-400" />
+        {/* Right Side - Background Image */}
+        <div 
+          className="relative flex items-center justify-center w-1/2 bg-center bg-cover"
+          style={{
+            backgroundImage: `url(${crosswalk})`,
+            backgroundSize: 'cover',
+            backgroundPosition: 'center'
+          }}
+        >
+          <div className="absolute inset-0 bg-white/90"></div>
+          <div className="relative z-10 w-full max-w-md p-8 mx-12 bg-white shadow-xl rounded-3xl">
+            <div className="flex justify-center mb-6">
+              <div className="w-20 h-20 border-2 rounded-full border-olive-600">
+                <User className="w-full h-full p-4 text-olive-600" />
               </div>
-              <input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all"
-                placeholder="Email"
-              />
             </div>
 
-            {/* Password Input */}
-            <div className="relative">
-              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                <Lock className="h-5 w-5 text-gray-400" />
+            <h2 className="mb-8 text-3xl font-bold text-center text-gray-800">Login</h2>
+
+            <form onSubmit={handleSubmit} className="space-y-6">
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+                  <User className="w-5 h-5 text-gray-400" />
+                </div>
+                <input
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="block w-full py-3 pl-10 pr-3 transition-all border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                  placeholder="Email"
+                />
               </div>
-              <input
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all"
-                placeholder="Password"
-              />
-            </div>
 
-            {/* Login Button */}
-            <button
-              type="submit"
-              className="w-full py-3 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors font-medium"
-            >
-              Login
-            </button>
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+                  <Lock className="w-5 h-5 text-gray-400" />
+                </div>
+                <input
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="block w-full py-3 pl-10 pr-3 transition-all border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                  placeholder="Password"
+                />
+              </div>
 
-            {/* Sign Up Link */}
-            <div className="text-center text-gray-600">
-              Not a member?{' '}
-              <Link to="/register" className="text-green-500 hover:text-green-600 font-medium">
-                Sign up now
-              </Link>   
-            </div>
-          </form>
+              <button
+                type="submit"
+                className="w-full py-3 font-medium text-white transition-colors bg-green-500 rounded-lg hover:bg-green-600"
+              >
+                Login
+              </button>
+
+              <div className="text-center text-gray-600">
+                Not a member?{' '}
+                <Link to="/register" className="font-medium text-green-500 hover:text-green-600">
+                  Sign up now
+                </Link>   
+              </div>
+            </form>
+          </div>
         </div>
       </div>
-    </div>
     </>
   );
 };
