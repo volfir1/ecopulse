@@ -10,6 +10,7 @@ import {Layout, Loader, theme} from '@shared/index.js'
 // Lazy Loading Pages
 const Dashboard = lazy(() => import('../features/dashboard/components/Index'));
 const EnergySharing = lazy(() => import('../features/energy-sharing/components/Dashboard'));
+const HelpSupport = lazy(() => import("../features/help-support/components/help-support.jsx"));
 const Solar = lazy(() => import('@modules/Solar/Solar'));
 const Wind = lazy(() => import('@modules/Wind/Wind'));
 const Geo = lazy(() => import('@modules/Geo/Geothermal'));
@@ -36,6 +37,7 @@ function App() {
               <Route element={<Layout />}>
                 <Route path="/dashboard" element={<Dashboard />} />
                 <Route path="/energy-share" element={<EnergySharing />} />
+                <Route path="/help-support" element={<HelpSupport />} />
                 <Route path="/modules/solar" element={<Solar />} />
                 <Route path="/modules/wind" element={<Wind />} />
                 <Route path="/modules/geothermal" element={<Geo />} />
