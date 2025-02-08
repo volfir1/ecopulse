@@ -1,173 +1,661 @@
-import React from 'react';
-import { ChevronRight } from 'lucide-react';
-import { useState, useEffect } from 'react';
-import { ChevronLeft } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { elements, Palette } from '@shared/components/ui/colors';
+import {
+  AppBar,
+  Box,
+  Button,
+  Card,
+  CardContent,
+  Container,
+  Grid,
+  IconButton,
+  Stack,
+  Typography,
+  useTheme
+} from '@mui/material';
+import { 
+  ChevronLeft, 
+  ChevronRight,
+  ArrowRight,
+  BarChart,
+  CloudSun,
+  Wind,
+  Droplets,
+  Flower,
+  Github,
+  Linkedin,
+  Activity,
+  LineChart,
+  PieChart
+} from 'lucide-react';
 
-// Import images 
+// Import your images
 import hydroImage from '../assets/images/landing/hydro.jpg';
 import solarImage from '../assets/images/landing/solar.jpg';
 import windImage from '../assets/images/landing/wind.webp';
 import logo from '../assets/images/logo.png';
 
 const carouselData = [
-    {
-      image: hydroImage,
-      title: "Hydro Power Energy",
-      description: "Hydropower energy uses flowing or falling water to generate electricity, making it one of the most widely used renewable energy sources globally.",
-      details: "In the Philippines, hydropower supplies about 10-12% of the country's electricity. With its abundant rivers and high rainfall, the nation hosts significant projects."
-    },
-    {
-      image: solarImage,
-      title: "Solar Energy",
-      description: "Solar power harnesses the sun's energy to generate clean electricity, providing a sustainable solution for our growing energy needs.",
-      details: "The Philippines has great potential for solar energy with an average of 5.1 kWh/m² per day of solar radiation."
-    },
-    {
-      image: windImage,
-      title: "Wind Power",
-      description: "Wind energy captures the natural power of wind through turbines, converting it into renewable electricity.",
-      details: "The Philippines' wind energy sector is growing, with several wind farms contributing to the national power grid."
-    }
+  {
+    image: hydroImage,
+    title: "Hydro Power Energy",
+    description: "Hydropower energy uses flowing or falling water to generate electricity, making it one of the most widely used renewable energy sources globally.",
+    details: "In the Philippines, hydropower supplies about 10-12% of the country's electricity. With its abundant rivers and high rainfall, the nation hosts significant projects.",
+    color: elements.hydropower
+  },
+  {
+    image: solarImage,
+    title: "Solar Energy",
+    description: "Solar power harnesses the sun's energy to generate clean electricity, providing a sustainable solution for our growing energy needs.",
+    details: "The Philippines has great potential for solar energy with an average of 5.1 kWh/m² per day of solar radiation.",
+    color: elements.solar
+  },
+  {
+    image: windImage,
+    title: "Wind Power",
+    description: "Wind energy captures the natural power of wind through turbines, converting it into renewable electricity.",
+    details: "The Philippines' wind energy sector is growing, with several wind farms contributing to the national power grid.",
+    color: elements.wind
+  }
+];
+
+const energyTypes = [
+  {
+    type: "Solar",
+    icon: <CloudSun size={32} />,
+    color: elements.solar,
+    description: "Harnessing the sun's power for sustainable energy"
+  },
+  {
+    type: "Wind",
+    icon: <Wind size={32} />,
+    color: elements.wind,
+    description: "Converting wind power into clean electricity"
+  },
+  {
+    type: "Geothermal",
+    icon: <Flower size={32} />,
+    color: elements.geothermal,
+    description: "Utilizing Earth's heat for renewable energy"
+  },
+  {
+    type: "Hydropower",
+    icon: <Droplets size={32} />,
+    color: elements.hydropower,
+    description: "Generating power from flowing water"
+  },
+  {
+    type: "Biomass",
+    icon: <Flower size={32} />,
+    color: elements.biomass,
+    description: "Converting organic matter into sustainable energy"
+  }
+];
+
+const features = [
+  {
+    icon: <Activity size={32} />,
+    title: "Real-time Monitoring",
+    description: "Track energy production and consumption with instant updates"
+  },
+  {
+    icon: <LineChart size={32} />,
+    title: "Advanced Analytics",
+    description: "Detailed insights and performance metrics for optimization"
+  },
+  {
+    icon: <PieChart size={32} />,
+    title: "Resource Distribution",
+    description: "Efficient allocation and management of energy resources"
+  }
+];
+
+const teamMembers = [
+  {
+    name: "John Doe",
+    role: "Lead Developer",
+    github: "https://github.com",
+    linkedin: "https://linkedin.com",
+    bio: "Expert in renewable energy systems and full-stack development"
+  },
+  {
+    name: "Jane Smith",
+    role: "Energy Specialist",
+    github: "https://github.com",
+    linkedin: "https://linkedin.com",
+    bio: "Specialized in optimizing renewable energy production"
+  },
+  {
+    name: "Mike Johnson",
+    role: "Data Analyst",
+    github: "https://github.com",
+    linkedin: "https://linkedin.com",
+    bio: "Focused on energy data analysis and forecasting"
+  }
 ];
 
 const LandingPage = () => {
-    const navigate = useNavigate();
-    const [currentSlide, setCurrentSlide] = useState(0);
+  const [currentSlide, setCurrentSlide] = useState(0);
+  const navigate = useNavigate();
 
-    useEffect(() => {
-      const timer = setInterval(() => {
-        setCurrentSlide((prev) => (prev + 1) % carouselData.length);
-      }, 5000);
-  
-      return () => clearInterval(timer);
-    }, []);
-  
-    const nextSlide = () => {
+  useEffect(() => {
+    const timer = setInterval(() => {
       setCurrentSlide((prev) => (prev + 1) % carouselData.length);
-    };
-  
-    const prevSlide = () => {
-      setCurrentSlide((prev) => (prev - 1 + carouselData.length) % carouselData.length);
-    };
-  
-    const goToSlide = (index) => {
-      setCurrentSlide(index);
-    };
+    }, 5000);
+    return () => clearInterval(timer);
+  }, []);
 
-   return (
-    <div className="relative min-h-screen">
-      <nav className="fixed w-full z-50 bg-white/80 backdrop-blur-sm shadow-sm">
-        <div className="container mx-auto px-6 py-4">
-          <div className="flex items-center justify-between">
-            {/* Logo */}
-            <Link to="/" className="flex items-center gap-3">
-              <img
-                src={logo}
-                alt="EcoPulse Logo"
-                className="w-20 h-20 object-cover"
-              />
-              <span className="text-2xl font-bold bg-gradient-to-r from-green-600 to-green-400 bg-clip-text text-transparent">
-                EcoPulse
-              </span>
-            </Link>
-
-            {/* Navigation Links */}
-            <div className="flex items-center gap-8">
-              <Link to="/about" className="text-gray-600 hover:text-green-600 font-medium transition-colors">
-                About us
-              </Link>
-              <Link to="/contact" className="text-gray-600 hover:text-green-600 font-medium transition-colors">
-                Contact
-              </Link>
-              <Link to="/login" className="text-gray-600 hover:text-green-600 font-medium transition-colors">
-                Login
-              </Link>
-              <button 
-                onClick={() => navigate('/register')}
-                className="px-6 py-2 bg-green-600 text-white rounded-full hover:bg-green-700 transition-colors"
-              >
-                Sign up
-              </button>
-            </div>
-          </div>
-        </div>
-      </nav>
-
-      {/* Rest of your component remains the same */}
-      <div className="absolute inset-0 transition-all duration-500 ease-in-out">
-        <div className="absolute inset-0 bg-black/40 z-10" />
-        <img
-          src={carouselData[currentSlide].image}
-          alt={carouselData[currentSlide].title}
-          className="w-full h-full object-cover"
-        />
-      </div>
-
-      {/* Content sections remain the same */}
-      <div className="relative z-20 container mx-auto px-6 pt-32">
-        {/* Your existing content */}
-        <div className="grid lg:grid-cols-2 gap-12 min-h-[80vh] items-center">
-          {/* Left Content */}
-          <div className="text-white space-y-6">
-            <h1 className="text-5xl font-bold leading-tight transition-all duration-500">
-              {carouselData[currentSlide].title}
-            </h1>
-            <p className="text-lg text-gray-200 max-w-xl transition-all duration-500">
-              {carouselData[currentSlide].description}
-            </p>
-            <button className="flex items-center gap-2 px-6 py-3 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-all group">
-              Learn More
-              <ChevronRight className="group-hover:translate-x-1 transition-transform" />
-            </button>
-          </div>
-
-          {/* Right Content - Info Card */}
-          <div className="bg-white/95 backdrop-blur-sm rounded-2xl shadow-xl p-8 space-y-6">
-            <h2 className="text-3xl font-bold text-green-800 transition-all duration-500">
-              {carouselData[currentSlide].title}
-            </h2>
-            <div className="space-y-4 text-gray-600 transition-all duration-500">
-              <p>{carouselData[currentSlide].description}</p>
-              <p>{carouselData[currentSlide].details}</p>
-            </div>
-            <button className="text-green-600 hover:text-green-700 font-medium flex items-center gap-1">
-              Read full article
-              <ChevronRight className="w-4 h-4" />
-            </button>
-          </div>
-        </div>
-      </div>
-
-      {/* Navigation Arrows */}
-      <button 
-        onClick={prevSlide}
-        className="absolute left-4 top-1/2 -translate-y-1/2 z-20 p-2 bg-white/20 hover:bg-white/30 rounded-full transition-colors"
-      >
-        <ChevronLeft className="w-6 h-6 text-white" />
-      </button>
-      <button 
-        onClick={nextSlide}
-        className="absolute right-4 top-1/2 -translate-y-1/2 z-20 p-2 bg-white/20 hover:bg-white/30 rounded-full transition-colors"
-      >
-        <ChevronRight className="w-6 h-6 text-white" />
-      </button>
-
-      {/* Slider Dots */}
-      <div className="absolute bottom-8 left-1/2 -translate-x-1/2 flex gap-2 z-20">
-        {carouselData.map((_, index) => (
-          <button
-            key={index}
-            onClick={() => goToSlide(index)}
-            className={`w-2 h-2 rounded-full transition-all ${
-              index === currentSlide 
-                ? 'w-8 bg-green-500' 
-                : 'bg-white/60 hover:bg-white/80'
-            }`}
+  return (
+    <Box sx={{ bgcolor: Palette.background.default }}>
+      {/* Navbar */}
+      <AppBar 
+  position="fixed" 
+  sx={{ 
+    bgcolor: 'rgba(255, 255, 255, 0.95)',
+    boxShadow: 'none',
+    borderBottom: '1px solid rgba(0,0,0,0.1)'
+  }}
+>
+  <Container maxWidth="lg">
+    <Stack 
+      direction="row" 
+      justifyContent="space-between" 
+      alignItems="center" 
+      py={1}
+    >
+      <Link to="/" style={{ textDecoration: 'none' }}>
+        <Stack direction="row" alignItems="center" spacing={2}>
+          <Box 
+            component="img"
+            src={logo}
+            alt="EcoPulse Logo"
+            sx={{ 
+              height: 50,  // Adjust this if needed
+              width: 'auto',
+              objectFit: 'contain'
+            }}
           />
-        ))}
-      </div>
-    </div>
+          <Typography 
+            variant="h5" 
+            sx={{ 
+              fontWeight: 500,
+              color: Palette.primary.main
+            }}
+          >
+            EcoPulse
+          </Typography>
+        </Stack>
+      </Link>
+      
+      <Stack direction="row" spacing={4}>
+        <Button sx={{ color: 'text.primary' }}>ABOUT</Button>
+        <Button sx={{ color: 'text.primary' }}>CONTACT</Button>
+        <Link to="/login"><Button sx={{ color: 'text.primary' }}>LOGIN</Button></Link>
+      
+        <Button 
+          variant="contained" 
+          sx={{ 
+            bgcolor: Palette.primary.main,
+            borderRadius: 6,
+            px: 3,
+            '&:hover': {
+              bgcolor: Palette.hovers.primary
+            }
+          }}
+        >
+          SIGN UP
+        </Button>
+      </Stack>
+    </Stack>
+  </Container>
+</AppBar>
+
+      {/* Hero Carousel Section */}
+      <Box sx={{ position: 'relative', height: '100vh' }}>
+        <Box
+          sx={{
+            position: 'absolute',
+            inset: 0,
+            '&::before': {
+              content: '""',
+              position: 'absolute',
+              inset: 0,
+              bgcolor: 'rgba(0,0,0,0.3)',
+              zIndex: 1
+            }
+          }}
+        >
+          <img
+            src={carouselData[currentSlide].image}
+            alt={carouselData[currentSlide].title}
+            style={{
+              width: '100%',
+              height: '100%',
+              objectFit: 'cover',
+              transition: 'all 0.5s ease-in-out'
+            }}
+          />
+        </Box>
+
+        <Container 
+          maxWidth="lg" 
+          sx={{ 
+            position: 'relative', 
+            zIndex: 2, 
+            height: '100%',
+            pt: 12
+          }}
+        >
+          <Grid 
+            container 
+            spacing={6} 
+            sx={{ height: '100%' }} 
+            alignItems="center"
+          >
+            <Grid item xs={12} md={6}>
+              <Stack spacing={4}>
+                <Typography 
+                  variant="h1" 
+                  sx={{ 
+                    color: 'white',
+                    fontSize: { xs: '3rem', md: '4.5rem' },
+                    fontWeight: 600,
+                    lineHeight: 1.2
+                  }}
+                >
+                  {carouselData[currentSlide].title}
+                </Typography>
+                <Typography 
+                  variant="h5" 
+                  sx={{ 
+                    color: 'rgba(255,255,255,0.9)',
+                    maxWidth: 600,
+                    lineHeight: 1.5
+                  }}
+                >
+                  {carouselData[currentSlide].description}
+                </Typography>
+                <Button
+                  variant="contained"
+                  sx={{
+                    bgcolor: Palette.primary.main,
+                    color: 'white',
+                    width: 'fit-content',
+                    borderRadius: 8,
+                    px: 4,
+                    py: 1.5,
+                    fontSize: '1.1rem',
+                    textTransform: 'none'
+                  }}
+                  endIcon={<ArrowRight />}
+                >
+                  Learn More
+                </Button>
+              </Stack>
+            </Grid>
+            <Grid item xs={12} md={6}>
+              <Card 
+                sx={{ 
+                  borderRadius: 4,
+                  bgcolor: 'rgba(255,255,255,0.98)',
+                  boxShadow: '0 8px 32px rgba(0,0,0,0.1)'
+                }}
+              >
+                <CardContent sx={{ p: 4 }}>
+                  <Stack spacing={3}>
+                    <Typography 
+                      variant="h3" 
+                      sx={{ 
+                        color: carouselData[currentSlide].color,
+                        fontWeight: 600,
+                        mb: 2
+                      }}
+                    >
+                      {carouselData[currentSlide].title}
+                    </Typography>
+                    <Typography 
+                      variant="body1" 
+                      sx={{ 
+                        color: 'text.primary',
+                        fontSize: '1.1rem',
+                        lineHeight: 1.7
+                      }}
+                    >
+                      {carouselData[currentSlide].details}
+                    </Typography>
+                    <Button 
+                      endIcon={<ArrowRight />}
+                      sx={{ 
+                        color: carouselData[currentSlide].color,
+                        alignSelf: 'flex-start',
+                        fontSize: '1.1rem',
+                        textTransform: 'none',
+                        mt: 2
+                      }}
+                    >
+                      Read full article
+                    </Button>
+                  </Stack>
+                </CardContent>
+              </Card>
+            </Grid>
+          </Grid>
+        </Container>
+
+        {/* Carousel Navigation */}
+        <Stack 
+          direction="row" 
+          spacing={1} 
+          sx={{ 
+            position: 'absolute', 
+            bottom: 40, 
+            left: '50%', 
+            transform: 'translateX(-50%)',
+            zIndex: 2
+          }}
+        >
+          {carouselData.map((_, index) => (
+            <Box
+              key={index}
+              onClick={() => setCurrentSlide(index)}
+              sx={{
+                width: currentSlide === index ? 24 : 8,
+                height: 8,
+                borderRadius: 4,
+                bgcolor: currentSlide === index ? Palette.primary.main : 'rgba(255,255,255,0.5)',
+                cursor: 'pointer',
+                transition: 'all 0.3s ease-in-out',
+                '&:hover': {
+                  bgcolor: currentSlide === index ? Palette.primary.main : 'rgba(255,255,255,0.8)'
+                }
+              }}
+            />
+          ))}
+        </Stack>
+
+        {/* Carousel Controls */}
+        <IconButton
+          onClick={() => setCurrentSlide((prev) => (prev - 1 + carouselData.length) % carouselData.length)}
+          sx={{
+            position: 'absolute',
+            left: { xs: 8, md: 24 },
+            top: '50%',
+            transform: 'translateY(-50%)',
+            color: 'white',
+            bgcolor: 'rgba(255,255,255,0.1)',
+            zIndex: 2,
+            '&:hover': {
+              bgcolor: 'rgba(255,255,255,0.2)'
+            }
+          }}
+        >
+          <ChevronLeft />
+        </IconButton>
+        <IconButton
+          onClick={() => setCurrentSlide((prev) => (prev + 1) % carouselData.length)}
+          sx={{
+            position: 'absolute',
+            right: { xs: 8, md: 24 },
+            top: '50%',
+            transform: 'translateY(-50%)',
+            color: 'white',
+            bgcolor: 'rgba(255,255,255,0.1)',
+            zIndex: 2,
+            '&:hover': {
+              bgcolor: 'rgba(255,255,255,0.2)'
+            }
+          }}
+        >
+          <ChevronRight />
+        </IconButton>
+      </Box>
+
+      {/* Energy Types Section */}
+      <Box sx={{ py: 12, bgcolor: 'white' }}>
+        <Container maxWidth="lg">
+          <Stack spacing={8}>
+            <Typography 
+              variant="h3" 
+              textAlign="center"
+              color={Palette.text.primary}
+              fontWeight={600}
+            >
+              Energy Sources We Monitor
+            </Typography>
+            <Grid container spacing={4}>
+              {energyTypes.map((energy, index) => (
+                <Grid item xs={12} sm={6} md={4} key={index}>
+                  <Card 
+                    sx={{ 
+                      height: '100%',
+                      borderRadius: 3,
+                      transition: 'all 0.3s ease-in-out',
+                      '&:hover': {
+                        transform: 'translateY(-8px)',
+                        boxShadow: '0 8px 30px rgba(0,0,0,0.12)'
+                      }
+                    }}
+                  >
+                    <CardContent sx={{ p: 4 }}>
+                      <Stack spacing={3} alignItems="center">
+                        <Box 
+                          sx={{ 
+                            p: 2,
+                            borderRadius: '50%',
+                            bgcolor: `${energy.color}20`,
+                            color: energy.color
+                          }}
+                        >
+                          {energy.icon}
+                        </Box>
+                        <Typography 
+                          variant="h5" 
+                          fontWeight={600}
+                          color={Palette.text.primary}
+                        >
+                          {energy.type}
+                        </Typography>
+                        <Typography 
+                          variant="body1"
+                          textAlign="center"
+                          color={Palette.text.secondary}
+                        >
+                          {energy.description}
+                        </Typography>
+                      </Stack>
+                    </CardContent>
+                  </Card>
+                </Grid>
+              ))}
+            </Grid>
+          </Stack>
+        </Container>
+      </Box>
+
+      {/* Features Section */}
+      <Box sx={{ py: 12, bgcolor: Palette.background.subtle }}>
+        <Container maxWidth="lg">
+          <Stack spacing={8}>
+            <Typography 
+              variant="h3" 
+              textAlign="center"
+              color={Palette.primary.main}
+              fontWeight={600}
+            >
+              Key Features
+            </Typography>
+            <Grid container spacing={4}>
+            {features.map((feature, index) => (
+                <Grid item xs={12} md={4} key={index}>
+                  <Card 
+                    sx={{ 
+                      height: '100%',
+                      borderRadius: 3,
+                      transition: 'all 0.3s ease-in-out',
+                      '&:hover': {
+                        transform: 'translateY(-8px)',
+                        boxShadow: '0 8px 30px rgba(0,0,0,0.12)'
+                      }
+                    }}
+                  >
+                    <CardContent sx={{ p: 4 }}>
+                      <Stack spacing={3}>
+                        <Box 
+                          sx={{ 
+                            color: Palette.primary.main,
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            width: 64,
+                            height: 64,
+                            borderRadius: '50%',
+                            bgcolor: `${Palette.primary.main}15`,
+                          }}
+                        >
+                          {feature.icon}
+                        </Box>
+                        <Typography 
+                          variant="h5"
+                          fontWeight={600}
+                          color={Palette.text.primary}
+                        >
+                          {feature.title}
+                        </Typography>
+                        <Typography 
+                          variant="body1"
+                          color={Palette.text.secondary}
+                          sx={{ lineHeight: 1.7 }}
+                        >
+                          {feature.description}
+                        </Typography>
+                      </Stack>
+                    </CardContent>
+                  </Card>
+                </Grid>
+              ))}
+            </Grid>
+          </Stack>
+        </Container>
+      </Box>
+
+      {/* Team Section */}
+      <Box sx={{ py: 12, bgcolor: 'white' }}>
+        <Container maxWidth="lg">
+          <Stack spacing={8}>
+            <Stack spacing={2} alignItems="center">
+              <Typography 
+                variant="h3" 
+                textAlign="center"
+                color={Palette.text.primary}
+                fontWeight={600}
+              >
+                Meet Our Team
+              </Typography>
+              <Typography 
+                variant="h6" 
+                textAlign="center"
+                color={Palette.text.secondary}
+                maxWidth="600px"
+                sx={{ lineHeight: 1.7 }}
+              >
+                Expert professionals dedicated to revolutionizing renewable energy monitoring and analytics
+              </Typography>
+            </Stack>
+
+            <Grid container spacing={4}>
+              {teamMembers.map((member, index) => (
+                <Grid item xs={12} sm={6} md={4} key={index}>
+                  <Card 
+                    sx={{ 
+                      height: '100%',
+                      borderRadius: 3,
+                      transition: 'all 0.3s ease-in-out',
+                      '&:hover': {
+                        transform: 'translateY(-8px)',
+                        boxShadow: '0 8px 30px rgba(0,0,0,0.12)'
+                      }
+                    }}
+                  >
+                    <CardContent sx={{ p: 4 }}>
+                      <Stack spacing={3} alignItems="center">
+                        <Box
+                          sx={{
+                            width: 120,
+                            height: 120,
+                            borderRadius: '50%',
+                            bgcolor: `${Palette.primary.main}15`,
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            fontSize: '2rem',
+                            color: Palette.primary.main,
+                            fontWeight: 600,
+                            mb: 2
+                          }}
+                        >
+                          {member.name.split(' ').map(n => n[0]).join('')}
+                        </Box>
+                        <Stack spacing={1} alignItems="center">
+                          <Typography 
+                            variant="h5"
+                            fontWeight={600}
+                            color={Palette.text.primary}
+                          >
+                            {member.name}
+                          </Typography>
+                          <Typography 
+                            variant="body1"
+                            color={Palette.primary.main}
+                            fontWeight={500}
+                          >
+                            {member.role}
+                          </Typography>
+                        </Stack>
+                        <Typography 
+                          variant="body2"
+                          textAlign="center"
+                          color={Palette.text.secondary}
+                          sx={{ lineHeight: 1.7 }}
+                        >
+                          {member.bio}
+                        </Typography>
+                        <Stack direction="row" spacing={2}>
+                          <IconButton
+                            component="a"
+                            href={member.github}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            sx={{ 
+                              color: Palette.text.secondary,
+                              '&:hover': { color: Palette.primary.main }
+                            }}
+                          >
+                            <Github size={20} />
+                          </IconButton>
+                          <IconButton
+                            component="a"
+                            href={member.linkedin}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            sx={{ 
+                              color: Palette.text.secondary,
+                              '&:hover': { color: Palette.primary.main }
+                            }}
+                          >
+                            <Linkedin size={20} />
+                          </IconButton>
+                        </Stack>
+                      </Stack>
+                    </CardContent>
+                  </Card>
+                </Grid>
+              ))}
+            </Grid>
+          </Stack>
+        </Container>
+      </Box>
+    </Box>
   );
 };
 

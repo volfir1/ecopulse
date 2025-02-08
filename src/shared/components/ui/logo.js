@@ -1,7 +1,8 @@
+import React from 'react';
 import { Box, IconButton } from '@mui/material';
 import { ChevronLeft, Menu } from '@mui/icons-material';
 import { useTheme } from '@emotion/react';
-import logo from '@assets/images/logo.png'; // Adjust path based on your structure
+import logo from '@assets/images/logo.png';  // Using ?url with Vite
 
 const Logo = ({ open, onToggle }) => {
   const theme = useTheme();
@@ -19,7 +20,7 @@ const Logo = ({ open, onToggle }) => {
       }}
     >
       {/* Logo Section */}
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>  
         <img 
           src={logo}
           alt="EcoPulse Logo"

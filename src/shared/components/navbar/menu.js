@@ -1,8 +1,15 @@
 import React from "react";
 import { Menu, MenuItem, Avatar, ListItemIcon, Divider } from "@mui/material";
-import { AppIcon } from "../icons";
+import { AppIcon } from "../ui/icons";
+import { useNavigate } from "react-router-dom";
 
 export default function NavMenu({ anchorEl, open, onClose }) {
+  const navigate = useNavigate()
+  
+  const handleNavigate = () =>{
+    onClose()
+    navigate('/profile')
+  }
   return (
     <Menu
       anchorEl={anchorEl}
@@ -41,7 +48,7 @@ export default function NavMenu({ anchorEl, open, onClose }) {
       transformOrigin={{ horizontal: "right", vertical: "top" }}
       anchorOrigin={{ horizontal: "right", vertical: "bottom" }}
     >
-      <MenuItem onClick={onClose}>
+      <MenuItem onClick={handleNavigate}>
         <Avatar /> Profile
       </MenuItem>
       <MenuItem onClick={onClose} sx={{ gap: 1 }}>

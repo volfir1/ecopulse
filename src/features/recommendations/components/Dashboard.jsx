@@ -1,34 +1,13 @@
 import React from 'react';
-import {
-  Box,
-  Typography,
-  Button,
-  Card,
-  CardContent,
-  Chip,
-  LinearProgress,
-  useTheme,
-  alpha,
-  Grid,
-  Divider,
-  IconButton,
-  Tooltip
-} from '@mui/material';
-import {
-  Download,
-  Save,
-  TrendingUp,
-  Sun,
-  Wind,
-  Droplets,
-  Battery,
-  LineChart,
-  Info,
-  MapPin
-} from 'lucide-react';
+import { 
+  Button, 
+  Card, 
+  theme, 
+  AppIcon
+} from '@shared/index';
 
 const EnergyRecommendations = () => {
-  const theme = useTheme();
+  const { primary, warning, info } = theme.palette;
 
   // Mock data - replace with real data
   const cityData = {
@@ -81,25 +60,25 @@ const EnergyRecommendations = () => {
     {
       label: "Initial Investment",
       value: "₱15M",
-      icon: <Battery size={20} />,
+      icon: 'battery',
       description: "Total upfront costs including equipment and installation"
     },
     {
       label: "ROI Timeline",
       value: "3.5 years",
-      icon: <TrendingUp size={20} />,
+      icon: 'trending-up',
       description: "Expected period to recover investment through savings"
     },
     {
       label: "Monthly Savings",
       value: "₱350,000",
-      icon: <LineChart size={20} />,
+      icon: 'line-chart',
       description: "Projected monthly reduction in energy costs"
     },
     {
       label: "Gov't Incentives",
       value: "₱2.5M",
-      icon: <Sun size={20} />,
+      icon: 'solar',
       description: "Available government subsidies and tax benefits"
     }
   ];
@@ -108,217 +87,148 @@ const EnergyRecommendations = () => {
     {
       type: "Solar",
       potential: "High",
-      icon: <Sun size={24} />,
-      color: theme.palette.warning.main,
+      icon: 'solar',
+      color: warning.main,
       details: "Average 5.5 kWh/m²/day"
     },
     {
       type: "Wind",
       potential: "Moderate",
-      icon: <Wind size={24} />,
-      color: theme.palette.info.main,
+      icon: 'wind',
+      color: info.main,
       details: "Average speed 12 km/h"
     },
     {
       type: "Hydro",
       potential: "Available",
-      icon: <Droplets size={24} />,
-      color: theme.palette.primary.main,
+      icon: 'hydropower',
+      color: primary.main,
       details: "2 viable water sources"
     }
   ];
 
   return (
-    <Box sx={{ p: 3, maxWidth: 1200, margin: '0 auto' }}>
+    <div className="p-6 max-w-7xl mx-auto">
       {/* Header Section */}
-      <Box sx={{ 
-        display: 'flex', 
-        justifyContent: 'space-between', 
-        alignItems: 'flex-start',
-        mb: 4 
-      }}>
-        <Box>
-          <Typography variant="h4" fontWeight={600} gutterBottom>
-            Energy Recommendations
-          </Typography>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-            <Typography variant="subtitle1" color="text.secondary">
+      <div className="flex justify-between items-start mb-8">
+        <div>
+          <h1 className="text-2xl font-semibold mb-2">Energy Recommendations</h1>
+          <div className="flex items-center gap-2">
+            <p className="text-gray-600">
               {cityData.city} • {cityData.period}
-            </Typography>
-            <Tooltip title={cityData.location.coordinates}>
-              <IconButton size="small">
-                <MapPin size={16} />
-              </IconButton>
-            </Tooltip>
-          </Box>
-          <Box sx={{ display: 'flex', gap: 2, mt: 1 }}>
-            <Chip 
-              label={`Budget: ${cityData.budget}`}
-              size="small"
-              color="primary"
-              variant="outlined"
-            />
-            <Chip 
-              label={`Year: ${cityData.year}`}
-              size="small"
-              color="primary"
-              variant="outlined"
-            />
-          </Box>
-        </Box>
+            </p>
+            <button 
+              className="p-1 hover:bg-gray-100 rounded-full"
+              title={cityData.location.coordinates}
+            >
+              <AppIcon name="location" type="tool" size={16} />
+            </button>
+          </div>
+          <div className="flex gap-2 mt-2">
+            <span className="px-3 py-1 text-sm border border-primary-600 text-primary-600 rounded-full"
+                  style={{ borderColor: primary.main, color: primary.main }}>
+              Budget: {cityData.budget}
+            </span>
+            <span className="px-3 py-1 text-sm border border-primary-600 text-primary-600 rounded-full"
+                  style={{ borderColor: primary.main, color: primary.main }}>
+              Year: {cityData.year}
+            </span>
+          </div>
+        </div>
         
-        <Box sx={{ display: 'flex', gap: 2 }}>
+        <div className="flex gap-2">
           <Button
-            startIcon={<Save size={18} />}
             variant="outlined"
-            color="primary"
-            sx={{ borderRadius: 2 }}
+            size="medium"
+            className="gap-2"
           >
+            <AppIcon name="save" size={18} />
             Save Report
           </Button>
           <Button
-            startIcon={<Download size={18} />}
-            variant="contained"
-            color="primary"
-            sx={{ borderRadius: 2 }}
+            variant="primary"
+            size="medium"
+            className="gap-2"
           >
+            <AppIcon name="download" size={18} />
             Download PDF
           </Button>
-        </Box>
-      </Box>
+        </div>
+      </div>
 
       {/* Energy Potential Cards */}
-      <Typography variant="h6" fontWeight={600} sx={{ mb: 2 }}>
-        Renewable Energy Potential
-      </Typography>
-      <Grid container spacing={3} sx={{ mb: 4 }}>
+      <h2 className="text-xl font-semibold mb-4">Renewable Energy Potential</h2>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
         {energyPotential.map((energy) => (
-          <Grid item xs={12} md={4} key={energy.type}>
-            <Card sx={{ 
-              height: '100%',
-              borderRadius: 3,
-              boxShadow: `0 0 20px ${alpha(theme.palette.common.black, 0.05)}`,
-              '&:hover': {
-                boxShadow: `0 0 25px ${alpha(theme.palette.common.black, 0.1)}`,
-              }
-            }}>
-              <CardContent>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
-                  <Box sx={{ 
-                    p: 1, 
-                    borderRadius: 2, 
-                    backgroundColor: alpha(energy.color, 0.1),
-                    color: energy.color
-                  }}>
-                    {energy.icon}
-                  </Box>
-                  <Box>
-                    <Typography variant="h6" fontWeight={600}>
-                      {energy.type}
-                    </Typography>
-                    <Typography color="text.secondary">
-                      Potential: {energy.potential}
-                    </Typography>
-                  </Box>
-                </Box>
-                <Typography variant="body2">
-                  {energy.details}
-                </Typography>
-              </CardContent>
-            </Card>
-          </Grid>
+          <Card key={energy.type} variant="default" className="hover:shadow-lg transition-shadow">
+            <div className="p-6">
+              <div className="flex items-center gap-4 mb-4">
+                <div className="p-2 rounded-lg" style={{ backgroundColor: `${energy.color}20`, color: energy.color }}>
+                  <AppIcon name={energy.icon} size={24} />
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold">{energy.type}</h3>
+                  <p className="text-gray-600">Potential: {energy.potential}</p>
+                </div>
+              </div>
+              <p className="text-sm text-gray-500">{energy.details}</p>
+            </div>
+          </Card>
         ))}
-      </Grid>
+      </div>
 
       {/* Future Projections */}
-      <Typography variant="h6" fontWeight={600} sx={{ mb: 2 }}>
-        Future Projections (2024-2026)
-      </Typography>
-      <Card sx={{ 
-        mb: 4, 
-        borderRadius: 3,
-        boxShadow: `0 0 20px ${alpha(theme.palette.common.black, 0.05)}`
-      }}>
-        <CardContent>
-          <Grid container spacing={4}>
+      <h2 className="text-xl font-semibold mb-4">Future Projections (2024-2026)</h2>
+      <Card variant="default" className="mb-8">
+        <div className="p-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             {projections.map((proj) => (
-              <Grid item xs={12} md={4} key={proj.year}>
-                <Box sx={{ mb: 2 }}>
-                  <Typography variant="h6" fontWeight={600}>
-                    {proj.year}
-                  </Typography>
-                  <Typography variant="subtitle1" gutterBottom>
-                    {proj.title}
-                  </Typography>
-                  <LinearProgress 
-                    variant="determinate" 
-                    value={proj.progress}
-                    sx={{ 
-                      height: 8, 
-                      borderRadius: 4,
-                      backgroundColor: alpha(theme.palette.primary.main, 0.1),
-                      mb: 2
-                    }} 
+              <div key={proj.year}>
+                <h3 className="text-lg font-semibold">{proj.year}</h3>
+                <p className="text-gray-600 mb-2">{proj.title}</p>
+                {/* Progress Bar */}
+                <div className="relative h-2 bg-primary-100 rounded-full mb-4">
+                  <div 
+                    className="absolute top-0 left-0 h-full rounded-full transition-all"
+                    style={{ 
+                      width: `${proj.progress}%`,
+                      backgroundColor: primary.main
+                    }}
                   />
-                  <Box component="ul" sx={{ pl: 2, m: 0 }}>
-                    {proj.details.map((detail, index) => (
-                      <Typography 
-                        component="li" 
-                        variant="body2" 
-                        color="text.secondary"
-                        key={index}
-                        sx={{ mb: 0.5 }}
-                      >
-                        {detail}
-                      </Typography>
-                    ))}
-                  </Box>
-                </Box>
-              </Grid>
+                </div>
+                <ul className="list-disc pl-4 space-y-1">
+                  {proj.details.map((detail, index) => (
+                    <li key={index} className="text-sm text-gray-500">{detail}</li>
+                  ))}
+                </ul>
+              </div>
             ))}
-          </Grid>
-        </CardContent>
+          </div>
+        </div>
       </Card>
 
       {/* Cost-Benefit Analysis */}
-      <Typography variant="h6" fontWeight={600} sx={{ mb: 2 }}>
-        Cost-Benefit Analysis
-      </Typography>
-      <Grid container spacing={3}>
+      <h2 className="text-xl font-semibold mb-4">Cost-Benefit Analysis</h2>
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
         {costBenefits.map((item) => (
-          <Grid item xs={12} md={3} key={item.label}>
-            <Card sx={{ 
-              height: '100%',
-              borderRadius: 3,
-              boxShadow: `0 0 20px ${alpha(theme.palette.common.black, 0.05)}`,
-              '&:hover': {
-                boxShadow: `0 0 25px ${alpha(theme.palette.common.black, 0.1)}`,
-              }
-            }}>
-              <CardContent>
-                <Box sx={{ 
-                  display: 'flex', 
-                  alignItems: 'center', 
-                  gap: 1,
-                  mb: 1
-                }}>
-                  {item.icon}
-                  <Typography color="text.secondary">
-                    {item.label}
-                  </Typography>
-                  <Tooltip title={item.description}>
-                    <Info size={16} style={{ cursor: 'help' }} />
-                  </Tooltip>
-                </Box>
-                <Typography variant="h5" fontWeight={600}>
-                  {item.value}
-                </Typography>
-              </CardContent>
-            </Card>
-          </Grid>
+          <Card key={item.label} variant="default" className="hover:shadow-lg transition-shadow">
+            <div className="p-6">
+              <div className="flex items-center gap-2 mb-2">
+                <AppIcon name={item.icon} size={20} />
+                <span className="text-gray-600">{item.label}</span>
+                <button 
+                  className="p-1 hover:bg-gray-100 rounded-full"
+                  title={item.description}
+                >
+                  <AppIcon name="info" size={16} />
+                </button>
+              </div>
+              <p className="text-2xl font-semibold">{item.value}</p>
+            </div>
+          </Card>
         ))}
-      </Grid>
-    </Box>
+      </div>
+    </div>
   );
 };
 

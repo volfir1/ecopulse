@@ -1,4 +1,4 @@
-import { AppIcon } from '../icons';
+import { AppIcon } from '../ui/icons';
 
 export const NAVIGATION = [
   {

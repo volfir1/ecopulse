@@ -1,5 +1,5 @@
-import React  from "react";
-import{
+import React from "react";
+import {
     Sun,
     Wind,
     Earth,
@@ -15,12 +15,23 @@ import{
     SearchIcon,
     Bell,
     Settings,
-    UserPlus
-
-} from 'lucide-react'
+    UserPlus,
+    // New Profile Related Icons
+    User,
+    Mail,
+    Lock,
+    Shield,
+    Camera,
+    Save,
+    Smartphone,
+    AlertTriangle,
+    Key,
+    Clock,
+    FileText
+} from 'lucide-react';
 import { useTheme } from "@emotion/react";
 
-export const IconLibrary ={
+export const IconLibrary = {
     // Sidebar Icons
     solar: Sun,
     wind: Wind,
@@ -32,13 +43,21 @@ export const IconLibrary ={
     energyshare: PlugZap,
     help: HeartHandshake,
     recommendation: BadgeCheck,
+    myaccount: UserPen,
 
-
-    // Other Icons
-   
-    myaccount: UserPen
-    
-}
+    // Profile Related Icons
+    profile: User,
+    email: Mail,
+    security: Shield,
+    notifications: Bell,
+    camera: Camera,
+    save: Save,
+    phone: Smartphone,
+    alert: AlertTriangle,
+    password: Key,
+    activity: Clock,
+    document: FileText
+};
 
 export const IconTools = {
     search: SearchIcon,
@@ -46,26 +65,26 @@ export const IconTools = {
     settings: Settings,
     addaccount: UserPlus,
     location: MapPinned,
+};
 
-}
-
-
-export const AppIcon = ({name, color,type ='icon', ...props}) =>{
+export const AppIcon = ({name, color, type = 'icon', ...props}) => {
     const IconComponent = type === 'tool'
             ? IconTools[name] || Sun
-            : IconLibrary[name] || Sun
-    const theme =useTheme()
-    return(  
+            : IconLibrary[name] || Sun;
+    const theme = useTheme();
+    return (
         <IconComponent 
             color={theme?.palette?.elements?.[name] || 'currentColor'} 
-        {...props} 
-    />
-      );
-}
+            {...props} 
+        />
+    );
+};
 
 //Default Props For icons
 AppIcon.defaultProps = {
     size: 20,
     strokeWidth: 1.75,
     color: 'currentColor',
-}
+};
+
+export default AppIcon
