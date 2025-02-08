@@ -3,8 +3,8 @@ import { AppBar, Box, Toolbar, IconButton, Typography, Avatar, Tooltip, useTheme
 import { MenuIcon } from "lucide-react";
 import NavMenu from './menu';
 import { useApp } from '@context/AppContext';
-import { AppIcon } from '../icons';
-import SearchBar from '../searchbar/searchbar';
+import { AppIcon } from '../ui/icons';
+import SearchBar from '@components/searchbar/searchbar';
 
 export default function Navbar() {
   const theme = useTheme();

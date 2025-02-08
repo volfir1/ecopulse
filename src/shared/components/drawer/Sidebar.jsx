@@ -6,7 +6,7 @@ import List from '@mui/material/List';
 import { NAVIGATION } from './data';
 import useDrawer from './useDrawer';
 import RenderDrawer from './renderDrawer';
-import Logo from '../logo';
+import Logo from '../ui/logo';
 import { 
   ListItemButton,
   ListItemIcon,
