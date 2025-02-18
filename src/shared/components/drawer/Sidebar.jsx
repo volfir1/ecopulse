@@ -98,7 +98,7 @@ const LogoutButton = React.memo(({ open }) => (
       mr: open ? 3 : 'auto',
       justifyContent: 'center',
     }}>
-      <Logout />
+    
     </ListItemIcon>
     <ListItemText
       primary="Logout"
@@ -143,9 +143,7 @@ const Sidebar = () => {
             />
           </List>
 
-          <Box sx={logoutContainerStyles}>
-            <LogoutButton open={open} />
-          </Box>
+        
         </Box>
       </StyledDrawer>
     </Box>

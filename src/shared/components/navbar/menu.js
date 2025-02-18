@@ -2,14 +2,16 @@ import React from "react";
 import { Menu, MenuItem, Avatar, ListItemIcon, Divider } from "@mui/material";
 import { AppIcon } from "../ui/icons";
 import { useNavigate } from "react-router-dom";
+import { Logout } from "@mui/icons-material";
 
 export default function NavMenu({ anchorEl, open, onClose }) {
   const navigate = useNavigate()
   
-  const handleNavigate = () =>{
+  const handleNavigate = () => {
     onClose()
     navigate('/profile')
   }
+
   return (
     <Menu
       anchorEl={anchorEl}
@@ -24,6 +26,8 @@ export default function NavMenu({ anchorEl, open, onClose }) {
             overflow: "visible",
             filter: "drop-shadow(0px 2px 8px rgba(0,0,0,0.32))",
             mt: 1.5,
+            p: 0.5, // Add padding to the menu container
+            minWidth: 200, // Set minimum width
             "& .MuiAvatar-root": {
               width: 32,
               height: 32,
@@ -48,19 +52,51 @@ export default function NavMenu({ anchorEl, open, onClose }) {
       transformOrigin={{ horizontal: "right", vertical: "top" }}
       anchorOrigin={{ horizontal: "right", vertical: "bottom" }}
     >
-      <MenuItem onClick={handleNavigate}>
+      <MenuItem 
+        onClick={handleNavigate}
+        sx={{ 
+          py: 1, // Vertical padding
+          px: 2, // Horizontal padding
+          gap: 1.5 // Gap between icon and text
+        }}
+      >
         <Avatar /> Profile
       </MenuItem>
-      <MenuItem onClick={onClose} sx={{ gap: 1 }}>
+      <MenuItem 
+        onClick={onClose} 
+        sx={{ 
+          py: 1,
+          px: 2,
+          gap: 1.5
+        }}
+      >
         <AppIcon name="myaccount" />
         My Account
       </MenuItem>
-      <Divider />
-      <MenuItem onClick={onClose}>
-        <ListItemIcon sx={{ gap: 1 }}>
+      <Divider sx={{ my: 1 }} /> {/* Add margin to divider */}
+      <MenuItem 
+        onClick={onClose}
+        sx={{ 
+          py: 1,
+          px: 2
+        }}
+      >
+        <ListItemIcon sx={{ gap: 1.5 }}>
           <AppIcon name="addaccount" type="tool" fontSize="small" />
         </ListItemIcon>
         Add Account
+      </MenuItem>
+      <MenuItem 
+        onClick={handleNavigate}
+        sx={{ 
+          py: 1,
+          px: 2,
+          gap: 1.5,
+          color: 'error.main' // Make logout red
+        }}
+      >
+        <Logout fontSize="small" />
+        Logout
       </MenuItem>
     </Menu>
   );
