@@ -1,9 +1,9 @@
 import { AppIcon } from '../ui/icons';
 
-export const NAVIGATION = [
+export const USER_NAVIGATION = [
   {
     kind: 'header',
-    segment: 'header-main', // Added unique segment
+    segment: 'header-main',
     title: 'Main items',
   },
   {
@@ -11,15 +11,15 @@ export const NAVIGATION = [
     segment: 'dashboard',
     title: 'Dashboard',
     icon: <AppIcon name="dashboard" color="solar" />,
-    path: '/dashboard' // Good - has path
+    path: '/dashboard',
   },
   {
     kind: 'divider',
-    segment: 'divider-1' // Added unique segment
+    segment: 'divider-user',
   },
   {
     kind: 'header',
-    segment: 'header-analytics', // Added unique segment
+    segment: 'header-analytics',
     title: 'Analytics',
   },
   {
@@ -27,14 +27,14 @@ export const NAVIGATION = [
     segment: 'reports',
     title: 'Modules',
     icon: <AppIcon name="modules" />,
-    path: '/modules', // Added parent path
+    path: '/modules',
     children: [
       {
         kind: 'item',
-        segment: 'reports-solar', // Made unique
+        segment: 'reports-solar',
         title: 'Solar',
         icon: <AppIcon name="solar" />,
-        path: '/modules/solar' // Added path
+        path: '/modules/solar'
       },
       {
         kind: 'item',
@@ -71,20 +71,83 @@ export const NAVIGATION = [
     segment: 'energy-share',
     title: 'Energy Sharing',
     icon: <AppIcon name="energyshare" />,
-    path: '/energy-share'
+    path: '/energy-share',
   },
   {
     kind: 'item',
     segment: 'recommendations',
     title: 'Recommendations',
     icon: <AppIcon name="recommendation" />,  
-    path: '/recommendations'
+    path: '/recommendations',
   },
   {
     kind: 'item',
     segment: 'help-support',
     title: 'Help & Support',
     icon: <AppIcon name="help" />,
-    path: '/help-support'
+    path: '/help-support',
+  },
+];
+
+export const ADMIN_NAVIGATION = [
+  {
+    kind: 'divider',
+    segment: 'divider-admin',
+  },
+  {
+    kind: 'header',
+    segment: 'header-admin',
+    title: 'Admin Panel',
+  },
+  {
+    kind: 'item',
+    segment: 'modules',
+    title: 'Modules',
+    icon: <AppIcon name="modules" />,
+    path: '/admin/modules',
+    children: [
+      {
+        kind: 'item',
+        segment: 'modules-solar',
+        title: 'Solar',
+        icon: <AppIcon name="solar" />,
+        path: '/admin/modules/solar',
+      },
+      {
+        kind: 'item',
+        segment: 'modules-wind',
+        title: 'Wind',
+        icon: <AppIcon name="wind" />,
+        path: '/admin/modules/wind',
+      },
+      {
+        kind: 'item',
+        segment: 'modules-geothermal',
+        title: 'Geothermal',
+        icon: <AppIcon name="geothermal" />,
+        path: '/admin/modules/geothermal',
+      },
+      {
+        kind: 'item',
+        segment: 'modules-hydropower',
+        title: 'Hydropower',
+        icon: <AppIcon name="hydropower" />,
+        path: '/admin/modules/hydropower',
+      },
+      {
+        kind: 'item',
+        segment: 'modules-biomass',
+        title: 'Biomass',
+        icon: <AppIcon name="biomass" />,
+        path: '/admin/modules/biomass',
+      },
+    ],
+  },
+  {
+    kind: 'item',
+    segment: 'admin-analytics',
+    title: 'Admin Analytics',
+    icon: <AppIcon name="analytics" />,
+    path: '/admin/analytics',
   },
 ];

@@ -44,7 +44,7 @@ const Geothermal = () => {
         </div>
       </div>
 
-      <Card variant="geothermal" className="mb-6">
+      <Card.Geo variant="geothermal" className="mb-6">
         <h2 className="text-xl font-semibold mb-2">Daily Power Generation</h2>
         <div className="text-3xl font-bold mb-1" style={{ color: geothermal }}>6,200 MWh</div>
         <p className="text-gray-600 mb-4">Stable baseline generation</p>
@@ -86,10 +86,10 @@ const Geothermal = () => {
             </AreaChart>
           </ResponsiveContainer>
         </div>
-      </Card>
+      </Card.Geo>
 
       <div className="grid grid-cols-2 gap-6">
-        <Card variant="default">
+        <Card.Geo variant="default">
           <h2 className="text-xl font-semibold mb-2">Temperature Monitoring</h2>
           <div className="text-2xl font-bold mb-4" style={{ color: geothermal }}>280°C at depth</div>
           <ResponsiveContainer width="100%" height={250}>
@@ -129,9 +129,9 @@ const Geothermal = () => {
               />
             </LineChart>
           </ResponsiveContainer>
-        </Card>
+        </Card.Geo>
 
-        <Card variant="default">
+        <Card.Geo variant="default">
           <h2 className="text-xl font-semibold mb-2">Well Performance</h2>
           <div className="text-2xl font-bold mb-4" style={{ color: geothermal }}>87.5% efficiency rating</div>
           <ResponsiveContainer width="100%" height={250}>
@@ -160,25 +160,25 @@ const Geothermal = () => {
               />
             </BarChart>
           </ResponsiveContainer>
-        </Card>
+        </Card.Geo>
       </div>
 
       <div className="grid grid-cols-3 gap-6 mt-6">
-        <Card variant="default">
+        <Card.Geo variant="default">
           <div className="text-xl font-semibold">Total Generation</div>
           <div className="text-3xl font-bold mt-2" style={{ color: geothermal }}>186.0 MWh</div>
           <div className="text-sm text-gray-600">Monthly total</div>
-        </Card>
-        <Card variant="default">
+        </Card.Geo>
+        <Card.Geo variant="default">
           <div className="text-xl font-semibold">Well Pressure</div>
           <div className="text-3xl font-bold mt-2" style={{ color: geothermal }}>85.2 PSI</div>
           <div className="text-sm text-gray-600">Average value</div>
-        </Card>
-        <Card variant="default">
+        </Card.Geo>
+        <Card.Geo variant="default">
           <div className="text-xl font-semibold">Efficiency</div>
           <div className="text-3xl font-bold mt-2" style={{ color: geothermal }}>87.5%</div>
           <div className="text-sm text-gray-600">System performance</div>
-        </Card>
+        </Card.Geo>
       </div>
     </div>
   );

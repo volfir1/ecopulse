@@ -18,6 +18,7 @@ const Hydro = lazy(() => import('@modules/Hydro/Hydropower'));
 const Biomass = lazy(() => import('@modules/Biomass/Biomass'));
 const Recommendations = lazy(() => import('@features/recommendations/components/Dashboard'));
 const UserProfile = lazy(() => import('@features/profile/UserProfile'))
+const AdminDashboard = lazy(() => import('@admin/dashboard/AdminDashboard.jsx'))
 // const Login = lazy(()=> import(''))
 
 function App() {
@@ -39,14 +40,22 @@ function App() {
                 <Route path="/dashboard" element={<Dashboard />} />
                 <Route path="/energy-share" element={<EnergySharing />} />
                 <Route path="/help-support" element={<HelpSupport />} />
-                <Route path="/modules/solar" element={<Solar />} />
-                <Route path="/modules/wind" element={<Wind />} />
-                <Route path="/modules/geothermal" element={<Geo />} />
-                <Route path="/modules/hydropower" element={<Hydro />} />
-                <Route path="/modules/biomass" element={<Biomass />} />
                 <Route path="/recommendations" element={<Recommendations />} />
                 <Route path="/profile" element={<UserProfile />} />
               </Route>
+            {/* Element ROutes for User  */}
+              <Route path='/modules' element={<Layout />}>
+                  <Route path="solar" element={<Solar />} />
+                  <Route path="wind" element={<Wind />} />
+                  <Route path="geothermal" element={<Geo />} />
+                  <Route path="hydropower" element={<Hydro />} />
+                  <Route path="biomass" element={<Biomass />} />
+              </Route>
+
+            {/* For Admin */}
+            <Route path='/admin' element={<Layout />}>
+                <Route path="dashboard" element={<AdminDashboard />} />
+            </Route>
             </Routes>
           </Suspense>
         </Router>

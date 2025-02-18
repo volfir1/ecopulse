@@ -3,10 +3,12 @@ import { styled } from '@mui/material/styles';
 import Box from '@mui/material/Box';
 import MuiDrawer from '@mui/material/Drawer';
 import List from '@mui/material/List';
-import { NAVIGATION } from './data';
+import { USER_NAVIGATION, ADMIN_NAVIGATION} from './data';
+import NavigationItems from './renderDrawer';
 import useDrawer from './useDrawer';
 import RenderDrawer from './renderDrawer';
 import Logo from '../ui/logo';
+import { useLocation } from 'react-router-dom';
 import { 
   ListItemButton,
   ListItemIcon,
@@ -106,24 +108,25 @@ const LogoutButton = React.memo(({ open }) => (
 ));
 
 // Memoized navigation items
-const NavigationItems = React.memo(({ open, openSubMenu, handleSubMenu }) => (
-  <>
-    {NAVIGATION.map((item) => 
-      RenderDrawer(item, open, openSubMenu, handleSubMenu)
-    )}
-  </>
-));
 
 const Sidebar = () => {
   const { open, openSubMenu, handleDrawer, handleSubMenu } = useDrawer();
+  const location = useLocation();
   
-  // Memoize the main container styles
+  const navigationData = React.useMemo(() => {
+    const isAdminPath = location.pathname.includes('/admin');
+    return isAdminPath ? ADMIN_NAVIGATION : USER_NAVIGATION;
+  }, [location.pathname]);
+
+
+
   const mainContainerStyles = React.useMemo(() => ({
     display: 'flex',
     flexDirection: 'column',
     height: '100%',
     minHeight: '100vh'
   }), []);
+
 
   return (
     <Box sx={{ display: 'flex' }}>
@@ -133,6 +136,7 @@ const Sidebar = () => {
           
           <List sx={scrollableListStyles}>
             <NavigationItems 
+              navigationData={navigationData}
               open={open}
               openSubMenu={openSubMenu}
               handleSubMenu={handleSubMenu}
