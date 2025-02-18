@@ -3,7 +3,7 @@ import { Card as MuiCard, CardContent, CardHeader, CardActions, Typography, Box 
 import { styled } from '@mui/material/styles';
 import { elements, Palette } from '../ui/colors';
 
-// Styled components for different card variants
+// Styled Card component
 const StyledCard = styled(MuiCard)(({ theme, variant = 'default', elevation = 1 }) => {
   const variants = {
     default: {
@@ -20,6 +20,23 @@ const StyledCard = styled(MuiCard)(({ theme, variant = 'default', elevation = 1 
       borderLeft: `4px solid ${elements.wind}`,
       borderRadius: theme.shape.borderRadius * 2,
     },
+    // Add new variants for other renewables
+    hydro: {
+      backgroundColor: theme.palette.background.paper,
+      borderLeft: `4px solid ${elements.hydropower}`,
+      borderRadius: theme.shape.borderRadius * 2,
+    },
+    geo: {
+      backgroundColor: theme.palette.background.paper,
+      borderLeft: `4px solid ${elements.geothermal}`,
+      borderRadius: theme.shape.borderRadius * 2,
+    },
+    biomass: {
+      backgroundColor: theme.palette.background.paper,
+      borderLeft: `4px solid ${elements.biomass}`,
+      borderRadius: theme.shape.borderRadius * 2,
+    },
+    // ... existing variants (success, warning, error, outlined, gradient)
     success: {
       backgroundColor: theme.palette.background.paper,
       borderLeft: `4px solid ${Palette.success.main}`,
@@ -56,7 +73,7 @@ const StyledCard = styled(MuiCard)(({ theme, variant = 'default', elevation = 1 
   };
 });
 
-// Styled CardHeader with consistent spacing
+// Styled Card Header
 const StyledCardHeader = styled(CardHeader)(({ theme }) => ({
   padding: theme.spacing(3),
   '& .MuiCardHeader-title': {
@@ -70,7 +87,7 @@ const StyledCardHeader = styled(CardHeader)(({ theme }) => ({
   }
 }));
 
-// Styled CardContent with consistent spacing
+// Styled Card Content
 const StyledCardContent = styled(CardContent)(({ theme }) => ({
   padding: theme.spacing(3),
   '&:last-child': {
@@ -78,21 +95,21 @@ const StyledCardContent = styled(CardContent)(({ theme }) => ({
   }
 }));
 
-// Styled CardActions with consistent spacing
+// Styled Card Actions
 const StyledCardActions = styled(CardActions)(({ theme }) => ({
   padding: theme.spacing(2, 3),
   justifyContent: 'flex-end',
 }));
 
-// Statistic display component for cards
+// Statistic Display
 const StatisticDisplay = styled(Box)(({ theme }) => ({
   display: 'flex',
   flexDirection: 'column',
   gap: theme.spacing(0.5),
 }));
 
-// Main Card component with all variants
-const Card = ({
+// Main Card Component
+const BaseCard = ({
   variant = 'default',
   elevation = 1,
   title,
@@ -113,7 +130,7 @@ const Card = ({
           action={action}
         />
       )}
-      
+
       <StyledCardContent>
         {stats && (
           <StatisticDisplay>
@@ -137,61 +154,20 @@ const Card = ({
   );
 };
 
-// Preset card variants for specific use cases
-export const MetricCard = ({ title, value, label, trend, ...props }) => (
-  <Card
-    {...props}
-    stats={{
-      value: value,
-      label: label
-    }}
-    title={title}
-  />
-);
+// Exporting named variants
+const Card = {
+  Base: (props) => <BaseCard variant="default" {...props} />,
+  Outlined: (props) => <BaseCard variant="outlined" {...props} />,
+  Solar: (props) => <BaseCard variant="solar" {...props} />,
+  Wind: (props) => <BaseCard variant="wind" {...props} />,
+  Hydro: (props) => <BaseCard variant="hydro" {...props} />,
+  Geo: (props) => <BaseCard variant="geo" {...props} />,
+  Biomass: (props) => <BaseCard variant="biomass" {...props} />,
+  Success: (props) => <BaseCard variant="success" {...props} />,
+  Warning: (props) => <BaseCard variant="warning" {...props} />,
+  Error: (props) => <BaseCard variant="error" {...props} />,
+  Gradient: (props) => <BaseCard variant="gradient" {...props} />,
+};
 
-export const ChartCard = ({ title, subheader, chart, ...props }) => (
-  <Card
-    {...props}
-    title={title}
-    subheader={subheader}
-  >
-    <Box sx={{ height: 300, width: '100%' }}>
-      {chart}
-    </Box>
-  </Card>
-);
-
-export const DashboardCard = ({ title, subheader, children, ...props }) => (
-  <Card
-    {...props}
-    variant="gradient"
-    elevation={2}
-    title={title}
-    subheader={subheader}
-  >
-    {children}
-  </Card>
-);
-
-// Example usage of custom variants
-export const SolarCard = (props) => (
-  <Card variant="solar" {...props} />
-);
-
-export const WindCard = (props) => (
-  <Card variant="wind" {...props} />
-);
-
-export const SuccessCard = (props) => (
-  <Card variant="success" {...props} />
-);
-
-export const WarningCard = (props) => (
-  <Card variant="warning" {...props} />
-);
-
-export const ErrorCard = (props) => (
-  <Card variant="error" {...props} />
-);
-
+// Export as default
 export default Card;

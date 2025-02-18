@@ -16,7 +16,8 @@ export default defineConfig({
       '@assets': path.resolve(__dirname, './src/assets'), 
       '@modules': path.resolve(__dirname, './src/features/modules/components/'),
       '@images' : path.resolve(__dirname, './src/assets/images'),
-      '@components': path.resolve(__dirname, './src/shared/components/')
+      '@components': path.resolve(__dirname, './src/shared/components/'),
+      '@admin' : path.resolve(__dirname, './src/admin/'),
     }
   },
   esbuild: {

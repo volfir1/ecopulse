@@ -7,7 +7,6 @@ const Biomass = () => {
   // Get theme colors
   const { elements, text, background } = theme.palette;
   const { biomass } = elements;
-
   // Generate biomass-appropriate data patterns
   const generationData = Array.from({ length: 100 }, (_, i) => ({
     date: `2024-${String(i).padStart(2, '0')}`,
@@ -28,6 +27,7 @@ const Biomass = () => {
 
   return (
     <div className="p-6 bg-gray-50">
+      {/* Header Section */}
       <div className="mb-6 flex justify-between items-center">
         <h1 className="text-2xl font-semibold flex items-center gap-2" style={{ color: biomass }}>
           <Leaf className="h-6 w-6" />
@@ -35,23 +35,17 @@ const Biomass = () => {
         </h1>
         <div className="flex gap-4 items-center">
           <YearPicker />
-          <Button 
-            variant="biomass" 
-            size="medium" 
-            outlined
-          >
+          <Button variant="biomass" size="medium" outlined>
             Feedstock Report
           </Button>
-          <Button 
-            variant="biomass" 
-            size="medium"
-          >
+          <Button variant="biomass" size="medium">
             Download Summary
           </Button>
         </div>
       </div>
 
-      <Card variant="biomass" className="mb-6">
+      {/* Main Generation Card */}
+      <Card.Biomass className="mb-6">
         <h2 className="text-xl font-semibold mb-2">Biomass Power Generation</h2>
         <div className="text-3xl font-bold mb-1" style={{ color: biomass }}>3,800 MWh</div>
         <p className="text-gray-600 mb-4">Current month projection</p>
@@ -65,13 +59,8 @@ const Biomass = () => {
                 </linearGradient>
               </defs>
               <CartesianGrid strokeDasharray="3 3" />
-              <XAxis 
-                dataKey="date" 
-                stroke={text.secondary}
-              />
-              <YAxis 
-                stroke={text.secondary}
-              />
+              <XAxis dataKey="date" stroke={text.secondary} />
+              <YAxis stroke={text.secondary} />
               <Tooltip
                 contentStyle={{
                   backgroundColor: background.paper,
@@ -88,22 +77,18 @@ const Biomass = () => {
             </AreaChart>
           </ResponsiveContainer>
         </div>
-      </Card>
+      </Card.Biomass>
 
+      {/* Chart Cards */}
       <div className="grid grid-cols-2 gap-6">
-        <Card variant="default">
+        <Card.Base>
           <h2 className="text-xl font-semibold mb-2">Feedstock Consumption</h2>
           <div className="text-2xl font-bold mb-4" style={{ color: biomass }}>5,200 tons monthly</div>
           <ResponsiveContainer width="100%" height={250}>
             <LineChart data={feedstockData}>
               <CartesianGrid strokeDasharray="3 3" />
-              <XAxis 
-                dataKey="day" 
-                stroke={text.secondary}
-              />
-              <YAxis 
-                stroke={text.secondary}
-              />
+              <XAxis dataKey="day" stroke={text.secondary} />
+              <YAxis stroke={text.secondary} />
               <Tooltip
                 contentStyle={{
                   backgroundColor: background.paper,
@@ -128,21 +113,16 @@ const Biomass = () => {
               />
             </LineChart>
           </ResponsiveContainer>
-        </Card>
+        </Card.Base>
 
-        <Card variant="default">
+        <Card.Base>
           <h2 className="text-xl font-semibold mb-2">Source Efficiency</h2>
           <div className="text-2xl font-bold mb-4" style={{ color: biomass }}>82.3% conversion rate</div>
           <ResponsiveContainer width="100%" height={250}>
             <BarChart data={efficiencyData}>
               <CartesianGrid strokeDasharray="3 3" />
-              <XAxis 
-                dataKey="source" 
-                stroke={text.secondary}
-              />
-              <YAxis 
-                stroke={text.secondary}
-              />
+              <XAxis dataKey="source" stroke={text.secondary} />
+              <YAxis stroke={text.secondary} />
               <Tooltip
                 contentStyle={{
                   backgroundColor: background.paper,
@@ -156,25 +136,26 @@ const Biomass = () => {
               />
             </BarChart>
           </ResponsiveContainer>
-        </Card>
+        </Card.Base>
       </div>
 
+      {/* Stats Cards */}
       <div className="grid grid-cols-3 gap-6 mt-6">
-        <Card variant="default">
+        <Card.Base>
           <div className="text-xl font-semibold">Total Generation</div>
           <div className="text-3xl font-bold mt-2" style={{ color: biomass }}>95.2 MWh</div>
           <div className="text-sm text-gray-600">Monthly total</div>
-        </Card>
-        <Card variant="default">
+        </Card.Base>
+        <Card.Base>
           <div className="text-xl font-semibold">Feedstock Usage</div>
           <div className="text-3xl font-bold mt-2" style={{ color: biomass }}>5,200 tons</div>
           <div className="text-sm text-gray-600">Current stock</div>
-        </Card>
-        <Card variant="default">
+        </Card.Base>
+        <Card.Base>
           <div className="text-xl font-semibold">Conversion Rate</div>
           <div className="text-3xl font-bold mt-2" style={{ color: biomass }}>82.3%</div>
           <div className="text-sm text-gray-600">Average efficiency</div>
-        </Card>
+        </Card.Base>
       </div>
     </div>
   );
