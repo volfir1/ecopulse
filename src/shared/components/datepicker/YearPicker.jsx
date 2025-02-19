@@ -1,50 +1,24 @@
-import { useState, useEffect } from 'react';
+// YearPicker.jsx
+import React from 'react';
 import { LocalizationProvider, DatePicker } from '@mui/x-date-pickers';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 import { Box, Typography } from '@mui/material';
 import { RefreshCcw, Calendar } from 'lucide-react';
-import { Button, theme } from '@shared/index';
 import dayjs from 'dayjs';
 
-export default function YearPicker() {
-  const [startYear, setStartYear] = useState(dayjs());
-  const [endYear, setEndYear] = useState(dayjs().add(1, 'year'));
-  
-  // Destructure colors
-  const { text, background } = theme.palette;
-
-  const handleReset = () => {
-    setStartYear(dayjs());
-    setEndYear(dayjs().add(1, 'year'));
+export const YearPicker = ({ startYear, endYear, onYearChange }) => {
+  const handleStartYearChange = (newValue) => {
+    if (!newValue) return;
+    onYearChange(newValue, endYear);
   };
 
-  const pickerStyles = {
-    '& .MuiInputBase-root': {
-      height: '42px',
-      width: '150px',
-      borderRadius: '100px',
-      backgroundColor: 'white',
-      fontSize: '1rem',
-      border: '1px solid #e2e8f0',
-      '&:hover': {
-        border: '1px solid #e2e8f0',
-      },
-      '&.Mui-focused': {
-        border: '1px solid #e2e8f0',
-        boxShadow: 'none',
-      }
-    },
-    '& .MuiInputBase-input': {
-      padding: '8px 14px',
-      fontWeight: 500,
-    },
-    '& .MuiOutlinedInput-notchedOutline': {
-      border: 'none'
-    },
-    '& .MuiIconButton-root': {
-      padding: '8px',
-      color: '#94a3b8',
-    }
+  const handleEndYearChange = (newValue) => {
+    if (!newValue) return;
+    onYearChange(startYear, newValue);
+  };
+
+  const handleReset = () => {
+    onYearChange(dayjs(), dayjs().add(1, 'year'));
   };
 
   return (
@@ -54,53 +28,44 @@ export default function YearPicker() {
           <DatePicker
             views={['year']}
             value={startYear}
-            onChange={(newValue) => setStartYear(newValue)}
+            onChange={handleStartYearChange}
             maxDate={endYear}
             slots={{
               openPickerIcon: () => <Calendar size={18} />
             }}
-            slotProps={{
-              textField: {
-                sx: pickerStyles
-              }
-            }}
           />
 
-          <Typography 
-            className="text-gray-500 font-normal mx-0"
-          >
+          <Typography className="text-gray-500 font-normal mx-0">
             to
           </Typography>
 
           <DatePicker
             views={['year']}
             value={endYear}
-            onChange={(newValue) => setEndYear(newValue)}
+            onChange={handleEndYearChange}
             minDate={startYear}
             slots={{
               openPickerIcon: () => <Calendar size={18} />
-            }}
-            slotProps={{
-              textField: {
-                sx: pickerStyles
-              }
             }}
           />
 
           <button
             onClick={handleReset}
             className="p-2 rounded-full bg-gray-100 hover:bg-gray-200 transition-colors"
-            style={{ marginLeft: '4px' }}
           >
             <RefreshCcw size={16} className="text-gray-500" />
           </button>
         </Box>
 
-        <Typography className="text-gray-500 text-sm mt-1">
-          Selected Range: {startYear.format('YYYY')} - {endYear.format('YYYY')}
-          ({endYear.diff(startYear, 'year')} years)
-        </Typography>
+        <Box className="mt-1">
+          <Typography className="text-gray-500 text-sm">
+            Selected Range: {startYear.format('YYYY')} - {endYear.format('YYYY')}
+            ({endYear.diff(startYear, 'year')} years)
+          </Typography>
+        </Box>
       </Box>
     </LocalizationProvider>
   );
-}
+};
+
+export default YearPicker

@@ -1,7 +1,7 @@
 import React from 'react';
 import { Card as MuiCard, CardContent, CardHeader, CardActions, Typography, Box } from '@mui/material';
 import { styled } from '@mui/material/styles';
-import { elements, Palette } from '../ui/colors';
+import theme from '../ui/colors';
 
 // Styled Card component
 const StyledCard = styled(MuiCard)(({ theme, variant = 'default', elevation = 1 }) => {
@@ -12,44 +12,42 @@ const StyledCard = styled(MuiCard)(({ theme, variant = 'default', elevation = 1 
     },
     solar: {
       backgroundColor: theme.palette.background.paper,
-      borderLeft: `4px solid ${elements.solar}`,
+      borderLeft: `4px solid ${theme.palette.elements.solar}`,
       borderRadius: theme.shape.borderRadius * 2,
     },
     wind: {
       backgroundColor: theme.palette.background.paper,
-      borderLeft: `4px solid ${elements.wind}`,
+      borderLeft: `4px solid ${theme.palette.elements.wind}`,
       borderRadius: theme.shape.borderRadius * 2,
     },
-    // Add new variants for other renewables
     hydro: {
       backgroundColor: theme.palette.background.paper,
-      borderLeft: `4px solid ${elements.hydropower}`,
+      borderLeft: `4px solid ${theme.palette.elements.hydropower}`,
       borderRadius: theme.shape.borderRadius * 2,
     },
     geo: {
       backgroundColor: theme.palette.background.paper,
-      borderLeft: `4px solid ${elements.geothermal}`,
+      borderLeft: `4px solid ${theme.palette.elements.geothermal}`,
       borderRadius: theme.shape.borderRadius * 2,
     },
     biomass: {
       backgroundColor: theme.palette.background.paper,
-      borderLeft: `4px solid ${elements.biomass}`,
+      borderLeft: `4px solid ${theme.palette.elements.biomass}`,
       borderRadius: theme.shape.borderRadius * 2,
     },
-    // ... existing variants (success, warning, error, outlined, gradient)
     success: {
       backgroundColor: theme.palette.background.paper,
-      borderLeft: `4px solid ${Palette.success.main}`,
+      borderLeft: `4px solid ${theme.palette.success.main}`,
       borderRadius: theme.shape.borderRadius * 2,
     },
     warning: {
       backgroundColor: theme.palette.background.paper,
-      borderLeft: `4px solid ${Palette.warning.main}`,
+      borderLeft: `4px solid ${theme.palette.warning.main}`,
       borderRadius: theme.shape.borderRadius * 2,
     },
     error: {
       backgroundColor: theme.palette.background.paper,
-      borderLeft: `4px solid ${Palette.error.main}`,
+      borderLeft: `4px solid ${theme.palette.error.main}`,
       borderRadius: theme.shape.borderRadius * 2,
     },
     outlined: {
@@ -134,10 +132,21 @@ const BaseCard = ({
       <StyledCardContent>
         {stats && (
           <StatisticDisplay>
-            <Typography variant="h3" color="primary" fontWeight="bold">
+            <Typography 
+              variant="h3" 
+              sx={{ 
+                color: theme.palette.primary.main,
+                fontWeight: 'bold' 
+              }}
+            >
               {stats.value}
             </Typography>
-            <Typography variant="body2" color="text.secondary">
+            <Typography 
+              variant="body2" 
+              sx={{ 
+                color: theme.palette.text.secondary 
+              }}
+            >
               {stats.label}
             </Typography>
           </StatisticDisplay>
@@ -169,5 +178,4 @@ const Card = {
   Gradient: (props) => <BaseCard variant="gradient" {...props} />,
 };
 
-// Export as default
 export default Card;

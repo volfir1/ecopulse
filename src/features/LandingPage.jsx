@@ -1,8 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { elements, Palette } from '@shared/components/ui/colors';
+import { Link } from 'react-router-dom';
+import {theme} from '@shared/index'
 import {
-  AppBar,
   Box,
   Button,
   Card,
@@ -11,18 +10,16 @@ import {
   Grid,
   IconButton,
   Stack,
-  Typography,
-  useTheme
+  Typography
 } from '@mui/material';
 import { 
   ChevronLeft, 
   ChevronRight,
   ArrowRight,
-  BarChart,
   CloudSun,
   Wind,
-  Droplets,
   Flower,
+  Droplets,
   Github,
   Linkedin,
   Activity,
@@ -30,33 +27,29 @@ import {
   PieChart
 } from 'lucide-react';
 
-// Import your images
-import hydroImage from '../assets/images/landing/hydro.jpg';
-import solarImage from '../assets/images/landing/solar.jpg';
-import windImage from '../assets/images/landing/wind.webp';
 import logo from '../assets/images/logo.png';
-
+// Data arrays
 const carouselData = [
   {
-    image: hydroImage,
+    image: '/assets/images/landing/hydro.jpg',
     title: "Hydro Power Energy",
     description: "Hydropower energy uses flowing or falling water to generate electricity, making it one of the most widely used renewable energy sources globally.",
     details: "In the Philippines, hydropower supplies about 10-12% of the country's electricity. With its abundant rivers and high rainfall, the nation hosts significant projects.",
-    color: elements.hydropower
+    color: theme.palette.elements.hydropower
   },
   {
-    image: solarImage,
+    image: '/assets/images/landing/solar.jpg',
     title: "Solar Energy",
     description: "Solar power harnesses the sun's energy to generate clean electricity, providing a sustainable solution for our growing energy needs.",
     details: "The Philippines has great potential for solar energy with an average of 5.1 kWh/m² per day of solar radiation.",
-    color: elements.solar
+    color: theme.palette.elements.solar
   },
   {
-    image: windImage,
+    image: '/assets/images/landing/wind.webp',
     title: "Wind Power",
     description: "Wind energy captures the natural power of wind through turbines, converting it into renewable electricity.",
     details: "The Philippines' wind energy sector is growing, with several wind farms contributing to the national power grid.",
-    color: elements.wind
+    color: theme.palette.elements.wind
   }
 ];
 
@@ -64,31 +57,31 @@ const energyTypes = [
   {
     type: "Solar",
     icon: <CloudSun size={32} />,
-    color: elements.solar,
+    color: theme.palette.elements.solar,
     description: "Harnessing the sun's power for sustainable energy"
   },
   {
     type: "Wind",
     icon: <Wind size={32} />,
-    color: elements.wind,
+    color: theme.palette.elements.wind,
     description: "Converting wind power into clean electricity"
   },
   {
     type: "Geothermal",
     icon: <Flower size={32} />,
-    color: elements.geothermal,
+    color: theme.palette.elements.geothermal,
     description: "Utilizing Earth's heat for renewable energy"
   },
   {
     type: "Hydropower",
     icon: <Droplets size={32} />,
-    color: elements.hydropower,
+    color: theme.palette.elements.hydropower,
     description: "Generating power from flowing water"
   },
   {
     type: "Biomass",
     icon: <Flower size={32} />,
-    color: elements.biomass,
+    color: theme.palette.elements.biomass,
     description: "Converting organic matter into sustainable energy"
   }
 ];
@@ -111,33 +104,8 @@ const features = [
   }
 ];
 
-const teamMembers = [
-  {
-    name: "John Doe",
-    role: "Lead Developer",
-    github: "https://github.com",
-    linkedin: "https://linkedin.com",
-    bio: "Expert in renewable energy systems and full-stack development"
-  },
-  {
-    name: "Jane Smith",
-    role: "Energy Specialist",
-    github: "https://github.com",
-    linkedin: "https://linkedin.com",
-    bio: "Specialized in optimizing renewable energy production"
-  },
-  {
-    name: "Mike Johnson",
-    role: "Data Analyst",
-    github: "https://github.com",
-    linkedin: "https://linkedin.com",
-    bio: "Focused on energy data analysis and forecasting"
-  }
-];
-
 const LandingPage = () => {
   const [currentSlide, setCurrentSlide] = useState(0);
-  const navigate = useNavigate();
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -147,89 +115,92 @@ const LandingPage = () => {
   }, []);
 
   return (
-    <Box sx={{ bgcolor: Palette.background.default }}>
+    <Box sx={{ bgcolor: theme.palette.background.default }}>
       {/* Navbar */}
-      <AppBar 
-  position="fixed" 
-  sx={{ 
-    bgcolor: 'rgba(255, 255, 255, 0.95)',
-    boxShadow: 'none',
-    borderBottom: '1px solid rgba(0,0,0,0.1)'
-  }}
->
-  <Container maxWidth="lg">
-    <Stack 
-      direction="row" 
-      justifyContent="space-between" 
-      alignItems="center" 
-      py={1}
-    >
-      <Link to="/" style={{ textDecoration: 'none' }}>
-        <Stack direction="row" alignItems="center" spacing={2}>
-          <Box 
-            component="img"
-            src={logo}
-            alt="EcoPulse Logo"
-            sx={{ 
-              height: 50,  // Adjust this if needed
-              width: 'auto',
-              objectFit: 'contain'
-            }}
-          />
-          <Typography 
-            variant="h5" 
-            sx={{ 
-              fontWeight: 500,
-              color: Palette.primary.main
-            }}
-          >
-            EcoPulse
-          </Typography>
-        </Stack>
-      </Link>
-      
-      <Stack direction="row" spacing={4}>
-        <Button sx={{ color: 'text.primary' }}>ABOUT</Button>
-        <Button sx={{ color: 'text.primary' }}>CONTACT</Button>
-        <Link to="/login"><Button sx={{ color: 'text.primary' }}>LOGIN</Button></Link>
-      
-        <Button 
-          variant="contained" 
-          sx={{ 
-            bgcolor: Palette.primary.main,
-            borderRadius: 6,
-            px: 3,
-            '&:hover': {
-              bgcolor: Palette.hovers.primary
-            }
-          }}
-        >
-          SIGN UP
-        </Button>
-      </Stack>
-    </Stack>
-  </Container>
-</AppBar>
+      <Box 
+        component="nav" 
+        sx={{ 
+          position: 'fixed',
+          width: '100%',
+          zIndex: 1000,
+          bgcolor: 'rgba(255, 255, 255, 0.95)',
+          borderBottom: `1px solid ${theme.palette.text.disabled}`,
+          py: 2
+        }}
+      >
+        <Container maxWidth="lg">
+          <Stack direction="row" justifyContent="space-between" alignItems="center">
+            <Link to="/" style={{ textDecoration: 'none' }}>
+              <Stack direction="row" alignItems="center" spacing={2}>
+                <Box 
+                  component="img"
+                  src={logo}
+                  alt="Logo"
+                  sx={{ height: 40 }}
+                />
+                <Typography 
+                  variant="h5" 
+                  sx={{ 
+                    color: theme.palette.primary.main,
+                    fontWeight: 500
+                  }}
+                >
+                  EcoPulse
+                </Typography>
+              </Stack>
+            </Link>
+            
+            <Stack direction="row" spacing={3}>
+              <Button sx={{ color: theme.palette.text.primary }}>About</Button>
+              <Button sx={{ color: theme.palette.text.primary }}>Contact</Button>
+              <Button 
+                variant="contained"
+                sx={{
+                  bgcolor: theme.palette.primary.main,
+                  color: theme.palette.primary.text,
+                  '&:hover': {
+                    bgcolor: theme.palette.hovers.primary
+                  }
+                }}
+              >
+                Get Started
+              </Button>
+            </Stack>
+          </Stack>
+        </Container>
+      </Box>
 
-      {/* Hero Carousel Section */}
-      <Box sx={{ position: 'relative', height: '100vh' }}>
+      {/* Hero Section */}
+      <Box 
+        sx={{ 
+          position: 'relative',
+          height: '100vh',
+          overflow: 'hidden'
+        }}
+      >
+        {/* Hero Background */}
         <Box
           sx={{
             position: 'absolute',
-            inset: 0,
+            width: '100%',
+            height: '100%',
             '&::before': {
               content: '""',
               position: 'absolute',
-              inset: 0,
-              bgcolor: 'rgba(0,0,0,0.3)',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              bgcolor: 'rgba(0,0,0,0.4)',
               zIndex: 1
             }
           }}
         >
-          <img
+          <Box
+            component="img"
             src={carouselData[currentSlide].image}
             alt={carouselData[currentSlide].title}
-            style={{
+            sx={{
               width: '100%',
               height: '100%',
               objectFit: 'cover',
@@ -238,27 +209,30 @@ const LandingPage = () => {
           />
         </Box>
 
+        {/* Hero Content */}
         <Container 
-          maxWidth="lg" 
           sx={{ 
-            position: 'relative', 
-            zIndex: 2, 
+            position: 'relative',
+            zIndex: 2,
             height: '100%',
-            pt: 12
+            pt: 16,
+            pb: 8
           }}
         >
           <Grid 
             container 
-            spacing={6} 
-            sx={{ height: '100%' }} 
-            alignItems="center"
+            spacing={6}
+            sx={{ 
+              height: '100%',
+              alignItems: 'center'
+            }}
           >
             <Grid item xs={12} md={6}>
               <Stack spacing={4}>
                 <Typography 
-                  variant="h1" 
-                  sx={{ 
-                    color: 'white',
+                  variant="h1"
+                  sx={{
+                    color: '#fff',
                     fontSize: { xs: '3rem', md: '4.5rem' },
                     fontWeight: 600,
                     lineHeight: 1.2
@@ -266,76 +240,64 @@ const LandingPage = () => {
                 >
                   {carouselData[currentSlide].title}
                 </Typography>
-                <Typography 
-                  variant="h5" 
-                  sx={{ 
+                <Typography
+                  variant="h5"
+                  sx={{
                     color: 'rgba(255,255,255,0.9)',
-                    maxWidth: 600,
-                    lineHeight: 1.5
+                    maxWidth: 600
                   }}
                 >
                   {carouselData[currentSlide].description}
                 </Typography>
                 <Button
                   variant="contained"
+                  endIcon={<ArrowRight />}
                   sx={{
-                    bgcolor: Palette.primary.main,
-                    color: 'white',
+                    bgcolor: theme.palette.primary.main,
+                    color: theme.palette.primary.text,
                     width: 'fit-content',
-                    borderRadius: 8,
                     px: 4,
                     py: 1.5,
-                    fontSize: '1.1rem',
-                    textTransform: 'none'
+                    borderRadius: 2,
+                    '&:hover': {
+                      bgcolor: theme.palette.hovers.primary
+                    }
                   }}
-                  endIcon={<ArrowRight />}
                 >
                   Learn More
                 </Button>
               </Stack>
             </Grid>
+            
             <Grid item xs={12} md={6}>
               <Card 
                 sx={{ 
-                  borderRadius: 4,
                   bgcolor: 'rgba(255,255,255,0.98)',
+                  borderRadius: 4,
                   boxShadow: '0 8px 32px rgba(0,0,0,0.1)'
                 }}
               >
                 <CardContent sx={{ p: 4 }}>
                   <Stack spacing={3}>
                     <Typography 
-                      variant="h3" 
-                      sx={{ 
+                      variant="h3"
+                      sx={{
                         color: carouselData[currentSlide].color,
-                        fontWeight: 600,
-                        mb: 2
+                        fontWeight: 600
                       }}
                     >
                       {carouselData[currentSlide].title}
                     </Typography>
                     <Typography 
-                      variant="body1" 
-                      sx={{ 
-                        color: 'text.primary',
+                      variant="body1"
+                      sx={{
+                        color: theme.palette.text.primary,
                         fontSize: '1.1rem',
                         lineHeight: 1.7
                       }}
                     >
                       {carouselData[currentSlide].details}
                     </Typography>
-                    <Button 
-                      endIcon={<ArrowRight />}
-                      sx={{ 
-                        color: carouselData[currentSlide].color,
-                        alignSelf: 'flex-start',
-                        fontSize: '1.1rem',
-                        textTransform: 'none',
-                        mt: 2
-                      }}
-                    >
-                      Read full article
-                    </Button>
                   </Stack>
                 </CardContent>
               </Card>
@@ -346,11 +308,11 @@ const LandingPage = () => {
         {/* Carousel Navigation */}
         <Stack 
           direction="row" 
-          spacing={1} 
-          sx={{ 
-            position: 'absolute', 
-            bottom: 40, 
-            left: '50%', 
+          spacing={2}
+          sx={{
+            position: 'absolute',
+            bottom: 40,
+            left: '50%',
             transform: 'translateX(-50%)',
             zIndex: 2
           }}
@@ -363,11 +325,15 @@ const LandingPage = () => {
                 width: currentSlide === index ? 24 : 8,
                 height: 8,
                 borderRadius: 4,
-                bgcolor: currentSlide === index ? Palette.primary.main : 'rgba(255,255,255,0.5)',
+                bgcolor: currentSlide === index 
+                  ? theme.palette.primary.main 
+                  : 'rgba(255,255,255,0.5)',
                 cursor: 'pointer',
-                transition: 'all 0.3s ease-in-out',
+                transition: 'all 0.3s ease',
                 '&:hover': {
-                  bgcolor: currentSlide === index ? Palette.primary.main : 'rgba(255,255,255,0.8)'
+                  bgcolor: currentSlide === index 
+                    ? theme.palette.primary.main 
+                    : 'rgba(255,255,255,0.8)'
                 }
               }}
             />
@@ -376,13 +342,15 @@ const LandingPage = () => {
 
         {/* Carousel Controls */}
         <IconButton
-          onClick={() => setCurrentSlide((prev) => (prev - 1 + carouselData.length) % carouselData.length)}
+          onClick={() => setCurrentSlide((prev) => 
+            (prev - 1 + carouselData.length) % carouselData.length
+          )}
           sx={{
             position: 'absolute',
             left: { xs: 8, md: 24 },
             top: '50%',
             transform: 'translateY(-50%)',
-            color: 'white',
+            color: '#fff',
             bgcolor: 'rgba(255,255,255,0.1)',
             zIndex: 2,
             '&:hover': {
@@ -393,13 +361,15 @@ const LandingPage = () => {
           <ChevronLeft />
         </IconButton>
         <IconButton
-          onClick={() => setCurrentSlide((prev) => (prev + 1) % carouselData.length)}
+          onClick={() => setCurrentSlide((prev) => 
+            (prev + 1) % carouselData.length
+          )}
           sx={{
             position: 'absolute',
             right: { xs: 8, md: 24 },
             top: '50%',
             transform: 'translateY(-50%)',
-            color: 'white',
+            color: '#fff',
             bgcolor: 'rgba(255,255,255,0.1)',
             zIndex: 2,
             '&:hover': {
@@ -412,25 +382,28 @@ const LandingPage = () => {
       </Box>
 
       {/* Energy Types Section */}
-      <Box sx={{ py: 12, bgcolor: 'white' }}>
-        <Container maxWidth="lg">
+      <Box sx={{ py: 12, bgcolor: '#fff' }}>
+        <Container>
           <Stack spacing={8}>
             <Typography 
-              variant="h3" 
-              textAlign="center"
-              color={Palette.text.primary}
-              fontWeight={600}
+              variant="h3"
+              align="center"
+              sx={{
+                color: theme.palette.text.primary,
+                fontWeight: 600
+              }}
             >
               Energy Sources We Monitor
             </Typography>
+            
             <Grid container spacing={4}>
               {energyTypes.map((energy, index) => (
                 <Grid item xs={12} sm={6} md={4} key={index}>
-                  <Card 
-                    sx={{ 
+                  <Card
+                    sx={{
                       height: '100%',
                       borderRadius: 3,
-                      transition: 'all 0.3s ease-in-out',
+                      transition: 'all 0.3s ease',
                       '&:hover': {
                         transform: 'translateY(-8px)',
                         boxShadow: '0 8px 30px rgba(0,0,0,0.12)'
@@ -439,8 +412,8 @@ const LandingPage = () => {
                   >
                     <CardContent sx={{ p: 4 }}>
                       <Stack spacing={3} alignItems="center">
-                        <Box 
-                          sx={{ 
+                        <Box
+                          sx={{
                             p: 2,
                             borderRadius: '50%',
                             bgcolor: `${energy.color}20`,
@@ -449,17 +422,21 @@ const LandingPage = () => {
                         >
                           {energy.icon}
                         </Box>
-                        <Typography 
-                          variant="h5" 
-                          fontWeight={600}
-                          color={Palette.text.primary}
+                        <Typography
+                          variant="h5"
+                          sx={{
+                            fontWeight: 600,
+                            color: theme.palette.text.primary
+                          }}
                         >
                           {energy.type}
                         </Typography>
-                        <Typography 
+                        <Typography
                           variant="body1"
-                          textAlign="center"
-                          color={Palette.text.secondary}
+                          align="center"
+                          sx={{
+                            color: theme.palette.text.secondary
+                          }}
                         >
                           {energy.description}
                         </Typography>
@@ -474,25 +451,28 @@ const LandingPage = () => {
       </Box>
 
       {/* Features Section */}
-      <Box sx={{ py: 12, bgcolor: Palette.background.subtle }}>
-        <Container maxWidth="lg">
+      <Box sx={{ py: 12, bgcolor: theme.palette.background.subtle }}>
+        <Container>
           <Stack spacing={8}>
-            <Typography 
-              variant="h3" 
-              textAlign="center"
-              color={Palette.primary.main}
-              fontWeight={600}
+            <Typography
+              variant="h3"
+              align="center"
+              sx={{
+                color: theme.palette.primary.main,
+                fontWeight: 600
+              }}
             >
               Key Features
             </Typography>
+            
             <Grid container spacing={4}>
-            {features.map((feature, index) => (
+              {features.map((feature, index) => (
                 <Grid item xs={12} md={4} key={index}>
-                  <Card 
-                    sx={{ 
+                  <Card
+                    sx={{
                       height: '100%',
                       borderRadius: 3,
-                      transition: 'all 0.3s ease-in-out',
+                      transition: 'all 0.3s ease',
                       '&:hover': {
                         transform: 'translateY(-8px)',
                         boxShadow: '0 8px 30px rgba(0,0,0,0.12)'
@@ -501,151 +481,38 @@ const LandingPage = () => {
                   >
                     <CardContent sx={{ p: 4 }}>
                       <Stack spacing={3}>
-                        <Box 
-                          sx={{ 
-                            color: Palette.primary.main,
+                        <Box
+                          sx={{
+                            color: theme.palette.primary.main,
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'center',
                             width: 64,
                             height: 64,
                             borderRadius: '50%',
-                            bgcolor: `${Palette.primary.main}15`,
+                            bgcolor: `${theme.palette.primary.main}15`,
                           }}
                         >
                           {feature.icon}
                         </Box>
-                        <Typography 
+                        <Typography
                           variant="h5"
-                          fontWeight={600}
-                          color={Palette.text.primary}
+                          sx={{
+                            fontWeight: 600,
+                            color: theme.palette.text.primary
+                          }}
                         >
                           {feature.title}
                         </Typography>
-                        <Typography 
+                        <Typography
                           variant="body1"
-                          color={Palette.text.secondary}
-                          sx={{ lineHeight: 1.7 }}
+                          sx={{
+                            color: theme.palette.text.secondary,
+                            lineHeight: 1.7
+                          }}
                         >
                           {feature.description}
                         </Typography>
-                      </Stack>
-                    </CardContent>
-                  </Card>
-                </Grid>
-              ))}
-            </Grid>
-          </Stack>
-        </Container>
-      </Box>
-
-      {/* Team Section */}
-      <Box sx={{ py: 12, bgcolor: 'white' }}>
-        <Container maxWidth="lg">
-          <Stack spacing={8}>
-            <Stack spacing={2} alignItems="center">
-              <Typography 
-                variant="h3" 
-                textAlign="center"
-                color={Palette.text.primary}
-                fontWeight={600}
-              >
-                Meet Our Team
-              </Typography>
-              <Typography 
-                variant="h6" 
-                textAlign="center"
-                color={Palette.text.secondary}
-                maxWidth="600px"
-                sx={{ lineHeight: 1.7 }}
-              >
-                Expert professionals dedicated to revolutionizing renewable energy monitoring and analytics
-              </Typography>
-            </Stack>
-
-            <Grid container spacing={4}>
-              {teamMembers.map((member, index) => (
-                <Grid item xs={12} sm={6} md={4} key={index}>
-                  <Card 
-                    sx={{ 
-                      height: '100%',
-                      borderRadius: 3,
-                      transition: 'all 0.3s ease-in-out',
-                      '&:hover': {
-                        transform: 'translateY(-8px)',
-                        boxShadow: '0 8px 30px rgba(0,0,0,0.12)'
-                      }
-                    }}
-                  >
-                    <CardContent sx={{ p: 4 }}>
-                      <Stack spacing={3} alignItems="center">
-                        <Box
-                          sx={{
-                            width: 120,
-                            height: 120,
-                            borderRadius: '50%',
-                            bgcolor: `${Palette.primary.main}15`,
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            fontSize: '2rem',
-                            color: Palette.primary.main,
-                            fontWeight: 600,
-                            mb: 2
-                          }}
-                        >
-                          {member.name.split(' ').map(n => n[0]).join('')}
-                        </Box>
-                        <Stack spacing={1} alignItems="center">
-                          <Typography 
-                            variant="h5"
-                            fontWeight={600}
-                            color={Palette.text.primary}
-                          >
-                            {member.name}
-                          </Typography>
-                          <Typography 
-                            variant="body1"
-                            color={Palette.primary.main}
-                            fontWeight={500}
-                          >
-                            {member.role}
-                          </Typography>
-                        </Stack>
-                        <Typography 
-                          variant="body2"
-                          textAlign="center"
-                          color={Palette.text.secondary}
-                          sx={{ lineHeight: 1.7 }}
-                        >
-                          {member.bio}
-                        </Typography>
-                        <Stack direction="row" spacing={2}>
-                          <IconButton
-                            component="a"
-                            href={member.github}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            sx={{ 
-                              color: Palette.text.secondary,
-                              '&:hover': { color: Palette.primary.main }
-                            }}
-                          >
-                            <Github size={20} />
-                          </IconButton>
-                          <IconButton
-                            component="a"
-                            href={member.linkedin}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            sx={{ 
-                              color: Palette.text.secondary,
-                              '&:hover': { color: Palette.primary.main }
-                            }}
-                          >
-                            <Linkedin size={20} />
-                          </IconButton>
-                        </Stack>
                       </Stack>
                     </CardContent>
                   </Card>

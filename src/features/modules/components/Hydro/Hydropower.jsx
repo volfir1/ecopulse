@@ -1,131 +1,187 @@
 import React from 'react';
-import { LineChart, Line, XAxis, YAxis, Tooltip, BarChart, Bar, AreaChart, Area, ResponsiveContainer, CartesianGrid } from 'recharts';
+import {
+  LineChart, Line, XAxis, YAxis, Tooltip,
+  AreaChart, Area, ResponsiveContainer, CartesianGrid,
+  ComposedChart, Bar
+} from 'recharts';
 import { Droplets } from 'lucide-react';
-import { Button, Card, YearPicker, theme } from '@shared/index';
+import { p, s, t, bg, elements, Button, Card, YearPicker } from '@shared/index';
+import { useHydroPowerAnalytics } from './hook';
+import { getGenerationConfig, getFlowConfig, getEfficiencyConfig } from './script';
 
 const HydroPower = () => {
-  // Get theme colors
-  const { elements, text, background } = theme.palette;
-  const { hydropower } = elements;
+  const {
+    generationData,
+    currentStats,
+    projectedStats,
+    growthPercentages,
+    startYear,
+    endYear,
+    handleYearChange
+  } = useHydroPowerAnalytics();
 
-  // Generate realistic hydro data with seasonal patterns
-  const generationData = Array.from({ length: 100 }, (_, i) => ({
-    date: `2024-${String(i).padStart(2, '0')}`,
-    value: 0.5 + Math.sin(i * 0.1) * 0.3 + Math.cos(i * 0.05) * 0.2 + Math.random() * 0.2
-  }));
-
-  const waterFlowData = Array.from({ length: 7 }, (_, i) => ({
-    day: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'][i],
-    flow: 4200 + Math.sin(i * 0.8) * 800 + Math.random() * 400,
-    generation: 3800 + Math.sin(i * 0.8) * 600 + Math.random() * 300
-  }));
-
-  const turbineEfficiency = Array.from({ length: 8 }, (_, i) => ({
-    turbine: `T${i + 1}`,
-    efficiency: 85 + Math.sin(i * 0.5) * 10 + Math.random() * 5,
-    output: 2800 + Math.sin(i * 0.7) * 400 + Math.random() * 200
-  }));
+  const generationConfig = getGenerationConfig(generationData, startYear, endYear);
+  const flowConfig = getFlowConfig(generationData, startYear, endYear);
+  const efficiencyConfig = getEfficiencyConfig(generationData, startYear, endYear);
 
   return (
-    <div className="p-6 bg-gray-50">
-    {/* Header Section */}
-    <div className="mb-6 flex justify-between items-center">
-      <h1 className="text-2xl font-semibold flex items-center gap-2" style={{ color: hydropower }}>
-        <Droplets className="h-6 w-6" />
-        Hydropower Energy Dashboard
-      </h1>
-      <div className="flex gap-4 items-center">
-        <YearPicker />
-        <Button 
-          variant="hydropower" 
-          size="medium" 
-          outlined
-        >
-          Export Data
-        </Button>
-        <Button 
-          variant="hydropower" 
-          size="medium"
-        >
-          Generate Report
-        </Button>
+    <div className="p-6" style={{ backgroundColor: bg.subtle }}>
+      {/* Header Section */}
+      <div className="mb-6 flex justify-between items-center">
+        <h1 className="text-2xl font-semibold flex items-center gap-2" style={{ color: elements.hydropower }}>
+          <Droplets size={24} />
+          Hydropower Energy Analytics
+        </h1>
+        
+        <YearPicker 
+          startYear={startYear}
+          endYear={endYear}
+          onYearChange={handleYearChange}
+        />
+        
+        <div className="flex gap-4">
+          <Button 
+            variant="outlined" 
+            style={{ 
+              borderColor: elements.hydropower,
+              color: elements.hydropower 
+            }}
+          >
+            Flow Report
+          </Button>
+          <Button style={{ 
+            backgroundColor: elements.hydropower,
+            color: '#ffffff'
+          }}>
+            Download Summary
+          </Button>
+        </div>
       </div>
-    </div>
 
-    {/* Main Generation Card */}
-    <Card.Hydro className="mb-6">
-      <h2 className="text-xl font-semibold mb-2">Power Generation Forecast</h2>
-      <div className="text-3xl font-bold mb-1" style={{ color: hydropower }}>5,200 MWh</div>
-      <p className="text-gray-600 mb-4">Projected for next 30 days</p>
-      <div className="h-64">
-        <ResponsiveContainer width="100%" height="100%">
-          <AreaChart data={generationData}>
-            <defs>
-              <linearGradient id="hydroGradient" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor={hydropower} stopOpacity={0.3}/>
-                <stop offset="95%" stopColor={hydropower} stopOpacity={0}/>
-              </linearGradient>
-            </defs>
-            <CartesianGrid strokeDasharray="3 3" />
-            <XAxis 
-              dataKey="date" 
-              stroke={text.secondary}
-            />
-            <YAxis 
-              stroke={text.secondary}
-            />
-            <Tooltip
-              contentStyle={{
-                backgroundColor: background.paper,
-                borderRadius: '8px'
-              }}
-            />
-            <Area
-              type="monotone"
-              dataKey="value"
-              stroke={hydropower}
-              fill="url(#hydroGradient)"
-              strokeWidth={2}
-            />
-          </AreaChart>
-        </ResponsiveContainer>
+      {/* Stats Cards */}
+      <div className="grid grid-cols-3 gap-6 mb-6">
+        <Card.Base className="p-4" style={{ backgroundColor: bg.paper }}>
+          <h3 className="text-sm mb-1" style={{ color: t.secondary }}>Current Generation</h3>
+          <p className="text-2xl font-bold" style={{ color: elements.hydropower }}>
+            {currentStats.generation.toLocaleString()} MWh
+          </p>
+          <p className="text-sm mt-1" style={{ color: t.hint }}>
+            Growth: {growthPercentages.generation}%
+          </p>
+        </Card.Base>
+        
+        <Card.Base className="p-4" style={{ backgroundColor: bg.paper }}>
+          <h3 className="text-sm mb-1" style={{ color: t.secondary }}>Water Flow</h3>
+          <p className="text-2xl font-bold" style={{ color: elements.hydropower }}>
+            {currentStats.flow.toLocaleString()} m³/s
+          </p>
+          <p className="text-sm mt-1" style={{ color: t.hint }}>
+            Change: {growthPercentages.flow}%
+          </p>
+        </Card.Base>
+        
+        <Card.Base className="p-4" style={{ backgroundColor: bg.paper }}>
+          <h3 className="text-sm mb-1" style={{ color: t.secondary }}>System Efficiency</h3>
+          <p className="text-2xl font-bold" style={{ color: elements.hydropower }}>
+            {currentStats.efficiency}%
+          </p>
+          <p className="text-sm mt-1" style={{ color: t.hint }}>
+            Improvement: {growthPercentages.efficiency}%
+          </p>
+        </Card.Base>
       </div>
-    </Card.Hydro>
 
-    {/* Chart Cards */}
-    <div className="grid grid-cols-2 gap-6">
-      <Card.Base>
-        <h2 className="text-xl font-semibold mb-2">Water Flow & Generation</h2>
-        <div className="text-2xl font-bold mb-4" style={{ color: hydropower }}>4,100 m³/s average flow</div>
-        {/* ... existing LineChart ... */}
+      {/* Generation Chart */}
+      <Card.Base className="p-6 mb-6" style={{ backgroundColor: bg.paper }}>
+        <h2 className="text-xl font-semibold mb-4" style={{ color: t.main }}>Power Generation Trend</h2>
+        <div className="h-[400px]">
+          <ResponsiveContainer width="100%" height="100%">
+            <AreaChart 
+              data={generationData}
+              margin={{ top: 20, right: 30, left: 20, bottom: 120 }}
+            >
+              <defs>
+                <linearGradient id="hydroGradient" x1="0" y1="0" x2="0" y2="1">
+                  {generationConfig.gradient.colors.map((color, index) => (
+                    <stop 
+                      key={index}
+                      offset={color.offset} 
+                      stopColor={color.color}
+                      stopOpacity={color.opacity}
+                    />
+                  ))}
+                </linearGradient>
+              </defs>
+              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={t.disabled} />
+              <XAxis {...generationConfig.xAxis} stroke={t.secondary} />
+              <YAxis {...generationConfig.yAxis} stroke={t.secondary} />
+              <Tooltip 
+                contentStyle={{ 
+                  backgroundColor: bg.paper,
+                  borderRadius: '6px',
+                  border: `1px solid ${t.disabled}`,
+                  boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+                }}
+              />
+              <Area {...generationConfig.area} />
+            </AreaChart>
+          </ResponsiveContainer>
+        </div>
       </Card.Base>
 
-      <Card.Base>
-        <h2 className="text-xl font-semibold mb-2">Turbine Performance</h2>
-        <div className="text-2xl font-bold mb-4" style={{ color: hydropower }}>89.4% average efficiency</div>
-        {/* ... existing BarChart ... */}
+      {/* Water Flow Chart */}
+      <Card.Base className="p-6 mb-6" style={{ backgroundColor: bg.paper }}>
+        <h2 className="text-xl font-semibold mb-4" style={{ color: t.main }}>Water Flow Analysis</h2>
+        <div className="h-[300px]">
+          <ResponsiveContainer width="100%" height="100%">
+            <LineChart
+              data={generationData}
+              margin={{ top: 20, right: 30, left: 20, bottom: 120 }}
+            >
+              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={t.disabled} />
+              <XAxis {...flowConfig.xAxis} stroke={t.secondary} />
+              <YAxis {...flowConfig.yAxis} stroke={t.secondary} />
+              <Tooltip 
+                contentStyle={{ 
+                  backgroundColor: bg.paper,
+                  borderRadius: '6px',
+                  border: `1px solid ${t.disabled}`,
+                  boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+                }}
+              />
+              <Line {...flowConfig.line} />
+            </LineChart>
+          </ResponsiveContainer>
+        </div>
+      </Card.Base>
+
+      {/* Efficiency Chart */}
+      <Card.Base className="p-6" style={{ backgroundColor: bg.paper }}>
+        <h2 className="text-xl font-semibold mb-4" style={{ color: t.main }}>System Efficiency</h2>
+        <div className="h-[300px]">
+          <ResponsiveContainer width="100%" height="100%">
+            <ComposedChart
+              data={generationData}
+              margin={{ top: 20, right: 30, left: 20, bottom: 120 }}
+            >
+              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={t.disabled} />
+              <XAxis {...efficiencyConfig.xAxis} stroke={t.secondary} />
+              <YAxis {...efficiencyConfig.yAxis} stroke={t.secondary} />
+              <Tooltip 
+                contentStyle={{ 
+                  backgroundColor: bg.paper,
+                  borderRadius: '6px',
+                  border: `1px solid ${t.disabled}`,
+                  boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+                }}
+              />
+              <Bar {...efficiencyConfig.bar} />
+              <Line {...efficiencyConfig.line} />
+            </ComposedChart>
+          </ResponsiveContainer>
+        </div>
       </Card.Base>
     </div>
-
-    {/* Stats Cards */}
-    <div className="grid grid-cols-3 gap-6 mt-6">
-      <Card.Base>
-        <div className="text-xl font-semibold">Total Generation</div>
-        <div className="text-3xl font-bold mt-2" style={{ color: hydropower }}>128.5 MWh</div>
-        <div className="text-sm text-gray-600">Monthly total</div>
-      </Card.Base>
-      <Card.Base>
-        <div className="text-xl font-semibold">Peak Flow</div>
-        <div className="text-3xl font-bold mt-2" style={{ color: hydropower }}>4,800 m³/s</div>
-        <div className="text-sm text-gray-600">Highest today</div>
-      </Card.Base>
-      <Card.Base>
-        <div className="text-xl font-semibold">Efficiency</div>
-        <div className="text-3xl font-bold mt-2" style={{ color: hydropower }}>89.4%</div>
-        <div className="text-sm text-gray-600">Average performance</div>
-      </Card.Base>
-    </div>
-  </div>
   );
 };
 
