@@ -1,106 +1,105 @@
-// src/components/common/Button/CustomButton.jsx
 import React from 'react';
 import { Button } from '@mui/material';
-import { elements, Palette } from '@shared/components/ui/colors';
+import theme from '../ui/colors';
 
-// Button variants based on our color system
+// Button variants based on theme colors
 const buttonStyles = {
   // Primary Buttons
   primary: {
-    backgroundColor: Palette.primary.main,
-    color: Palette.primary.contrastText,
+    backgroundColor: theme.palette.primary.main,
+    color: theme.palette.primary.text,
     '&:hover': {
-      backgroundColor: Palette.hovers.primary,
+      backgroundColor: theme.palette.hovers.primary,
     }
   },
   primaryOutlined: {
-    color: Palette.primary.main,
-    borderColor: Palette.primary.main,
+    color: theme.palette.primary.main,
+    borderColor: theme.palette.primary.main,
     '&:hover': {
-      borderColor: Palette.hovers.primary,
-      backgroundColor: `${Palette.primary.main}10`,
+      borderColor: theme.palette.hovers.primary,
+      backgroundColor: `${theme.palette.primary.main}10`,
     }
   },
 
   // Secondary Buttons
   secondary: {
-    backgroundColor: Palette.secondary.main,
-    color: Palette.secondary.contrastText,
+    backgroundColor: theme.palette.secondary.main,
+    color: theme.palette.secondary.text,
     '&:hover': {
-      backgroundColor: Palette.hovers.secondary,
+      backgroundColor: theme.palette.hovers.secondary,
     }
   },
   secondaryOutlined: {
-    color: Palette.secondary.main,
-    borderColor: Palette.secondary.main,
+    color: theme.palette.secondary.main,
+    borderColor: theme.palette.secondary.main,
     '&:hover': {
-      borderColor: Palette.hovers.secondary,
-      backgroundColor: `${Palette.secondary.main}10`,
+      borderColor: theme.palette.hovers.secondary,
+      backgroundColor: `${theme.palette.secondary.main}10`,
     }
   },
 
   // Energy Type Specific Buttons
   solar: {
-    backgroundColor: elements.solar,
-    color: '#000000',
+    backgroundColor: theme.palette.elements.solar,
+    color: theme.palette.text.primary,
     '&:hover': {
-      backgroundColor: elements.solar,
+      backgroundColor: theme.palette.elements.solar,
       filter: 'brightness(0.9)',
     }
   },
   wind: {
-    backgroundColor: elements.wind,
+    backgroundColor: theme.palette.elements.wind,
     color: '#ffffff',
     '&:hover': {
-      backgroundColor: elements.wind,
+      backgroundColor: theme.palette.elements.wind,
       filter: 'brightness(0.9)',
     }
   },
   geothermal: {
-    backgroundColor: elements.geothermal,
+    backgroundColor: theme.palette.elements.geothermal,
     color: '#ffffff',
     '&:hover': {
-      backgroundColor: elements.geothermal,
+      backgroundColor: theme.palette.elements.geothermal,
       filter: 'brightness(0.9)',
     }
   },
   hydropower: {
-    backgroundColor: elements.hydropower,
+    backgroundColor: theme.palette.elements.hydropower,
     color: '#ffffff',
     '&:hover': {
-      backgroundColor: elements.hydropower,
+      backgroundColor: theme.palette.elements.hydropower,
       filter: 'brightness(0.9)',
     }
   },
   biomass: {
-    backgroundColor: elements.biomass,
+    backgroundColor: theme.palette.elements.biomass,
     color: '#ffffff',
     '&:hover': {
-      backgroundColor: elements.biomass,
+      backgroundColor: theme.palette.elements.biomass,
       filter: 'brightness(0.9)',
     }
   },
 
   // State Buttons
   success: {
-    backgroundColor: Palette.success.main,
+    backgroundColor: theme.palette.success.main,
     color: '#ffffff',
     '&:hover': {
-      backgroundColor: Palette.hovers.success,
+      backgroundColor: theme.palette.hovers.success,
     }
   },
   warning: {
-    backgroundColor: Palette.warning.main,
+    backgroundColor: theme.palette.warning.main,
     color: '#ffffff',
     '&:hover': {
-      backgroundColor: Palette.hovers.warning,
+      backgroundColor: theme.palette.hovers.warning,
     }
   },
   error: {
-    backgroundColor: Palette.error.main,
+    backgroundColor: theme.palette.error.main,
     color: '#ffffff',
     '&:hover': {
-      backgroundColor: Palette.hovers.error,
+      backgroundColor: theme.palette.hovers.error,
     }
   }
 };
@@ -147,6 +146,10 @@ const CustomButton = ({
         '&:hover': {
           border: '2px solid',
         }
+      }),
+      ...(disabled && {
+        opacity: 0.6,
+        pointerEvents: 'none'
       })
     };
   };

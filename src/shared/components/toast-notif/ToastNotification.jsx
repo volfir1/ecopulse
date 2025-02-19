@@ -1,30 +1,30 @@
 import React from 'react';
 import { ToastContainer, toast } from 'react-toastify';
 import { X, CheckCircle, AlertCircle, Info, AlertTriangle } from 'lucide-react';
-import { Palette } from '@shared/components/ui/colors';
+import { theme } from '@shared/index';
 import 'react-toastify/dist/ReactToastify.css';
 
 const toastStyles = {
   success: {
-    background: Palette.success.main,
+    background: theme.palette.success.main,
     color: '#ffffff',
     icon: <CheckCircle size={20} />,
     progress: '#ffffff'
   },
   error: {
-    background: Palette.error.main,
+    background: theme.palette.error.main,
     color: '#ffffff',
     icon: <AlertCircle size={20} />,
     progress: '#ffffff'
   },
   info: {
-    background: Palette.primary.main,
+    background: theme.palette.primary.main,
     color: '#ffffff',
     icon: <Info size={20} />,
     progress: '#ffffff'
   },
   warning: {
-    background: Palette.warning.main,
+    background: theme.palette.warning.main,
     color: '#ffffff',
     icon: <AlertTriangle size={20} />,
     progress: '#ffffff'

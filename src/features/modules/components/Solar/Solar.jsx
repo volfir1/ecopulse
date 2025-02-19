@@ -1,143 +1,176 @@
 import React from 'react';
-import { 
-  LineChart, Line, XAxis, YAxis, Tooltip, 
-  BarChart, Bar, AreaChart, Area, 
-  ResponsiveContainer, CartesianGrid 
+import {
+  LineChart, Line, XAxis, YAxis, Tooltip,
+  AreaChart, Area, ResponsiveContainer, CartesianGrid,
+  ComposedChart, Bar
 } from 'recharts';
 import { Sun } from 'lucide-react';
-import { Button, Card, theme } from '@shared/index';
+// Import components and color objects directly from central index
+import { p, s, bg, t, success, elements, Button, Card, YearPicker } from '@shared/index';
+import { getAreaChartConfig, getEfficiencyChartConfig } from './chart';
+import { useSolarAnalytics } from './hook';
 
 const SolarEnergy = () => {
-  const { elements, text, background, divider } = theme.palette;
-  const { solar } = elements;
-  
-  // Data generation
-  const generationData = Array.from({ length: 24 }, (_, i) => ({
-    time: `${String(i).padStart(2, '0')}:00`,
-    output: Math.max(0, 5 * Math.sin((i - 6) * Math.PI / 12) + Math.random() * 0.5),
-    efficiency: Math.max(0, 95 + 5 * Math.sin((i - 6) * Math.PI / 12) + Math.random())
-  })).filter(d => d.output > 0);
+  const {
+    generationData,
+    currentGeneration,
+    projectedGeneration,
+    growthPercentage,
+    startYear,
+    endYear,
+    handleYearChange,
+    efficiency
+  } = useSolarAnalytics();
 
-  const solarIrradianceData = Array.from({ length: 7 }, (_, i) => ({
-    day: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'][i],
-    irradiance: 800 + Math.sin(i * 0.8) * 200 + Math.random() * 100,
-    power: 4200 + Math.sin(i * 0.8) * 800 + Math.random() * 400
-  }));
-
-  const panelPerformance = Array.from({ length: 6 }, (_, i) => ({
-    array: `Array ${i + 1}`,
-    efficiency: 95 + Math.sin(i * 0.5) * 3 + Math.random() * 2,
-    output: 2500 + Math.sin(i * 0.5) * 300 + Math.random() * 200
-  }));
+  const areaChartConfig = getAreaChartConfig(generationData, null, startYear, endYear);
+  const efficiencyChartConfig = getEfficiencyChartConfig(generationData, null, startYear, endYear);
 
   return (
-    <div className="p-6 bg-gray-50">
+    <div className="p-6" style={{ backgroundColor: bg.subtle }}>
       {/* Header Section */}
       <div className="mb-6 flex justify-between items-center">
-        <h1 className="text-2xl font-semibold flex items-center gap-2" style={{ color: solar }}>
+        <h1 className="text-2xl font-semibold flex items-center gap-2" style={{ color: elements.solar }}>
           <Sun size={24} />
           Solar Energy Analytics
         </h1>
-        <div className="flex gap-4 items-center">
-          <Button variant="solar" size="medium" outlined>
+        
+        <YearPicker 
+          startYear={startYear}
+          endYear={endYear}
+          onYearChange={handleYearChange}
+        />
+        
+        <div className="flex gap-4">
+          <Button 
+            variant="outlined" 
+            style={{ 
+              borderColor: elements.solar, 
+              color: elements.solar 
+            }}
+          >
             Panel Report
           </Button>
-          <Button variant="solar" size="medium">
+          <Button style={{ 
+            backgroundColor: elements.solar, 
+            color: p.text 
+          }}>
             Download Summary
           </Button>
         </div>
       </div>
 
-      {/* Main Generation Card */}
-      <Card.Solar className="mb-6">
-        <h2 className="text-xl font-semibold mb-2">Daily Power Generation</h2>
-        <div className="text-3xl font-bold mb-1" style={{ color: solar }}>5,200 kWh</div>
-        <p className="text-gray-600 mb-4">Peak sunlight generation forecast</p>
-        <div className="h-64">
+      {/* Stats Cards */}
+      <div className="grid grid-cols-3 gap-6 mb-6">
+        <Card.Base className="p-4" style={{ backgroundColor: bg.paper }}>
+          <h3 className="text-sm mb-1" style={{ color: t.secondary }}>
+            Current Generation
+          </h3>
+          <p className="text-2xl font-bold" style={{ color: elements.solar }}>
+            {currentGeneration.toLocaleString()} kWh
+          </p>
+        </Card.Base>
+        
+        <Card.Base className="p-4" style={{ backgroundColor: bg.paper }}>
+          <h3 className="text-sm mb-1" style={{ color: t.secondary }}>
+            Projected Generation
+          </h3>
+          <p className="text-2xl font-bold" style={{ color: success.main }}>
+            {projectedGeneration.toLocaleString()} kWh
+          </p>
+        </Card.Base>
+        
+        <Card.Base className="p-4" style={{ backgroundColor: bg.paper }}>
+          <h3 className="text-sm mb-1" style={{ color: t.secondary }}>
+            Growth Projection
+          </h3>
+          <p className="text-2xl font-bold" style={{ color: s.main }}>
+            +{growthPercentage}%
+          </p>
+        </Card.Base>
+      </div>
+
+      {/* Generation Chart */}
+      <Card.Base className="p-6 mb-6" style={{ backgroundColor: bg.paper }}>
+        <h2 className="text-xl font-semibold mb-4" style={{ color: t.main }}>
+          Power Generation Trend
+        </h2>
+        <div className="h-[400px]">
           <ResponsiveContainer width="100%" height="100%">
-            <AreaChart data={generationData}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="time" />
-              <YAxis />
-              <Tooltip />
+            <AreaChart 
+              data={generationData}
+              margin={{ top: 20, right: 30, left: 20, bottom: 120 }}
+            >
+              <defs>
+                <linearGradient id="solarGradient" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor={elements.solar} stopOpacity={0.2} />
+                  <stop offset="100%" stopColor={elements.solar} stopOpacity={0.05} />
+                </linearGradient>
+              </defs>
+              <CartesianGrid 
+                strokeDasharray="3 3" 
+                vertical={false}
+                stroke={t.disabled}
+              />
+              <XAxis {...areaChartConfig.xAxis} stroke={t.secondary} />
+              <YAxis {...areaChartConfig.yAxis} stroke={t.secondary} />
+              <Tooltip 
+                contentStyle={{ 
+                  backgroundColor: bg.paper,
+                  borderRadius: '6px',
+                  border: `1px solid ${t.disabled}`,
+                  boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+                }}
+              />
               <Area 
-                type="monotone" 
-                dataKey="output" 
-                stroke={solar} 
-                fill={solar} 
-                fillOpacity={0.1} 
+                {...areaChartConfig.area}
+                fill="url(#solarGradient)"
+                stroke={elements.solar}
               />
             </AreaChart>
           </ResponsiveContainer>
         </div>
-      </Card.Solar>
+      </Card.Base>
 
-      {/* Chart Cards */}
-      <div className="grid grid-cols-2 gap-6">
-        <Card.Base>
-          <h2 className="text-xl font-semibold mb-2">Solar Irradiance & Power</h2>
-          <div className="h-64">
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={solarIrradianceData}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="day" />
-                <YAxis yAxisId="left" />
-                <YAxis yAxisId="right" orientation="right" />
-                <Tooltip />
-                <Line 
-                  yAxisId="left"
-                  type="monotone" 
-                  dataKey="irradiance" 
-                  stroke={solar} 
-                  strokeWidth={2}
-                />
-                <Line 
-                  yAxisId="right"
-                  type="monotone" 
-                  dataKey="power" 
-                  stroke={text.secondary} 
-                  strokeWidth={2} 
-                  strokeDasharray="5 5"
-                />
-              </LineChart>
-            </ResponsiveContainer>
-          </div>
-        </Card.Base>
-
-        <Card.Base>
-          <h2 className="text-xl font-semibold mb-2">Panel Array Performance</h2>
-          <div className="h-64">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={panelPerformance}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="array" />
-                <YAxis />
-                <Tooltip />
-                <Bar dataKey="output" fill={solar} fillOpacity={0.8} />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-        </Card.Base>
-      </div>
-
-      {/* Stats Cards */}
-      <div className="grid grid-cols-3 gap-6 mt-6">
-        <Card.Base>
-          <div className="text-xl font-semibold">Total Generation</div>
-          <div className="text-3xl font-bold mt-2" style={{ color: solar }}>128.5 MWh</div>
-          <div className="text-sm text-gray-600">Monthly total</div>
-        </Card.Base>
-        <Card.Base>
-          <div className="text-xl font-semibold">Peak Power</div>
-          <div className="text-3xl font-bold mt-2" style={{ color: solar }}>12.8 kW</div>
-          <div className="text-sm text-gray-600">Highest today</div>
-        </Card.Base>
-        <Card.Base>
-          <div className="text-xl font-semibold">Efficiency</div>
-          <div className="text-3xl font-bold mt-2" style={{ color: solar }}>95.2%</div>
-          <div className="text-sm text-gray-600">Average performance</div>
-        </Card.Base>
-      </div>
+      {/* Efficiency Chart */}
+      <Card.Base className="p-6" style={{ backgroundColor: bg.paper }}>
+        <h2 className="text-xl font-semibold mb-4" style={{ color: t.main }}>
+          System Efficiency
+        </h2>
+        <div className="h-[300px]">
+          <ResponsiveContainer width="100%" height="100%">
+            <ComposedChart
+              data={generationData}
+              margin={{ top: 20, right: 30, left: 20, bottom: 120 }}
+            >
+              <CartesianGrid 
+                strokeDasharray="3 3" 
+                vertical={false}
+                stroke={t.disabled}
+              />
+              <XAxis {...efficiencyChartConfig.xAxis} stroke={t.secondary} />
+              <YAxis {...efficiencyChartConfig.yAxis} stroke={t.secondary} />
+              <Tooltip 
+                contentStyle={{ 
+                  backgroundColor: bg.paper,
+                  borderRadius: '6px',
+                  border: `1px solid ${t.disabled}`,
+                  boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+                }}
+              />
+              <Line 
+                {...efficiencyChartConfig.line}
+                stroke={success.main}
+              />
+              <Bar
+                dataKey="efficiency"
+                fill={`${success.main}20`}
+                barSize={20}
+                radius={[4, 4, 0, 0]}
+              />
+            </ComposedChart>
+          </ResponsiveContainer>
+        </div>
+      </Card.Base>
     </div>
   );
 };

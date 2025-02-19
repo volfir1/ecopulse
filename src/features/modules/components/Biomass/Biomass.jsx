@@ -1,162 +1,186 @@
 import React from 'react';
-import { LineChart, Line, XAxis, YAxis, Tooltip, BarChart, Bar, AreaChart, Area, ResponsiveContainer, CartesianGrid } from 'recharts';
+import {
+  LineChart, Line, XAxis, YAxis, Tooltip,
+  AreaChart, Area, ResponsiveContainer, CartesianGrid,
+  ComposedChart, Bar
+} from 'recharts';
 import { Leaf } from 'lucide-react';
-import { Button, Card, YearPicker, theme } from '@shared/index';
+import { p, s, t, bg, elements, Button, Card, YearPicker } from '@shared/index';
+import { useBiomassAnalytics } from './hook';
+import { getGenerationConfig, getFeedstockConfig, getEfficiencyConfig } from './script';
 
 const Biomass = () => {
-  // Get theme colors
-  const { elements, text, background } = theme.palette;
-  const { biomass } = elements;
-  // Generate biomass-appropriate data patterns
-  const generationData = Array.from({ length: 100 }, (_, i) => ({
-    date: `2024-${String(i).padStart(2, '0')}`,
-    value: 0.6 + Math.sin(i * 0.15) * 0.2 + Math.cos(i * 0.1) * 0.15 + Math.random() * 0.15
-  }));
+  const {
+    generationData,
+    currentStats,
+    projectedStats,
+    growthPercentages,
+    startYear,
+    endYear,
+    handleYearChange
+  } = useBiomassAnalytics();
 
-  const feedstockData = Array.from({ length: 7 }, (_, i) => ({
-    day: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'][i],
-    agricultural: 2800 + Math.sin(i * 0.8) * 500 + Math.random() * 300,
-    forestry: 2200 + Math.cos(i * 0.8) * 400 + Math.random() * 250
-  }));
-
-  const efficiencyData = Array.from({ length: 6 }, (_, i) => ({
-    source: ['Wood', 'Crop', 'Waste', 'Biogas', 'Pellets', 'Other'][i],
-    efficiency: 75 + Math.sin(i * 0.7) * 15 + Math.random() * 10,
-    output: 2400 + Math.sin(i * 0.6) * 500 + Math.random() * 300
-  }));
+  const generationConfig = getGenerationConfig(generationData, startYear, endYear);
+  const feedstockConfig = getFeedstockConfig(generationData, startYear, endYear);
+  const efficiencyConfig = getEfficiencyConfig(generationData, startYear, endYear);
 
   return (
-    <div className="p-6 bg-gray-50">
+    <div className="p-6" style={{ backgroundColor: bg.subtle }}>
       {/* Header Section */}
       <div className="mb-6 flex justify-between items-center">
-        <h1 className="text-2xl font-semibold flex items-center gap-2" style={{ color: biomass }}>
-          <Leaf className="h-6 w-6" />
+        <h1 className="text-2xl font-semibold flex items-center gap-2" style={{ color: elements.biomass }}>
+          <Leaf size={24} />
           Biomass Energy Analytics
         </h1>
-        <div className="flex gap-4 items-center">
-          <YearPicker />
-          <Button variant="biomass" size="medium" outlined>
+        
+        <YearPicker 
+          startYear={startYear}
+          endYear={endYear}
+          onYearChange={handleYearChange}
+        />
+        
+        <div className="flex gap-4">
+          <Button 
+            variant="outlined" 
+            style={{ 
+              borderColor: elements.biomass,
+              color: elements.biomass 
+            }}
+          >
             Feedstock Report
           </Button>
-          <Button variant="biomass" size="medium">
+          <Button style={{ 
+            backgroundColor: elements.biomass,
+            color: '#ffffff'
+          }}>
             Download Summary
           </Button>
         </div>
       </div>
 
-      {/* Main Generation Card */}
-      <Card.Biomass className="mb-6">
-        <h2 className="text-xl font-semibold mb-2">Biomass Power Generation</h2>
-        <div className="text-3xl font-bold mb-1" style={{ color: biomass }}>3,800 MWh</div>
-        <p className="text-gray-600 mb-4">Current month projection</p>
-        <div className="h-64">
+      {/* Stats Cards */}
+      <div className="grid grid-cols-3 gap-6 mb-6">
+        <Card.Base className="p-4" style={{ backgroundColor: bg.paper }}>
+          <h3 className="text-sm mb-1" style={{ color: t.secondary }}>Current Generation</h3>
+          <p className="text-2xl font-bold" style={{ color: elements.biomass }}>
+            {currentStats.generation.toLocaleString()} MWh
+          </p>
+          <p className="text-sm mt-1" style={{ color: t.hint }}>
+            Growth: {growthPercentages.generation}%
+          </p>
+        </Card.Base>
+        
+        <Card.Base className="p-4" style={{ backgroundColor: bg.paper }}>
+          <h3 className="text-sm mb-1" style={{ color: t.secondary }}>Feedstock Usage</h3>
+          <p className="text-2xl font-bold" style={{ color: elements.biomass }}>
+            {currentStats.feedstock.toLocaleString()} tons
+          </p>
+          <p className="text-sm mt-1" style={{ color: t.hint }}>
+            Change: {growthPercentages.feedstock}%
+          </p>
+        </Card.Base>
+        
+        <Card.Base className="p-4" style={{ backgroundColor: bg.paper }}>
+          <h3 className="text-sm mb-1" style={{ color: t.secondary }}>Conversion Rate</h3>
+          <p className="text-2xl font-bold" style={{ color: elements.biomass }}>
+            {currentStats.efficiency}%
+          </p>
+          <p className="text-sm mt-1" style={{ color: t.hint }}>
+            Improvement: {growthPercentages.efficiency}%
+          </p>
+        </Card.Base>
+      </div>
+
+      {/* Generation Chart */}
+      <Card.Base className="p-6 mb-6" style={{ backgroundColor: bg.paper }}>
+        <h2 className="text-xl font-semibold mb-4" style={{ color: t.main }}>Power Generation Trend</h2>
+        <div className="h-[400px]">
           <ResponsiveContainer width="100%" height="100%">
-            <AreaChart data={generationData}>
+            <AreaChart 
+              data={generationData}
+              margin={{ top: 20, right: 30, left: 20, bottom: 120 }}
+            >
               <defs>
                 <linearGradient id="biomassGradient" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor={biomass} stopOpacity={0.3}/>
-                  <stop offset="95%" stopColor={biomass} stopOpacity={0}/>
+                  {generationConfig.gradient.colors.map((color, index) => (
+                    <stop 
+                      key={index}
+                      offset={color.offset} 
+                      stopColor={color.color}
+                      stopOpacity={color.opacity}
+                    />
+                  ))}
                 </linearGradient>
               </defs>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="date" stroke={text.secondary} />
-              <YAxis stroke={text.secondary} />
-              <Tooltip
-                contentStyle={{
-                  backgroundColor: background.paper,
-                  borderRadius: '8px'
+              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={t.disabled} />
+              <XAxis {...generationConfig.xAxis} stroke={t.secondary} />
+              <YAxis {...generationConfig.yAxis} stroke={t.secondary} />
+              <Tooltip 
+                contentStyle={{ 
+                  backgroundColor: bg.paper,
+                  borderRadius: '6px',
+                  border: `1px solid ${t.disabled}`,
+                  boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
                 }}
               />
-              <Area
-                type="monotone"
-                dataKey="value"
-                stroke={biomass}
-                fill="url(#biomassGradient)"
-                strokeWidth={2}
-              />
+              <Area {...generationConfig.area} />
             </AreaChart>
           </ResponsiveContainer>
         </div>
-      </Card.Biomass>
+      </Card.Base>
 
-      {/* Chart Cards */}
-      <div className="grid grid-cols-2 gap-6">
-        <Card.Base>
-          <h2 className="text-xl font-semibold mb-2">Feedstock Consumption</h2>
-          <div className="text-2xl font-bold mb-4" style={{ color: biomass }}>5,200 tons monthly</div>
-          <ResponsiveContainer width="100%" height={250}>
-            <LineChart data={feedstockData}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="day" stroke={text.secondary} />
-              <YAxis stroke={text.secondary} />
-              <Tooltip
-                contentStyle={{
-                  backgroundColor: background.paper,
-                  borderRadius: '8px'
+      {/* Feedstock Chart */}
+      <Card.Base className="p-6 mb-6" style={{ backgroundColor: bg.paper }}>
+        <h2 className="text-xl font-semibold mb-4" style={{ color: t.main }}>Feedstock Consumption</h2>
+        <div className="h-[300px]">
+          <ResponsiveContainer width="100%" height="100%">
+            <LineChart
+              data={generationData}
+              margin={{ top: 20, right: 30, left: 20, bottom: 120 }}
+            >
+              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={t.disabled} />
+              <XAxis {...feedstockConfig.xAxis} stroke={t.secondary} />
+              <YAxis {...feedstockConfig.yAxis} stroke={t.secondary} />
+              <Tooltip 
+                contentStyle={{ 
+                  backgroundColor: bg.paper,
+                  borderRadius: '6px',
+                  border: `1px solid ${t.disabled}`,
+                  boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
                 }}
               />
-              <Line
-                type="monotone"
-                dataKey="agricultural"
-                name="Agricultural"
-                stroke={biomass}
-                strokeWidth={2}
-                dot={{ fill: biomass }}
-              />
-              <Line
-                type="monotone"
-                dataKey="forestry"
-                name="Forestry"
-                stroke={elements.wind}
-                strokeWidth={2}
-                dot={{ fill: elements.wind }}
-              />
+              <Line {...feedstockConfig.line} />
             </LineChart>
           </ResponsiveContainer>
-        </Card.Base>
+        </div>
+      </Card.Base>
 
-        <Card.Base>
-          <h2 className="text-xl font-semibold mb-2">Source Efficiency</h2>
-          <div className="text-2xl font-bold mb-4" style={{ color: biomass }}>82.3% conversion rate</div>
-          <ResponsiveContainer width="100%" height={250}>
-            <BarChart data={efficiencyData}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="source" stroke={text.secondary} />
-              <YAxis stroke={text.secondary} />
-              <Tooltip
-                contentStyle={{
-                  backgroundColor: background.paper,
-                  borderRadius: '8px'
+      {/* Efficiency Chart */}
+      <Card.Base className="p-6" style={{ backgroundColor: bg.paper }}>
+        <h2 className="text-xl font-semibold mb-4" style={{ color: t.main }}>Conversion Efficiency</h2>
+        <div className="h-[300px]">
+          <ResponsiveContainer width="100%" height="100%">
+            <ComposedChart
+              data={generationData}
+              margin={{ top: 20, right: 30, left: 20, bottom: 120 }}
+            >
+              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={t.disabled} />
+              <XAxis {...efficiencyConfig.xAxis} stroke={t.secondary} />
+              <YAxis {...efficiencyConfig.yAxis} stroke={t.secondary} />
+              <Tooltip 
+                contentStyle={{ 
+                  backgroundColor: bg.paper,
+                  borderRadius: '6px',
+                  border: `1px solid ${t.disabled}`,
+                  boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
                 }}
               />
-              <Bar
-                dataKey="efficiency"
-                fill={biomass}
-                radius={[4, 4, 0, 0]}
-              />
-            </BarChart>
+              <Bar {...efficiencyConfig.bar} />
+              <Line {...efficiencyConfig.line} />
+            </ComposedChart>
           </ResponsiveContainer>
-        </Card.Base>
-      </div>
-
-      {/* Stats Cards */}
-      <div className="grid grid-cols-3 gap-6 mt-6">
-        <Card.Base>
-          <div className="text-xl font-semibold">Total Generation</div>
-          <div className="text-3xl font-bold mt-2" style={{ color: biomass }}>95.2 MWh</div>
-          <div className="text-sm text-gray-600">Monthly total</div>
-        </Card.Base>
-        <Card.Base>
-          <div className="text-xl font-semibold">Feedstock Usage</div>
-          <div className="text-3xl font-bold mt-2" style={{ color: biomass }}>5,200 tons</div>
-          <div className="text-sm text-gray-600">Current stock</div>
-        </Card.Base>
-        <Card.Base>
-          <div className="text-xl font-semibold">Conversion Rate</div>
-          <div className="text-3xl font-bold mt-2" style={{ color: biomass }}>82.3%</div>
-          <div className="text-sm text-gray-600">Average efficiency</div>
-        </Card.Base>
-      </div>
+        </div>
+      </Card.Base>
     </div>
   );
 };

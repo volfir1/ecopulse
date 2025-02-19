@@ -1,59 +1,26 @@
-import React, { useState } from 'react';
+// src/components/auth/Register.jsx
+import React from 'react';
 import { User, Lock, Phone, Mail } from 'lucide-react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import CustomButton from '@components/buttons/buttons';
-import { Palette } from '@shared/components/ui/colors';
+import { p, s, t, bg } from '@shared/index';
 import Loader from '@shared/components/loaders/Loader';
-import { useLoader } from '@components/loaders/useLoader';
 import ToastNotification from '@shared/components/toast-notif/ToastNotification';
+import { useRegister } from './hook';
 
 const Register = () => {
-  const [email, setEmail] = useState('');
-  const [phone, setPhone] = useState('');
-  const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
-  const { startLoading, stopLoading } = useLoader();
-  const navigate = useNavigate();
-  const [toastMessage, setToastMessage] = useState('');
-  const [toastType, setToastType] = useState('');
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    if (password !== confirmPassword) {
-      setToastMessage('Passwords do not match!');
-      setToastType('error');
-      return;
-    }
-    
-    startLoading();
-    try {
-      await new Promise((resolve) => setTimeout(resolve, 2000));
-      setToastMessage('Registration Successful!');
-      setToastType('success');
-      setTimeout(() => {
-        navigate('/login');
-      }, 800);
-    } catch (error) {
-      setToastMessage('Registration failed. Please try again.');
-      setToastType('error');
-    } finally {
-      stopLoading();
-    }
-  };
-
-  const handleGoogleSignUp = async () => {
-    startLoading();
-    try {
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-      setToastMessage('Google Sign-up Successful!');
-      setToastType('success');
-      setTimeout(() => {
-        navigate('/dashboard');
-      }, 800);
-    } finally {
-      stopLoading();
-    }
-  };
+  const {
+    formValues: { email, phone, password, confirmPassword },
+    formHandlers: {
+      handleEmailChange,
+      handlePhoneChange,
+      handlePasswordChange,
+      handleConfirmPasswordChange,
+      handleSubmit,
+      handleGoogleSignUp
+    },
+    toast: { toastMessage, toastType }
+  } = useRegister();
 
   return (
     <>
@@ -66,27 +33,27 @@ const Register = () => {
           <div className="w-full max-w-md">
             <div className="flex justify-center mb-4">
               <div className="w-16 h-16 rounded-full" 
-                   style={{ border: `2px solid ${Palette.primary.main}` }}>
-                <User className="w-full h-full p-3" style={{ color: Palette.primary.main }} />
+                   style={{ border: `2px solid ${t.main}` }}>
+                <User className="w-full h-full p-3" style={{ color: p.main }} />
               </div>
             </div>
 
             <h2 className="text-2xl font-bold text-center mb-6" 
-                style={{ color: Palette.text.primary }}>
+                style={{ color: t.main }}>
               Create Account
             </h2>
 
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
-                  <Mail className="w-4 h-4" style={{ color: Palette.text.disabled }} />
+                  <Mail className="w-4 h-4" style={{ color: t.disabled }} />
                 </div>
                 <input
                   type="email"
                   value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  onChange={handleEmailChange}
                   className="block w-full py-2 pl-9 pr-3 text-sm transition-all border rounded-lg"
-                  style={{ borderColor: Palette.text.disabled }}
+                  style={{ borderColor: t.disabled }}
                   placeholder="Email"
                   required
                 />
@@ -94,14 +61,14 @@ const Register = () => {
 
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
-                  <Phone className="w-4 h-4" style={{ color: Palette.text.disabled }} />
+                  <Phone className="w-4 h-4" style={{ color: t.disabled }} />
                 </div>
                 <input
                   type="tel"
                   value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
+                  onChange={handlePhoneChange}
                   className="block w-full py-2 pl-9 pr-3 text-sm transition-all border rounded-lg"
-                  style={{ borderColor: Palette.text.disabled }}
+                  style={{ borderColor: t.disabled }}
                   placeholder="Phone Number"
                   required
                 />
@@ -109,14 +76,14 @@ const Register = () => {
 
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
-                  <Lock className="w-4 h-4" style={{ color: Palette.text.disabled }} />
+                  <Lock className="w-4 h-4" style={{ color: t.disabled }} />
                 </div>
                 <input
                   type="password"
                   value={password}
-                  onChange={(e) => setPassword(e.target.value)}
+                  onChange={handlePasswordChange}
                   className="block w-full py-2 pl-9 pr-3 text-sm transition-all border rounded-lg"
-                  style={{ borderColor: Palette.text.disabled }}
+                  style={{ borderColor: t.disabled }}
                   placeholder="Password"
                   required
                 />
@@ -124,14 +91,14 @@ const Register = () => {
 
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
-                  <Lock className="w-4 h-4" style={{ color: Palette.text.disabled }} />
+                  <Lock className="w-4 h-4" style={{ color: t.disabled }} />
                 </div>
                 <input
                   type="password"
                   value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  onChange={handleConfirmPasswordChange}
                   className="block w-full py-2 pl-9 pr-3 text-sm transition-all border rounded-lg"
-                  style={{ borderColor: Palette.text.disabled }}
+                  style={{ borderColor: t.disabled }}
                   placeholder="Confirm Password"
                   required
                 />
@@ -148,7 +115,7 @@ const Register = () => {
 
               <div className="relative my-4">
                 <div className="absolute inset-0 flex items-center">
-                  <div className="w-full border-t" style={{ borderColor: Palette.text.disabled }}></div>
+                  <div className="w-full border-t" style={{ borderColor: t.disabled }}></div>
                 </div>
                 <div className="relative flex justify-center text-xs">
                   <span className="px-2 text-gray-500 bg-white">Or continue with</span>
@@ -188,12 +155,12 @@ const Register = () => {
                 Sign up with Google
               </CustomButton>
 
-              <div className="text-center text-sm" style={{ color: Palette.text.secondary }}>
+              <div className="text-center text-sm" style={{ color: t.secondary }}>
                 Already have an account?{' '}
                 <Link 
                   to="/login" 
                   className="font-medium hover:underline"
-                  style={{ color: Palette.primary.main }}
+                  style={{ color: p.main }}
                 >
                   Login now
                 </Link>
@@ -206,7 +173,7 @@ const Register = () => {
         <div 
           className="w-1/2 flex items-center justify-center p-6"
           style={{ 
-            background: `linear-gradient(135deg, ${Palette.primary.main}, ${Palette.primary.dark})`
+            background: `linear-gradient(135deg, ${p.main}, ${p.dark})`
           }}
         >
           <div className="text-center">
