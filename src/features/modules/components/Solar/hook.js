@@ -1,10 +1,13 @@
 import { useState, useMemo, useEffect } from 'react';
 import dayjs from 'dayjs';
+import { showToast } from '@shared/index';
 
 export const useSolarAnalytics = () => {
   const [startYear, setStartYear] = useState(dayjs());
   const [endYear, setEndYear] = useState(dayjs().add(1, 'year'));
   const [isLoading, setIsLoading] = useState(true);
+  const [toastNotif, setToastNotif] = useState('');
+  const [toastType, setToastType] = useState('');
 
   const handleYearChange = (newStart, newEnd) => {
     // Validate year range (maximum 30 years instead of 50)
@@ -64,6 +67,21 @@ export const useSolarAnalytics = () => {
     return () => clearTimeout(timer);
   }, [startYear, endYear]);
 
+  const handleDownloadSummary = async () => {
+    try {
+      // Your download logic here
+      // For example:
+      // await downloadFile();
+      
+      showToast.success('Summary downloaded successfully');
+    } catch (error) {
+      showToast.error('Failed to download summary');
+      console.error('Download error:', error);
+    }
+  };
+
+
+
   return {
     generationData,
     currentGeneration,
@@ -72,7 +90,8 @@ export const useSolarAnalytics = () => {
     startYear,
     endYear,
     handleYearChange,
-    isLoading
+    isLoading,
+    handleDownloadSummary
   };
 };
 

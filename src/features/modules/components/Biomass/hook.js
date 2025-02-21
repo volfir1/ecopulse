@@ -1,9 +1,10 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import dayjs from 'dayjs';
 
 export const useBiomassAnalytics = () => {
   const [startYear, setStartYear] = useState(dayjs());
   const [endYear, setEndYear] = useState(dayjs().add(1, 'year'));
+  const [isLoading, setIsLoading] = useState(true);
 
   const handleYearChange = (newStart, newEnd) => {
     if (newEnd.diff(newStart, 'year') > 30) {
@@ -11,6 +12,8 @@ export const useBiomassAnalytics = () => {
     }
     setStartYear(newStart);
     setEndYear(newEnd);
+    // Trigger loading state when years change
+    setIsLoading(true);
   };
 
   const generationData = useMemo(() => {
@@ -55,6 +58,17 @@ export const useBiomassAnalytics = () => {
     efficiency: Math.round(((projectedStats.efficiency - currentStats.efficiency) / currentStats.efficiency) * 100)
   }), [currentStats, projectedStats]);
 
+  // Add loading effect whenever year changes
+  useEffect(() => {
+    // Simulate data loading delay
+    setIsLoading(true);
+    const timer = setTimeout(() => {
+      setIsLoading(false);
+    }, 800); // Adjust loading time as needed
+    
+    return () => clearTimeout(timer);
+  }, [startYear, endYear]);
+
   return {
     generationData,
     currentStats,
@@ -62,6 +76,7 @@ export const useBiomassAnalytics = () => {
     growthPercentages,
     startYear,
     endYear,
-    handleYearChange
+    handleYearChange,
+    isLoading
   };
 };
