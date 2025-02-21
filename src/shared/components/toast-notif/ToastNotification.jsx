@@ -6,72 +6,77 @@ import 'react-toastify/dist/ReactToastify.css';
 
 const toastStyles = {
   success: {
-    background: theme.palette.success.main,
+    background: 'rgba(52, 199, 89, 0.95)',
     color: '#ffffff',
-    icon: <CheckCircle size={20} />,
+    icon: <CheckCircle size={20} strokeWidth={2.5} />,
     progress: '#ffffff'
   },
   error: {
-    background: theme.palette.error.main,
+    background: 'rgba(255, 59, 48, 0.95)',
     color: '#ffffff',
-    icon: <AlertCircle size={20} />,
+    icon: <AlertCircle size={20} strokeWidth={2.5} />,
     progress: '#ffffff'
   },
   info: {
-    background: theme.palette.primary.main,
+    background: 'rgba(0, 122, 255, 0.95)',
     color: '#ffffff',
-    icon: <Info size={20} />,
+    icon: <Info size={20} strokeWidth={2.5} />,
     progress: '#ffffff'
   },
   warning: {
-    background: theme.palette.warning.main,
+    background: 'rgba(255, 149, 0, 0.95)',
     color: '#ffffff',
-    icon: <AlertTriangle size={20} />,
+    icon: <AlertTriangle size={20} strokeWidth={2.5} />,
     progress: '#ffffff'
   }
 };
 
-// Custom close button
 const CloseButton = ({ closeToast }) => (
   <button
     onClick={closeToast}
-    className="self-center opacity-70 hover:opacity-100 transition-opacity ml-5"
+    className="self-center opacity-70 hover:opacity-100 transition-all duration-200 ml-3"
+    style={{ padding: '6px' }}
   >
-    <X size={18} />
+    <X size={16} strokeWidth={2.5} />
   </button>
 );
 
-// Custom toast content
 const ToastContent = ({ message, type }) => (
-  <div className="flex items-center gap-3">
-    {toastStyles[type].icon}
-    <span className="flex-1">{message}</span>
+  <div className="flex items-center gap-3 px-1">
+    <div className="flex-shrink-0">
+      {toastStyles[type].icon}
+    </div>
+    <span className="flex-1 font-medium text-sm truncate">
+      {message}
+    </span>
   </div>
 );
 
-const ToastNotification = ({ message, type }) => {
+// Toast configuration
+const toastConfig = (type) => ({
+  position: "top-center",
+  autoClose: 4000,
+  hideProgressBar: false,
+  closeOnClick: true,
+  pauseOnHover: true,
+  draggable: true,
+  progress: undefined,
+  closeButton: CloseButton,
+  style: {
+    background: toastStyles[type].background,
+    color: toastStyles[type].color,
+    backdropFilter: 'blur(8px)',
+    border: '1px solid rgba(255, 255, 255, 0.1)',
+  },
+  progressClassName: 'toastProgress',
+  bodyClassName: 'toastBody',
+  className: 'toast'
+});
+
+const Notif = ({ message, type }) => {
   React.useEffect(() => {
     if (message && type && toastStyles[type]) {
-      toast(
-        <ToastContent message={message} type={type} />,
-        {
-          position: "top-right",
-          autoClose: 3000,
-          hideProgressBar: false,
-          closeOnClick: false,
-          pauseOnHover: true,
-          draggable: true,
-          progress: undefined,
-          closeButton: CloseButton,
-          style: {
-            background: toastStyles[type].background,
-            color: toastStyles[type].color,
-          },
-          progressStyle: {
-            background: toastStyles[type].progress,
-          }
-        }
-      );
+      toast(<ToastContent message={message} type={type} />, toastConfig(type));
     }
   }, [message, type]);
 
@@ -79,35 +84,42 @@ const ToastNotification = ({ message, type }) => {
     <>
       <style>
         {`
-          .Toastify__toast {
-            border-radius: 8px;
-            padding: 12px 16px;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-            position: relative;
-          }
-          
-          .Toastify__toast-body {
+          .Toastify__toast-container {
             padding: 0;
-            margin: 0;
+            width: auto;
+            max-width: 380px;
           }
 
-          .Toastify__progress-bar {
-            height: 4px;
-            opacity: 1;
-            position: absolute;
-            bottom: 0;
-            left: 0;
-            right: 0;
-            border-radius: 0 0 8px 8px;
-            background: #ffffff !important;
-            background-image: none !important;
+          .toast {
+            margin: 8px;
+            padding: 12px 16px;
+            border-radius: 14px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            backdrop-filter: blur(8px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            min-height: 54px;
+            overflow: hidden;
           }
           
-          .Toastify__progress-bar--animated {
-            background: #ffffff !important;
-            background-image: none !important;
+          .toastBody {
+            padding: 0;
+            margin: 0;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
           }
-          
+
+          .toastProgress {
+            height: 3px !important;
+            opacity: 0.7 !important;
+            background-color: #ffffff !important;
+            box-shadow: none !important;
+            background-image: none !important;
+            transition: none !important;
+          }
+
+          .Toastify__progress-bar,
+          .Toastify__progress-bar--animated,
           .Toastify__progress-bar-theme--light,
           .Toastify__progress-bar-theme--dark {
             background: #ffffff !important;
@@ -115,40 +127,56 @@ const ToastNotification = ({ message, type }) => {
           }
           
           .Toastify__close-button {
-            padding: 0;
-            margin-left: 12px;
-            color: inherit;
+            opacity: 0.7;
+            transition: all 0.2s ease;
             align-self: center;
           }
           
-          @keyframes slideIn {
+          .Toastify__close-button:hover {
+            opacity: 1;
+          }
+          
+          @keyframes smoothSlideDown {
             from {
-              transform: translateX(100%);
+              transform: translateY(-120%);
               opacity: 0;
             }
             to {
-              transform: translateX(0);
+              transform: translateY(0);
               opacity: 1;
             }
           }
           
-          @keyframes slideOut {
+          @keyframes smoothSlideUp {
             from {
-              transform: translateX(0);
+              transform: translateY(0);
               opacity: 1;
             }
             to {
-              transform: translateX(100%);
+              transform: translateY(-120%);
               opacity: 0;
             }
           }
           
           .Toastify__toast--enter {
-            animation: slideIn 0.2s ease forwards;
+            animation: smoothSlideDown 0.6s cubic-bezier(0.4, 0, 0.2, 1) forwards;
           }
           
           .Toastify__toast--exit {
-            animation: slideOut 0.2s ease forwards;
+            animation: smoothSlideUp 0.5s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+          }
+
+          @media (prefers-color-scheme: dark) {
+            .toast {
+              box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+            }
+          }
+
+          @media (max-width: 480px) {
+            .Toastify__toast-container {
+              width: calc(100vw - 32px);
+              margin: 16px;
+            }
           }
         `}
       </style>
@@ -161,36 +189,12 @@ const ToastNotification = ({ message, type }) => {
   );
 };
 
-// Helper functions to show notifications
+// Export toast functions
 export const showToast = {
-  success: (message) => toast(<ToastContent message={message} type="success" />, {
-    position: "top-right",
-    autoClose: 3000,
-    style: { background: toastStyles.success.background, color: toastStyles.success.color },
-    progressStyle: { background: toastStyles.success.progress },
-    closeButton: CloseButton
-  }),
-  error: (message) => toast(<ToastContent message={message} type="error" />, {
-    position: "top-right",
-    autoClose: 3000,
-    style: { background: toastStyles.error.background, color: toastStyles.error.color },
-    progressStyle: { background: toastStyles.error.progress },
-    closeButton: CloseButton
-  }),
-  info: (message) => toast(<ToastContent message={message} type="info" />, {
-    position: "top-right",
-    autoClose: 3000,
-    style: { background: toastStyles.info.background, color: toastStyles.info.color },
-    progressStyle: { background: toastStyles.info.progress },
-    closeButton: CloseButton
-  }),
-  warning: (message) => toast(<ToastContent message={message} type="warning" />, {
-    position: "top-right",
-    autoClose: 3000,
-    style: { background: toastStyles.warning.background, color: toastStyles.warning.color },
-    progressStyle: { background: toastStyles.warning.progress },
-    closeButton: CloseButton
-  })
+  success: (message) => toast(<ToastContent message={message} type="success" />, toastConfig('success')),
+  error: (message) => toast(<ToastContent message={message} type="error" />, toastConfig('error')),
+  info: (message) => toast(<ToastContent message={message} type="info" />, toastConfig('info')),
+  warning: (message) => toast(<ToastContent message={message} type="warning" />, toastConfig('warning'))
 };
 
-export default ToastNotification;
+export default Notif;

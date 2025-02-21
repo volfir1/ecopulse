@@ -8,6 +8,7 @@ import { Sun } from 'lucide-react';
 import { p, s, bg, t, success, elements, Button, YearPicker, Card } from '@shared/index';
 import { getAreaChartConfig, getEfficiencyChartConfig } from './chart';
 import { useSolarAnalytics } from './hook';
+import { ToastContainer } from 'react-toastify';
 
 // Enhanced skeleton components for loading state
 const SkeletonPulse = ({ className }) => (
@@ -64,6 +65,7 @@ const SolarEnergy = () => {
     startYear,
     endYear,
     handleYearChange,
+    handleDownloadSummary,
     isLoading
   } = useSolarAnalytics();
 
@@ -170,7 +172,11 @@ const SolarEnergy = () => {
             endYear={endYear}
             onYearChange={handleYearChange}
           />
-
+<ToastContainer 
+        limit={3}
+        newestOnTop
+        pauseOnFocusLoss={false}
+      />
           <div className="flex gap-2">
             <Button 
               className="whitespace-nowrap"
@@ -178,6 +184,7 @@ const SolarEnergy = () => {
                 backgroundColor: elements.solar,
                 color: p.text
               }}
+              onClick={handleDownloadSummary}
             >
               Download Summary
             </Button>
