@@ -22,162 +22,156 @@ export default function Navbar() {
 
   return (
     <Box sx={{ flexGrow: 1 }}>
-    <AppBar 
-      position="static" 
-      color="transparent" 
-      elevation={0}
-      sx={{
-        backdropFilter: 'blur(8px)',
-        borderBottom: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
-        backgroundColor: alpha(theme.palette.background.paper, 0.7),
-        minHeight: 56, // Add fixed height
-      }}
-    >
-      <Toolbar 
-        sx={{ 
-          display: 'flex', 
-          justifyContent: 'space-between',
-          minHeight: '56px !important', // Override default Toolbar height
-          py: 0.5, // Reduced vertical padding
-          px: { xs: 1.5, sm: 2 }
+      <AppBar 
+        position="static" 
+        color="transparent" 
+        elevation={0}
+        sx={{
+          backdropFilter: 'blur(6px)',
+          borderBottom: `1px solid ${alpha(theme.palette.divider, 0.08)}`,
+          backgroundColor: alpha(theme.palette.background.paper, 0.85),
+          height: 52,
         }}
       >
-        {/* Left Section - Adjust Typography and Box heights */}
-        <Box sx={{ display: 'flex', alignItems: 'center', height: 40 }}>
-          {/* ... existing IconButton ... */}
+        <Toolbar 
+          sx={{ 
+            display: 'flex', 
+            justifyContent: 'space-between',
+            minHeight: '52px !important',
+            px: { xs: 1.5, sm: 2 },
+            gap: 2
+          }}
+        >
+          {/* Left Section */}
           <Box sx={{ 
             display: 'flex', 
             alignItems: 'center', 
-            gap: 1.5,
-            height: '100%'
+            gap: 2,
+            height: 36 
           }}>
             <Typography 
               variant="h6" 
               noWrap
               sx={{
                 fontWeight: 600,
-                fontSize: { xs: '0.95rem', sm: '1.1rem' }, // Slightly smaller
+                fontSize: '1rem',
                 color: theme.palette.text.primary,
-                lineHeight: 1, // Reduce line height
+                lineHeight: 1,
               }}
             >
               Hello, User
             </Typography>
-           
+
             <Box
               sx={{
                 display: 'flex',
                 alignItems: 'center',
-                backgroundColor: alpha(theme.palette.primary.main, 0.08),
-                borderRadius: 1.5,
-                px: 0.75,
-                py: 0.25,
-                height: 32, // Fixed height
+                backgroundColor: alpha(theme.palette.primary.main, 0.06),
+                borderRadius: '20px',
+                px: 1.5,
+                py: 0.5,
+                height: 28,
                 transition: 'all 0.2s ease',
                 '&:hover': {
-                  backgroundColor: alpha(theme.palette.primary.main, 0.12),
+                  backgroundColor: alpha(theme.palette.primary.main, 0.1),
                   transform: 'translateY(-1px)'
                 }
               }}
             >
-            <IconButton 
-      size="small"
-      sx={{
-        mr: 0.5,
-        color: theme.palette.primary.main,
-        p: 0.5,
-        '&:hover': {
-          backgroundColor: 'transparent'
-        }
-      }}
-    >
-      <AppIcon 
-        name="location" 
-        type="tool"
-        sx={{ 
-          width: 18,
-          height: 18
-        }}
-      />
-    </IconButton>
-    <Typography 
-      variant="body2" 
-      noWrap 
-      sx={{
-        fontWeight: 500,
-        color: theme.palette.text.primary,
-        pr: 0.5
-      }}
-    >
-      Taguig
-    </Typography>
+              <AppIcon 
+                name="location" 
+                type="tool"
+                sx={{ 
+                  width: 16,
+                  height: 16,
+                  color: theme.palette.primary.main,
+                  mr: 0.5
+                }}
+              />
+              <Typography 
+                variant="body2" 
+                noWrap 
+                sx={{
+                  fontWeight: 500,
+                  color: theme.palette.text.primary,
+                  fontSize: '0.875rem'
+                }}
+              >
+                Taguig
+              </Typography>
             </Box>
           </Box>
-        </Box>
 
-        {/* Right Section - Adjust icon button sizes */}
-        <Box sx={{ 
-          display: 'flex', 
-          alignItems: 'center', 
-          gap: { xs: 0.5, sm: 1 },
-          height: 40
-        }}>
-          <Box sx={{ height: '100%' }}>
-            <SearchBar />
-          </Box>
+          {/* Right Section */}
+          <Box sx={{ 
+            display: 'flex', 
+            alignItems: 'center', 
+            gap: 1,
+            height: 36
+          }}>
+            <Box sx={{ 
+              width: { xs: 180, sm: 240 },
+              height: '100%' 
+            }}>
+              <SearchBar />
+            </Box>
 
-          <IconButton 
-            size="small" // Changed from medium
-            sx={{
-              p: 0.5, // Reduced padding
-              height: 32,
-              width: 32,
-              // ... existing hover styles ...
-            }}
-          >
-            <AppIcon 
-              name='notification' 
-              type='tool'
-              sx={{ 
-                width: 18,
-                height: 18
-              }}
-            />
-          </IconButton>
-
-          {/* Apply same changes to settings IconButton */}
-
-          <Tooltip title="My Account">
-            <IconButton
-              size='small'
-              onClick={handleMenuClick}
-              aria-controls={open ? "account-menu" : undefined}
+            <IconButton 
+              size="small"
               sx={{
-                p: 0.25,
+                p: 1,
                 height: 32,
                 width: 32,
-                // ... existing styles ...
+                backgroundColor: alpha(theme.palette.divider, 0.04),
+                '&:hover': {
+                  backgroundColor: alpha(theme.palette.divider, 0.08),
+                }
               }}
             >
-              <Avatar 
-                alt="User" 
-                src="/api/placeholder/24/24" // Further reduced
+              <AppIcon 
+                name='notification' 
+                type='tool'
                 sx={{ 
-                  width: 24,
-                  height: 24
-                }} 
+                  width: 18,
+                  height: 18,
+                  color: theme.palette.text.secondary
+                }}
               />
             </IconButton>
-          </Tooltip>
-        </Box>
 
-        <NavMenu 
-          anchorEl={anchorEl} 
-          open={open} 
-          onClose={handleMenuClose}
-        />
-      </Toolbar>
-    </AppBar>
-  </Box>
+            <Tooltip title="My Account">
+              <IconButton
+                size='small'
+                onClick={handleMenuClick}
+                sx={{
+                  p: 0.25,
+                  height: 32,
+                  width: 32,
+                  border: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
+                  '&:hover': {
+                    backgroundColor: alpha(theme.palette.divider, 0.04),
+                  }
+                }}
+              >
+                <Avatar 
+                  alt="User" 
+                  src="/api/placeholder/24/24"
+                  sx={{ 
+                    width: 24,
+                    height: 24
+                  }} 
+                />
+              </IconButton>
+            </Tooltip>
+          </Box>
+
+          <NavMenu 
+            anchorEl={anchorEl} 
+            open={open} 
+            onClose={handleMenuClose}
+          />
+        </Toolbar>
+      </AppBar>
+    </Box>
   );
 }

@@ -6,8 +6,8 @@ import {
     Dam,
     Recycle,
     LayoutDashboard,
-    Component, 
-    PlugZap,  
+    Component,
+    PlugZap,
     HeartHandshake,
     BadgeCheck,
     MapPinned,
@@ -16,7 +16,7 @@ import {
     Bell,
     Settings,
     UserPlus,
-    // New Profile Related Icons
+    // Profile Related Icons
     User,
     Mail,
     Lock,
@@ -67,24 +67,28 @@ export const IconTools = {
     location: MapPinned,
 };
 
-export const AppIcon = ({name, color, type = 'icon', ...props}) => {
+export const AppIcon = ({
+    name,
+    color,
+    type = 'icon',
+    size = 20,
+    strokeWidth = 1.75,
+    ...props
+}) => {
     const IconComponent = type === 'tool'
-            ? IconTools[name] || Sun
-            : IconLibrary[name] || Sun;
+        ? IconTools[name] || Sun
+        : IconLibrary[name] || Sun;
+    
     const theme = useTheme();
+    
     return (
         <IconComponent 
-            color={theme?.palette?.elements?.[name] || 'currentColor'} 
-            {...props} 
+            color={theme?.palette?.elements?.[name] || 'currentColor'}
+            size={size}
+            strokeWidth={strokeWidth}
+            {...props}
         />
     );
 };
 
-//Default Props For icons
-AppIcon.defaultProps = {
-    size: 20,
-    strokeWidth: 1.75,
-    color: 'currentColor',
-};
-
-export default AppIcon
+export default AppIcon;
