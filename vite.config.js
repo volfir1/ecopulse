@@ -18,6 +18,7 @@ export default defineConfig({
       '@images' : path.resolve(__dirname, './src/assets/images'),
       '@components': path.resolve(__dirname, './src/shared/components/'),
       '@admin' : path.resolve(__dirname, './src/admin/'),
+      '@exceptions': path.resolve(__dirname, './src/exceptions/'),
     }
   },
   esbuild: {
