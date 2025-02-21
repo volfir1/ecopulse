@@ -1,9 +1,10 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import dayjs from 'dayjs';
 
 export const useWindAnalytics = () => {
   const [startYear, setStartYear] = useState(dayjs());
   const [endYear, setEndYear] = useState(dayjs().add(1, 'year'));
+  const [isLoading, setIsLoading] = useState(true);
 
   const handleYearChange = (newStart, newEnd) => {
     // Validate year range (maximum 30 years)
@@ -12,6 +13,8 @@ export const useWindAnalytics = () => {
     }
     setStartYear(newStart);
     setEndYear(newEnd);
+    // Trigger loading state when years change
+    setIsLoading(true);
   };
 
   const generationData = useMemo(() => {
@@ -56,6 +59,17 @@ export const useWindAnalytics = () => {
     efficiency: Math.round(((projectedStats.efficiency - currentStats.efficiency) / currentStats.efficiency) * 100)
   }), [currentStats, projectedStats]);
 
+  // Add loading effect whenever year changes
+  useEffect(() => {
+    // Simulate data loading delay
+    setIsLoading(true);
+    const timer = setTimeout(() => {
+      setIsLoading(false);
+    }, 800); // Adjust loading time as needed
+    
+    return () => clearTimeout(timer);
+  }, [startYear, endYear]);
+
   return {
     generationData,
     currentStats,
@@ -63,6 +77,9 @@ export const useWindAnalytics = () => {
     growthPercentages,
     startYear,
     endYear,
-    handleYearChange
+    handleYearChange,
+    isLoading
   };
 };
+
+export default useWindAnalytics;

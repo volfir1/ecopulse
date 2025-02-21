@@ -1,9 +1,10 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import dayjs from 'dayjs';
 
 export const useSolarAnalytics = () => {
   const [startYear, setStartYear] = useState(dayjs());
   const [endYear, setEndYear] = useState(dayjs().add(1, 'year'));
+  const [isLoading, setIsLoading] = useState(true);
 
   const handleYearChange = (newStart, newEnd) => {
     // Validate year range (maximum 30 years instead of 50)
@@ -12,6 +13,8 @@ export const useSolarAnalytics = () => {
     }
     setStartYear(newStart);
     setEndYear(newEnd);
+    // Trigger loading state when years change
+    setIsLoading(true);
   };
 
   const generationData = useMemo(() => {
@@ -37,7 +40,6 @@ export const useSolarAnalytics = () => {
     return yearRange;
   }, [startYear, endYear]);
 
-  // ... rest of the code remains the same ...
   const currentGeneration = useMemo(() => {
     return generationData[0]?.generation || 0;
   }, [generationData]);
@@ -51,6 +53,17 @@ export const useSolarAnalytics = () => {
     return Math.round(((projectedGeneration - currentGeneration) / currentGeneration) * 100);
   }, [currentGeneration, projectedGeneration]);
 
+  // Add loading effect whenever year changes
+  useEffect(() => {
+    // Simulate data loading delay
+    setIsLoading(true);
+    const timer = setTimeout(() => {
+      setIsLoading(false);
+    }, 800); // Adjust loading time as needed
+    
+    return () => clearTimeout(timer);
+  }, [startYear, endYear]);
+
   return {
     generationData,
     currentGeneration,
@@ -58,7 +71,8 @@ export const useSolarAnalytics = () => {
     growthPercentage,
     startYear,
     endYear,
-    handleYearChange
+    handleYearChange,
+    isLoading
   };
 };
 
