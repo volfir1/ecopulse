@@ -3,7 +3,6 @@ import { User, Lock, Mail } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { Button, p, t } from '@shared/index';
 import Loader from '@shared/components/loaders/Loader';
-import {Notif, showToast} from '@shared/index';
 import useLogin from './hook';
 import crosswalk from '../../../../assets/images/vectors/crosswalk.jpg';
 
@@ -22,7 +21,7 @@ const Login = () => {
   return (
     <>
       <Loader />
-      {toastMessage && <Notif message={toastMessage} type={toastType} />}
+   
       
       <div className="flex min-h-screen">
         {/* Left Side - Primary Color Background */}

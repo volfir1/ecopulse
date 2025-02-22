@@ -19,4 +19,5 @@ export {default as Footer} from '@components/foooter/footer'
 export {default as InputBox} from '@components/inputs/inputs'
 export {default as TextArea} from '@components/inputs/inputs'
 export {default as useYearPicker} from '@components/datepicker/useYearPicker'
-export {default as Notif, showToast} from '@components/toast-notif/ToastNotification'
+
+export {default as SnackbarProvider, useSnackbar} from '@components/toast-notif/ToastNotification'
