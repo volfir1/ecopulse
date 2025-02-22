@@ -1,200 +1,200 @@
-import React from 'react';
-import { ToastContainer, toast } from 'react-toastify';
-import { X, CheckCircle, AlertCircle, Info, AlertTriangle } from 'lucide-react';
-import { theme } from '@shared/index';
-import 'react-toastify/dist/ReactToastify.css';
+// ToastNotification.jsx
+import React, { useState, useEffect, createContext, useContext } from 'react';
+import { Snackbar, Alert, LinearProgress } from '@mui/material';
+import { CheckCircle, AlertCircle, Info, AlertTriangle } from 'lucide-react';
 
-const toastStyles = {
+// Create context
+const SnackbarContext = createContext(null);
+
+// Snackbar styles configuration
+const snackbarStyles = {
   success: {
-    background: 'rgba(52, 199, 89, 0.95)',
-    color: '#ffffff',
-    icon: <CheckCircle size={20} strokeWidth={2.5} />,
-    progress: '#ffffff'
+    icon: <CheckCircle size={24} strokeWidth={2.5} />,
+    color: '#34C759',
+    lightColor: 'rgba(52, 199, 89, 0.95)'
   },
   error: {
-    background: 'rgba(255, 59, 48, 0.95)',
-    color: '#ffffff',
-    icon: <AlertCircle size={20} strokeWidth={2.5} />,
-    progress: '#ffffff'
+    icon: <AlertCircle size={24} strokeWidth={2.5} />,
+    color: '#FF3B30',
+    lightColor: 'rgba(255, 59, 48, 0.95)'
   },
   info: {
-    background: 'rgba(0, 122, 255, 0.95)',
-    color: '#ffffff',
-    icon: <Info size={20} strokeWidth={2.5} />,
-    progress: '#ffffff'
+    icon: <Info size={24} strokeWidth={2.5} />,
+    color: '#007AFF',
+    lightColor: 'rgba(0, 122, 255, 0.95)'
   },
   warning: {
-    background: 'rgba(255, 149, 0, 0.95)',
-    color: '#ffffff',
-    icon: <AlertTriangle size={20} strokeWidth={2.5} />,
-    progress: '#ffffff'
+    icon: <AlertTriangle size={24} strokeWidth={2.5} />,
+    color: '#FF9500',
+    lightColor: 'rgba(255, 149, 0, 0.95)'
   }
 };
 
-const CloseButton = ({ closeToast }) => (
-  <button
-    onClick={closeToast}
-    className="self-center opacity-70 hover:opacity-100 transition-all duration-200 ml-3"
-    style={{ padding: '6px' }}
-  >
-    <X size={16} strokeWidth={2.5} />
-  </button>
-);
+// Hook to use snackbar
+export const useSnackbar = () => {
+  const context = useContext(SnackbarContext);
+  if (!context) {
+    throw new Error('useSnackbar must be used within a SnackbarProvider');
+  }
+  return context;
+};
 
-const ToastContent = ({ message, type }) => (
-  <div className="flex items-center gap-3 px-1">
-    <div className="flex-shrink-0">
-      {toastStyles[type].icon}
-    </div>
-    <span className="flex-1 font-medium text-sm truncate">
-      {message}
-    </span>
-  </div>
-);
+// Snackbar Provider Component
+export const SnackbarProvider = ({ children }) => {
+  const [queue, setQueue] = useState([]);
+  const [open, setOpen] = useState(false);
+  const [currentSnackbar, setCurrentSnackbar] = useState(null);
+  const [progress, setProgress] = useState(100);
 
-// Toast configuration
-const toastConfig = (type) => ({
-  position: "top-center",
-  autoClose: 4000,
-  hideProgressBar: false,
-  closeOnClick: true,
-  pauseOnHover: true,
-  draggable: true,
-  progress: undefined,
-  closeButton: CloseButton,
-  style: {
-    background: toastStyles[type].background,
-    color: toastStyles[type].color,
-    backdropFilter: 'blur(8px)',
-    border: '1px solid rgba(255, 255, 255, 0.1)',
-  },
-  progressClassName: 'toastProgress',
-  bodyClassName: 'toastBody',
-  className: 'toast'
-});
+  const NOTIFICATION_DURATION = 5000; // 5 seconds
 
-const Notif = ({ message, type }) => {
-  React.useEffect(() => {
-    if (message && type && toastStyles[type]) {
-      toast(<ToastContent message={message} type={type} />, toastConfig(type));
+  useEffect(() => {
+    let timer;
+    if (open && progress > 0) {
+      timer = setInterval(() => {
+        setProgress((prev) => Math.max(prev - 2, 0));
+      }, NOTIFICATION_DURATION / 50);
     }
-  }, [message, type]);
+    return () => {
+      clearInterval(timer);
+    };
+  }, [open, progress]);
+
+  const enqueueSnackbar = (message, type, position = { vertical: 'top', horizontal: 'center' }) => {
+    setQueue(prev => [...prev, { message, type, position }]);
+  };
+
+  const handleClose = (event, reason) => {
+    if (reason === 'clickaway') return;
+    setOpen(false);
+  };
+
+  const handleExited = () => {
+    setCurrentSnackbar(null);
+    setProgress(100);
+  };
+
+  useEffect(() => {
+    if (queue.length && !currentSnackbar) {
+      setCurrentSnackbar(queue[0]);
+      setQueue(prev => prev.slice(1));
+      setOpen(true);
+      setProgress(100);
+    } else if (queue.length && currentSnackbar && open) {
+      setOpen(false);
+    }
+  }, [queue, currentSnackbar, open]);
+
+  const toast = {
+    success: (message, position = 'top-center') => {
+      const vertical = position?.includes('bottom') ? 'bottom' : 'top';
+      const horizontal = position?.includes('left') ? 'left' : 
+                        position?.includes('right') ? 'right' : 'center';
+      enqueueSnackbar(message, 'success', { vertical, horizontal });
+    },
+    error: (message, position = 'top-center') => {
+      const vertical = position?.includes('bottom') ? 'bottom' : 'top';
+      const horizontal = position?.includes('left') ? 'left' : 
+                        position?.includes('right') ? 'right' : 'center';
+      enqueueSnackbar(message, 'error', { vertical, horizontal });
+    },
+    info: (message, position = 'top-center') => {
+      const vertical = position?.includes('bottom') ? 'bottom' : 'top';
+      const horizontal = position?.includes('left') ? 'left' : 
+                        position?.includes('right') ? 'right' : 'center';
+      enqueueSnackbar(message, 'info', { vertical, horizontal });
+    },
+    warning: (message, position = 'top-center') => {
+      const vertical = position?.includes('bottom') ? 'bottom' : 'top';
+      const horizontal = position?.includes('left') ? 'left' : 
+                        position?.includes('right') ? 'right' : 'center';
+      enqueueSnackbar(message, 'warning', { vertical, horizontal });
+    }
+  };
 
   return (
-    <>
-      <style>
-        {`
-          .Toastify__toast-container {
-            padding: 0;
-            width: auto;
-            max-width: 380px;
-          }
-
-          .toast {
-            margin: 8px;
-            padding: 12px 16px;
-            border-radius: 14px;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-            backdrop-filter: blur(8px);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            min-height: 54px;
-            overflow: hidden;
-          }
-          
-          .toastBody {
-            padding: 0;
-            margin: 0;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
-          }
-
-          .toastProgress {
-            height: 3px !important;
-            opacity: 0.7 !important;
-            background-color: #ffffff !important;
-            box-shadow: none !important;
-            background-image: none !important;
-            transition: none !important;
-          }
-
-          .Toastify__progress-bar,
-          .Toastify__progress-bar--animated,
-          .Toastify__progress-bar-theme--light,
-          .Toastify__progress-bar-theme--dark {
-            background: #ffffff !important;
-            background-image: none !important;
-          }
-          
-          .Toastify__close-button {
-            opacity: 0.7;
-            transition: all 0.2s ease;
-            align-self: center;
-          }
-          
-          .Toastify__close-button:hover {
-            opacity: 1;
-          }
-          
-          @keyframes smoothSlideDown {
-            from {
-              transform: translateY(-120%);
-              opacity: 0;
+    <SnackbarContext.Provider value={toast}>
+      {children}
+      {currentSnackbar && (
+        <Snackbar
+          open={open}
+          autoHideDuration={NOTIFICATION_DURATION}
+          onClose={handleClose}
+          TransitionProps={{ onExited: handleExited }}
+          anchorOrigin={currentSnackbar.position}
+          sx={{
+            '& .MuiPaper-root': {
+              width: '100%',
+              maxWidth: '420px', // Increased width
+              backdropFilter: 'blur(8px)',
+              border: '1px solid rgba(255, 255, 255, 0.1)',
+              padding: 0,
+              borderRadius: '12px',
+              overflow: 'hidden',
+              boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)'
             }
-            to {
-              transform: translateY(0);
-              opacity: 1;
-            }
-          }
-          
-          @keyframes smoothSlideUp {
-            from {
-              transform: translateY(0);
-              opacity: 1;
-            }
-            to {
-              transform: translateY(-120%);
-              opacity: 0;
-            }
-          }
-          
-          .Toastify__toast--enter {
-            animation: smoothSlideDown 0.6s cubic-bezier(0.4, 0, 0.2, 1) forwards;
-          }
-          
-          .Toastify__toast--exit {
-            animation: smoothSlideUp 0.5s cubic-bezier(0.4, 0, 0.2, 1) forwards;
-          }
-
-          @media (prefers-color-scheme: dark) {
-            .toast {
-              box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-            }
-          }
-
-          @media (max-width: 480px) {
-            .Toastify__toast-container {
-              width: calc(100vw - 32px);
-              margin: 16px;
-            }
-          }
-        `}
-      </style>
-      <ToastContainer 
-        limit={3}
-        newestOnTop
-        pauseOnFocusLoss={false}
-      />
-    </>
+          }}
+        >
+          <div style={{ width: '100%' }}>
+            <Alert
+              onClose={handleClose}
+              severity={currentSnackbar.type}
+              variant="filled"
+              icon={snackbarStyles[currentSnackbar.type].icon}
+              sx={{
+                width: '100%',
+                backgroundColor: snackbarStyles[currentSnackbar.type].lightColor,
+                '& .MuiAlert-icon': { 
+                  color: 'white',
+                  marginRight: '16px', // Increased spacing
+                  padding: '4px',
+                  display: 'flex',
+                  alignItems: 'center'
+                },
+                '& .MuiAlert-message': { 
+                  color: 'white',
+                  padding: '6px 0',
+                  fontSize: '15px', // Increased font size
+                  fontWeight: 500,
+                  lineHeight: '1.5'
+                },
+                '& .MuiAlert-action': { 
+                  color: 'white',
+                  padding: '0 8px',
+                  alignItems: 'center'
+                },
+                borderRadius: '12px',
+                padding: '16px 24px', // Increased padding
+                minHeight: '64px', // Minimum height
+                display: 'flex',
+                alignItems: 'center'
+              }}
+            >
+              {currentSnackbar.message}
+            </Alert>
+            <LinearProgress
+              variant="determinate"
+              value={progress}
+              sx={{
+                height: 4, // Thicker progress bar
+                backgroundColor: 'rgba(255, 255, 255, 0.2)',
+                '& .MuiLinearProgress-bar': {
+                  backgroundColor: 'rgba(255, 255, 255, 0.8)',
+                  transition: 'transform .2s linear'
+                },
+                position: 'absolute',
+                bottom: 0,
+                left: 0,
+                right: 0,
+                borderRadius: '0 0 12px 12px'
+              }}
+            />
+          </div>
+        </Snackbar>
+      )}
+    </SnackbarContext.Provider>
   );
 };
 
-// Export toast functions
-export const showToast = {
-  success: (message) => toast(<ToastContent message={message} type="success" />, toastConfig('success')),
-  error: (message) => toast(<ToastContent message={message} type="error" />, toastConfig('error')),
-  info: (message) => toast(<ToastContent message={message} type="info" />, toastConfig('info')),
-  warning: (message) => toast(<ToastContent message={message} type="warning" />, toastConfig('warning'))
-};
-
-export default Notif;
+// Export as named exports only
+export  default SnackbarProvider ;

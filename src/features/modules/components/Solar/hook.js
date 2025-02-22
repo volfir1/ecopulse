@@ -1,18 +1,18 @@
 import { useState, useMemo, useEffect } from 'react';
 import dayjs from 'dayjs';
-import { showToast } from '@shared/index';
+import { useSnackbar } from '@shared/index';
 
 export const useSolarAnalytics = () => {
   const [startYear, setStartYear] = useState(dayjs());
   const [endYear, setEndYear] = useState(dayjs().add(1, 'year'));
   const [isLoading, setIsLoading] = useState(true);
-  const [toastNotif, setToastNotif] = useState('');
-  const [toastType, setToastType] = useState('');
+  const toast = useSnackbar();
 
   const handleYearChange = (newStart, newEnd) => {
     // Validate year range (maximum 30 years instead of 50)
     if (newEnd.diff(newStart, 'year') > 30) {
       newEnd = newStart.add(30, 'year');
+      toast.warning('Maximum range of 30 years applied', 'top-center');
     }
     setStartYear(newStart);
     setEndYear(newEnd);
@@ -31,7 +31,7 @@ export const useSolarAnalytics = () => {
       const yearProgress = (year - yearStart) / (yearEnd - yearStart || 1);
       
       // Adjusted growth factor for 30-year projection
-      const growthFactor = 1 + (yearProgress * 0.6); // Reduced from 0.8 to 0.6 for more realistic 30-year growth
+      const growthFactor = 1 + (yearProgress * 0.6);
       const randomVariation = 0.9 + Math.random() * 0.2;
       
       yearRange.push({
@@ -56,31 +56,28 @@ export const useSolarAnalytics = () => {
     return Math.round(((projectedGeneration - currentGeneration) / currentGeneration) * 100);
   }, [currentGeneration, projectedGeneration]);
 
-  // Add loading effect whenever year changes
   useEffect(() => {
-    // Simulate data loading delay
     setIsLoading(true);
     const timer = setTimeout(() => {
       setIsLoading(false);
-    }, 800); // Adjust loading time as needed
+    }, 800);
     
     return () => clearTimeout(timer);
   }, [startYear, endYear]);
 
-  const handleDownloadSummary = async () => {
+  const handleDownloadSummary = () => {
     try {
       // Your download logic here
-      // For example:
-      // await downloadFile();
-      
-      showToast.success('Summary downloaded successfully');
+      toast.success('Summary downloaded successfully', 'top-center');
     } catch (error) {
-      showToast.error('Failed to download summary');
-      console.error('Download error:', error);
+      toast.error('Failed to download summary', 'top-center');
     }
   };
 
-
+  const handleClick = () => {
+    console.log('Button clicked');
+    toast.success('Test notification', 'top-center');
+  };
 
   return {
     generationData,
@@ -91,7 +88,8 @@ export const useSolarAnalytics = () => {
     endYear,
     handleYearChange,
     isLoading,
-    handleDownloadSummary
+    handleDownloadSummary,
+    handleClick
   };
 };
 
