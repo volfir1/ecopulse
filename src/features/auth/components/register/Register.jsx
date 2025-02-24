@@ -7,6 +7,7 @@ import { Button, Loader, useSnackbar, useLoader } from '@shared/index';
 import { useRegister } from './registerHook';
 import { RegisterSchema, initialValues } from './validation';
 import { p, t } from '@shared/index';
+import crosswalk from '../../../../assets/images/vectors/crosswalk.jpg';
 
 const Register = () => {
   const {
@@ -23,30 +24,55 @@ const Register = () => {
       <Loader />
       
       <div className="flex min-h-screen">
-        <div className="w-full md:w-1/2 flex items-center justify-center p-4">
-          <div className="w-full max-w-md space-y-4">
-            {/* User Icon */}
-            <div className="flex justify-center">
-              <div className="w-12 h-12 rounded-full flex items-center justify-center"
+        {/* Left Side - Primary Color Background */}
+        <div 
+          className="flex flex-col items-center justify-center flex-1 p-12 text-center" 
+          style={{ 
+            background: `linear-gradient(135deg, ${p.main}, ${p.dark})` 
+          }}
+        >
+          <img src="/logo.png" alt="EcoPulse Logo" className="w-32 h-32 mb-6" />
+          <h1 className="mb-6 text-5xl font-bold text-white">EcoPulse</h1>
+          <p className="text-lg leading-relaxed text-white/80 max-w-md">
+            Join our community of eco-conscious individuals and businesses.
+            Together, we can make a difference for a sustainable future.
+          </p>
+        </div>
+
+        {/* Right Side - Form with Background Image */}
+        <div 
+          className="relative flex items-center justify-center w-1/2 bg-center bg-cover"
+          style={{
+            backgroundImage: `url(${crosswalk})`,
+            backgroundSize: 'cover',
+            backgroundPosition: 'center'
+          }}
+        >
+          <div 
+            className="absolute inset-0" 
+            style={{ backgroundColor: 'rgba(255, 255, 255, 0.9)' }}
+          />
+          
+          <div className="relative z-10 w-full max-w-md p-8 mx-12 bg-white shadow-xl rounded-3xl">
+            <div className="flex justify-center mb-4">
+              <div className="w-16 h-16 rounded-full flex items-center justify-center"
                    style={{ border: `2px solid ${t.main}` }}>
-                <User className="w-6 h-6" style={{ color: p.main }} />
+                <User className="w-8 h-8" style={{ color: p.main }} />
               </div>
             </div>
 
-            {/* Title */}
-            <h2 className="text-xl font-bold text-center" 
+            <h2 className="text-2xl font-bold text-center mb-6" 
                 style={{ color: t.main }}>
               Create Account
             </h2>
 
-            {/* Form */}
             <Formik
               initialValues={initialValues}
               validationSchema={RegisterSchema}
               onSubmit={handleSubmit}
             >
               {({ isSubmitting, touched, errors }) => (
-                <Form className="space-y-3">
+                <Form className="space-y-4">
                   {/* Email Input */}
                   <div>
                     <div className="relative flex items-center">
@@ -131,16 +157,14 @@ const Register = () => {
                     />
                   </div>
 
-                  {/* Submit Button */}
                   <button
                     type="submit"
                     disabled={isSubmitting || isLoading}
-                    className="w-full h-10 bg-green-700 text-white rounded-lg font-medium hover:bg-green-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="w-full h-10 bg-green-700 text-white rounded-lg font-medium hover:bg-green-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm"
                   >
                     {isSubmitting || isLoading ? 'Creating Account...' : 'Create Account'}
                   </button>
 
-                  {/* Divider */}
                   <div className="relative py-2">
                     <div className="absolute inset-0 flex items-center">
                       <div className="w-full border-t border-gray-300"></div>
@@ -150,18 +174,16 @@ const Register = () => {
                     </div>
                   </div>
 
-                  {/* Google Sign Up Button */}
                   <button
                     type="button"
                     onClick={handleGoogleSignUp}
                     disabled={isLoading}
-                    className="w-full h-10 flex items-center justify-center gap-2 border border-gray-300 rounded-lg text-gray-700 font-medium hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="w-full h-10 flex items-center justify-center gap-2 border border-gray-300 rounded-lg text-gray-700 font-medium hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm"
                   >
-                    <img src="/google-icon.svg" alt="Google" className="w-4 h-4" />
-                    <span className="text-sm">Sign up with Google</span>
+                    <img src="/public/google.svg" alt="Google" className="w-4 h-4" />
+                    <span>Sign up with Google</span>
                   </button>
 
-                  {/* Login Link */}
                   <div className="text-center text-xs text-gray-600">
                     Already have an account?{' '}
                     <Link 
@@ -174,23 +196,6 @@ const Register = () => {
                 </Form>
               )}
             </Formik>
-          </div>
-        </div>
-
-        {/* Brand Side */}
-        <div 
-          className="hidden md:flex w-1/2 items-center justify-center p-6"
-          style={{ 
-            background: `linear-gradient(135deg, ${p.main}, ${p.dark})`
-          }}
-        >
-          <div className="text-center">
-            <img src="/logo.png" alt="Logo" className="w-32 h-32 mx-auto mb-4" />
-            <h1 className="text-4xl font-bold text-white mb-4">EcoPulse</h1>
-            <p className="text-sm leading-relaxed text-white/80 max-w-md mx-auto">
-              Join our community of eco-conscious individuals and businesses.
-              Together, we can make a difference for a sustainable future.
-            </p>
           </div>
         </div>
       </div>

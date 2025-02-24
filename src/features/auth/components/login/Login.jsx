@@ -22,21 +22,19 @@ const Login = () => {
       
       <div className="flex min-h-screen">
         {/* Left Side - Primary Color Background */}
-        <div 
-          className="flex flex-col items-start justify-center flex-1 p-12" 
-          style={{ 
-            background: `linear-gradient(135deg, ${p.main}, ${p.dark})` 
-          }}
-        >
-          <div className="max-w-xl">
-            <img src="/logo.png" alt="EcoPulse Logo" className="w-32 h-32 mb-6" />
-            <h1 className="mb-8 text-5xl font-bold text-white">EcoPulse</h1>
-            <p className="max-w-md text-lg leading-relaxed text-white/80">
-              Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.
-              Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris.
-            </p>
-          </div>
-        </div>
+       <div 
+                 className="flex flex-col items-center justify-center flex-1 p-12 text-center" 
+                 style={{ 
+                   background: `linear-gradient(135deg, ${p.main}, ${p.dark})` 
+                 }}
+               >
+                 <img src="/logo.png" alt="EcoPulse Logo" className="w-32 h-32 mb-6" />
+                 <h1 className="mb-6 text-5xl font-bold text-white">EcoPulse</h1>
+                 <p className="text-lg leading-relaxed text-white/80 max-w-md">
+                   Join our community of eco-conscious individuals and businesses.
+                   Together, we can make a difference for a sustainable future.
+                 </p>
+               </div>
 
         {/* Right Side - Background Image */}
         <div 
@@ -145,7 +143,7 @@ const Login = () => {
                     onClick={handleGoogleSignIn}
                     className="w-full h-10 flex items-center justify-center gap-2 border border-gray-300 rounded-lg text-gray-700 font-medium hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm"
                   >
-                    <img src="/google-icon.svg" alt="Google" className="w-4 h-4" />
+                    <img src="/public/google.svg" alt="Google" className="w-4 h-4" />
                     <span>Sign in with Google</span>
                   </button>
 
