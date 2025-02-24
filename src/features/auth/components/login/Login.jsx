@@ -2,26 +2,49 @@ import React from 'react';
 import { User, Lock, Mail } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { Button, p, t } from '@shared/index';
+import { Formik, Form, Field, ErrorMessage } from 'formik';
+import * as Yup from 'yup';
 import Loader from '@shared/components/loaders/Loader';
 import useLogin from './hook';
 import crosswalk from '../../../../assets/images/vectors/crosswalk.jpg';
 
+// Validation Schema using Yup
+const LoginSchema = Yup.object().shape({
+  email: Yup.string()
+    .email('Invalid email address')
+    .required('Email is required'),
+  password: Yup.string()
+    .min(8, 'Password must be at least 8 characters')
+    .required('Password is required')
+});
+
 const Login = () => {
   const {
-    email,
-    setEmail,
-    password,
-    setPassword,
+    handleGoogleSignIn,
     toastMessage,
-    toastType,
-    handleSubmit,
-    handleGoogleSignIn
+    toastType
   } = useLogin();
+
+  const initialValues = {
+    email: '',
+    password: ''
+  };
+
+  const handleFormSubmit = async (values, { setSubmitting }) => {
+    try {
+      // Your login logic here
+      // You can call your handleSubmit function from useLogin hook
+      console.log('Form submitted:', values);
+    } catch (error) {
+      console.error('Login error:', error);
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
   return (
     <>
       <Loader />
-   
       
       <div className="flex min-h-screen">
         {/* Left Side - Primary Color Background */}
@@ -75,92 +98,113 @@ const Login = () => {
               Login
             </h2>
 
-            <form onSubmit={handleSubmit} className="space-y-6">
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
-                  <Mail 
-                    className="w-5 h-5" 
-                    style={{ color: t.disabled }} 
-                  />
-                </div>
-                <input
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="block w-full py-3 pl-10 pr-3 transition-all border rounded-lg"
-                  style={{ 
-                    borderColor: t.disabled
-                  }}
-                  placeholder="Email"
-                />
-              </div>
+            <Formik
+              initialValues={initialValues}
+              validationSchema={LoginSchema}
+              onSubmit={handleFormSubmit}
+            >
+              {({ isSubmitting, touched, errors }) => (
+                <Form className="space-y-6">
+                  <div className="relative">
+                    <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+                      <Mail 
+                        className="w-5 h-5" 
+                        style={{ color: t.disabled }} 
+                      />
+                    </div>
+                    <Field
+                      type="email"
+                      name="email"
+                      className={`block w-full py-3 pl-10 pr-3 transition-all border rounded-lg ${
+                        touched.email && errors.email ? 'border-red-500' : ''
+                      }`}
+                      style={{ 
+                        borderColor: touched.email && errors.email ? undefined : t.disabled
+                      }}
+                      placeholder="Email"
+                    />
+                    <ErrorMessage
+                      name="email"
+                      component="div"
+                      className="mt-1 text-sm text-red-500"
+                    />
+                  </div>
 
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
-                  <Lock 
-                    className="w-5 h-5" 
-                    style={{ color: t.disabled }} 
-                  />
-                </div>
-                <input
-                  type="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="block w-full py-3 pl-10 pr-3 transition-all border rounded-lg"
-                  style={{ 
-                    borderColor: t.disabled
-                  }}
-                  placeholder="Password"
-                />
-              </div>
+                  <div className="relative">
+                    <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+                      <Lock 
+                        className="w-5 h-5" 
+                        style={{ color: t.disabled }} 
+                      />
+                    </div>
+                    <Field
+                      type="password"
+                      name="password"
+                      className={`block w-full py-3 pl-10 pr-3 transition-all border rounded-lg ${
+                        touched.password && errors.password ? 'border-red-500' : ''
+                      }`}
+                      style={{ 
+                        borderColor: touched.password && errors.password ? undefined : t.disabled
+                      }}
+                      placeholder="Password"
+                    />
+                    <ErrorMessage
+                      name="password"
+                      component="div"
+                      className="mt-1 text-sm text-red-500"
+                    />
+                  </div>
 
-              <Button
-                variant="primary"
-                size="large"
-                fullWidth
-                type="submit"
-              >
-                Login
-              </Button>
+                  <Button
+                    variant="primary"
+                    size="large"
+                    fullWidth
+                    type="submit"
+                    disabled={isSubmitting}
+                  >
+                    {isSubmitting ? 'Logging in...' : 'Login'}
+                  </Button>
 
-              <div className="relative my-6">
-                <div className="absolute inset-0 flex items-center">
+                  <div className="relative my-6">
+                    <div className="absolute inset-0 flex items-center">
+                      <div 
+                        className="w-full border-t" 
+                        style={{ borderColor: t.disabled }}
+                      />
+                    </div>
+                    <div className="relative flex justify-center text-sm">
+                      <span className="px-2 text-gray-500 bg-white">
+                        Or continue with
+                      </span>
+                    </div>
+                  </div>
+
+                  <Button
+                    variant="secondary"
+                    size="large"
+                    fullWidth
+                    onClick={handleGoogleSignIn}
+                    startIcon={<GoogleIcon />}
+                  >
+                    Sign in with Google
+                  </Button>
+
                   <div 
-                    className="w-full border-t" 
-                    style={{ borderColor: t.disabled }}
-                  />
-                </div>
-                <div className="relative flex justify-center text-sm">
-                  <span className="px-2 text-gray-500 bg-white">
-                    Or continue with
-                  </span>
-                </div>
-              </div>
-
-              <Button
-                variant="secondary"
-                size="large"
-                fullWidth
-                onClick={handleGoogleSignIn}
-                startIcon={<GoogleIcon />}
-              >
-                Sign in with Google
-              </Button>
-
-              <div 
-                className="text-center" 
-                style={{ color: t.secondary }}
-              >
-                Not a member?{' '}
-                <Link 
-                  to="/register" 
-                  className="font-medium hover:underline"
-                  style={{ color: p.main }}
-                >
-                  Sign up now
-                </Link>
-              </div>
-            </form>
+                    className="text-center" 
+                    style={{ color: t.secondary }}
+                  >
+                    Not a member?{' '}
+                    <Link 
+                      to="/register" 
+                      className="font-medium hover:underline"
+                      style={{ color: p.main }}
+                    >
+                      Sign up now
+                    </Link>
+                  </div>
+                </Form>
+              )}
+            </Formik>
           </div>
         </div>
       </div>
@@ -168,7 +212,7 @@ const Login = () => {
   );
 };
 
-// Google Icon Component
+// Google Icon Component remains the same
 const GoogleIcon = () => (
   <svg 
     viewBox="0 0 24 24" 
