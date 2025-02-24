@@ -6,7 +6,7 @@ export const userRoutes = {
   Dashboard: lazy(() => import('@features/dashboard/components/Index')),
   EnergySharing: lazy(() => import('@features/energy-sharing/components/Dashboard.jsx')),
   HelpSupport: lazy(() => import('@features/help-support/components/help-support')),
-  Recommendations: lazy(() => import('@features/recommendations/components/Dashboard')),
+  Recommendations: lazy(() => import('@features/recommendations/components/Recommnedation')),
   UserProfile: lazy(() => import('@features/profile/UserProfile'))
 };
 
