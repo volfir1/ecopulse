@@ -2,12 +2,19 @@ import React from 'react';
 import {
   LineChart, Line, XAxis, YAxis, Tooltip,
   AreaChart, Area, ResponsiveContainer, CartesianGrid,
-  ComposedChart, Bar
+  BarChart, Bar
 } from 'recharts';
 import { Leaf } from 'lucide-react';
-import { p, s, t, bg, elements, Button, Card, YearPicker } from '@shared/index';
-import { useBiomassAnalytics } from './hook';
-import { getGenerationConfig, getFeedstockConfig, getEfficiencyConfig } from './script';
+import { Button, Card, YearPicker } from '@shared/index';
+import { useBiomassAnalytics } from './bioHook';
+import { 
+  getAreaChartConfig, 
+  getLineChartConfig, 
+  getBarChartConfig, 
+  getGridConfig,
+  getMetricCardData,
+  downloadSummary 
+} from './bioUtils';
 
 // Enhanced skeleton components for loading state
 const SkeletonPulse = ({ className }) => (
@@ -31,14 +38,9 @@ const SkeletonButton = ({ width = "w-36" }) => (
 const SkeletonChart = () => (
   <div className="w-full h-80 relative overflow-hidden">
     <SkeletonPulse className="absolute inset-0" />
-    
-    {/* Simulated X-axis */}
+    {/* Simulated chart elements */}
     <div className="absolute bottom-0 left-0 right-0 h-px bg-gray-300"></div>
-    
-    {/* Simulated Y-axis */}
     <div className="absolute top-0 bottom-0 left-0 w-px bg-gray-300"></div>
-    
-    {/* Simulated chart lines */}
     {[...Array(5)].map((_, i) => (
       <div 
         key={i} 
@@ -46,8 +48,6 @@ const SkeletonChart = () => (
         style={{ top: `${20 + i * 15}%` }}
       ></div>
     ))}
-    
-    {/* Simulated area chart */}
     <div 
       className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-green-200 to-transparent animate-pulse"
       style={{ height: '60%', clipPath: 'polygon(0 100%, 20% 80%, 40% 90%, 60% 60%, 80% 70%, 100% 40%, 100% 100%)' }}
@@ -58,25 +58,24 @@ const SkeletonChart = () => (
 const Biomass = () => {
   const {
     generationData,
-    currentStats,
-    projectedStats,
-    growthPercentages,
-    startYear,
-    endYear,
-    handleYearChange,
-    isLoading
+    currentProjection,
+    loading,
+    selectedStartYear,
+    selectedEndYear,
+    handleStartYearChange,
+    handleEndYearChange,
+    handleDownload
   } = useBiomassAnalytics();
 
-  const generationConfig = !isLoading ? getGenerationConfig(generationData, startYear, endYear) : {};
-  const feedstockConfig = !isLoading ? getFeedstockConfig(generationData, startYear, endYear) : {};
-  const efficiencyConfig = !isLoading ? getEfficiencyConfig(generationData, startYear, endYear) : {};
+  const areaChartConfig = getAreaChartConfig();
 
-  // Enhanced Skeleton UI
-  if (isLoading) {
+  const gridConfig = getGridConfig();
+
+  if (loading) {
     return (
       <div className="p-6">
-        {/* Header Section Skeleton with improved aesthetics */}
-        <div className="mb-6">
+        {/* Header Section Skeleton */}
+        <div className="mb-10">
           <div className="flex justify-between items-center mb-4">
             <div className="flex items-center gap-2">
               <SkeletonLeaf />
@@ -100,85 +99,45 @@ const Biomass = () => {
           </div>
         </div>
 
-        {/* Enhanced Generation Chart Skeleton */}
-        <div className="p-6 mb-6 rounded-lg overflow-hidden" style={{ 
-          backgroundColor: bg.paper,
-          boxShadow: '0 2px 8px rgba(0, 0, 0, 0.04)'
-        }}>
-          {/* Title with subtitle simulation */}
+        <Card.Base className="p-6 mb-6">
           <div className="space-y-2 mb-6">
             <SkeletonPulse className="w-48 h-7" />
             <SkeletonPulse className="w-64 h-4 opacity-70" />
           </div>
-          
-          {/* Chart with visual elements that suggest the shape of the data */}
           <SkeletonChart />
-          
-          {/* Legend items */}
-          <div className="flex gap-4 mt-4 justify-end">
-            <div className="flex items-center gap-2">
-              <SkeletonPulse className="w-3 h-3 rounded" />
-              <SkeletonPulse className="w-20 h-4" />
-            </div>
-            <div className="flex items-center gap-2">
-              <SkeletonPulse className="w-3 h-3 rounded" />
-              <SkeletonPulse className="w-20 h-4" />
-            </div>
-          </div>
-        </div>
-        
-        {/* Metrics cards skeleton */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-          {[1, 2, 3].map((i) => (
-            <div key={i} className="p-4 rounded-lg" style={{ 
-              backgroundColor: bg.paper,
-              boxShadow: '0 2px 8px rgba(0, 0, 0, 0.04)'
-            }}>
-              <div className="flex justify-between items-start">
-                <div className="space-y-2">
-                  <SkeletonPulse className="w-24 h-5" />
-                  <SkeletonPulse className="w-16 h-8" />
-                </div>
-                <SkeletonPulse className="w-10 h-10 rounded-full" />
-              </div>
-              <SkeletonPulse className="w-full h-2 mt-4" />
-            </div>
-          ))}
-        </div>
+        </Card.Base>
       </div>
     );
   }
 
-  // Actual content
   return (
-    <div className="p-6">
+    <div className="p-3">
       {/* Header Section */}
       <div className="mb-6">
         <div className="flex justify-between items-center mb-4">
-          <h1 className="text-2xl font-semibold flex items-center gap-2" style={{ color: elements.biomass }}>
+          <h1 className="text-2xl font-semibold flex items-center gap-2 text-green-600">
             <Leaf size={24} />
             Biomass Energy Analytics
           </h1>
-          <div className="text-gray-500 text-sm">
-            Selected Range: {startYear.format('YYYY')} - {endYear.format('YYYY')}
-            ({endYear.diff(startYear, 'year')} years)
+          <div className="text-gray-500">
+            <div className="text-sm font-medium">
+              Selected Range: {selectedStartYear} - {selectedEndYear}  ({selectedEndYear - selectedStartYear} year/s)
+            </div>
+          
           </div>
         </div>
 
         <div className="flex justify-between items-center">
           <YearPicker
-            startYear={startYear}
-            endYear={endYear}
-            onYearChange={handleYearChange}
+            initialStartYear={selectedStartYear}
+            initialEndYear={selectedEndYear}
+            onStartYearChange={handleStartYearChange}
+            onEndYearChange={handleEndYearChange}
           />
-
           <div className="flex gap-2">
             <Button 
-              className="whitespace-nowrap"
-              style={{
-                backgroundColor: elements.biomass,
-                color: '#ffffff'
-              }}
+              className="whitespace-nowrap bg-green-600 text-white hover:bg-green-700"
+              onClick={handleDownload}
             >
               Download Summary
             </Button>
@@ -186,55 +145,44 @@ const Biomass = () => {
         </div>
       </div>
 
-      {/* Generation Chart */}
-      <Card.Base 
-        className="p-6 mb-6" 
-        style={{ 
-          backgroundColor: bg.paper,
-          boxShadow: '0 2px 8px rgba(0, 0, 0, 0.04)'
-        }}
-      >
-        <h2 className="text-xl font-semibold mb-4" style={{ color: t.main }}>
-          Power Generation Trend
-        </h2>
-        <div className="h-[300px]">
-          <ResponsiveContainer width="100%" height={400}>
-            <AreaChart
-              data={generationData}
-              margin={{ top: 0, right: 30, left: 20, bottom: 20 }}
-            >
-              <defs>
-                <linearGradient id="biomassGradient" x1="0" y1="0" x2="0" y2="1">
-                  {generationConfig.gradient.colors.map((color, index) => (
-                    <stop
-                      key={index}
-                      offset={color.offset}
-                      stopColor={color.color}
-                      stopOpacity={color.opacity}
-                    />
-                  ))}
-                </linearGradient>
-              </defs>
-              <CartesianGrid 
-                strokeDasharray="3 3" 
-                vertical={false} 
-                stroke={t.disabled} 
+
+
+      {/* Charts Section */}
+
+<Card.Biomass className="p-6 mb-6 bg-white shadow-sm">
+  <h2 className="text-xl font-semibold mb-4 text-gray-800">
+    Power Generation Trend
+  </h2>
+  <div className="text-3xl font-bold mb-1 text-green-600">
+    {currentProjection} GWH
+  </div>
+  <p className="text-gray-600 mb-4">Predictive Analysis Generation projection</p>
+  <div className="h-[250px]"> {/* Reduced from 300px to 250px */}
+    <ResponsiveContainer width="100%" height="100%">
+      <AreaChart data={generationData}>
+        <defs>
+          <linearGradient id="biomassGradient" x1="0" y1="0" x2="0" y2="1">
+            {areaChartConfig.gradient.stops.map((stop, index) => (
+              <stop
+                key={index}
+                offset={stop.offset}
+                stopColor={stop.color}
+                stopOpacity={stop.opacity}
               />
-              <XAxis {...generationConfig.xAxis} stroke={t.secondary} />
-              <YAxis {...generationConfig.yAxis} stroke={t.secondary} />
-              <Tooltip
-                contentStyle={{
-                  backgroundColor: bg.paper,
-                  borderRadius: '6px',
-                  border: `1px solid ${t.disabled}`,
-                  boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
-                }}
-              />
-              <Area {...generationConfig.area} />
-            </AreaChart>
-          </ResponsiveContainer>
-        </div>
-      </Card.Base>
+            ))}
+          </linearGradient>
+        </defs>
+        <CartesianGrid {...gridConfig.cartesianGrid} />
+        <XAxis {...gridConfig.xAxis} dataKey="date" />
+        <YAxis {...gridConfig.yAxis} />
+        <Tooltip {...areaChartConfig.tooltip} />
+        <Area {...areaChartConfig.area} />
+      </AreaChart>
+    </ResponsiveContainer>
+  </div>
+</Card.Biomass>
+    
+      
     </div>
   );
 };

@@ -1,55 +1,57 @@
-import { useState, useEffect } from "react";
+// useYearPicker.js
+import { useState, useCallback } from 'react';
 import dayjs from 'dayjs';
 
-export const useYearPicker = () => {
-    const [startYear, setStartYear] = useState(dayjs())
-    const [endYear, setEndYear] = useState(dayjs().add(1, 'year'))
-    const [error, setError] = useState('')
+export const useYearPicker = ({
+  initialStartYear,
+  initialEndYear,
+  onStartYearChange,
+  onEndYearChange
+}) => {
+  const [startYear, setStartYear] = useState(dayjs(initialStartYear?.toString()));
+  const [endYear, setEndYear] = useState(dayjs(initialEndYear?.toString()));
+  const [error, setError] = useState(false);
 
-    // Changed from 50 to 30 years
-    useEffect(() => {
-        const yearDifference = endYear.diff(startYear, 'year')
-        if(yearDifference > 30){ // Changed limit
-            setError('Time span cannot exceed 30 years') // Updated error message
-            setEndYear(startYear.add(30, 'year')) // Changed limit
-        }else{
-            setError('')
-        }
-    },[startYear, endYear])
-
-    const handleStartYearChange = (newValue) => {
-        if (!newValue) return
-
-        setStartYear(newValue)
-        if(endYear.diff(newValue, 'year') > 30){ // Changed limit
-            setEndYear(newValue.add(30, 'year')) // Changed limit
-        }
+  const handleStartYearChange = useCallback((newValue) => {
+    if (!newValue || !newValue.isValid()) {
+      setError(true);
+      return;
     }
+    setError(false);
+    setStartYear(newValue);
+    onStartYearChange?.(newValue.year());
+  }, [onStartYearChange]);
 
-    const handleEndYearChange = (newValue) => {
-        if (!newValue) return;
-        
-        if (newValue.diff(startYear, 'year') > 30) { // Changed limit
-          setEndYear(startYear.add(30, 'year')); // Changed limit
-        } else {
-          setEndYear(newValue);
-        }
+  const handleEndYearChange = useCallback((newValue) => {
+    if (!newValue || !newValue.isValid()) {
+      setError(true);
+      return;
     }
+    setError(false);
+    setEndYear(newValue);
+    onEndYearChange?.(newValue.year());
+  }, [onEndYearChange]);
+
+  const handleReset = useCallback(() => {
+    const currentYear = dayjs().year();
+    const defaultStartYear = dayjs(currentYear.toString());
+    const defaultEndYear = dayjs((currentYear + 1).toString());
     
-    const handleReset = () => {
-        setStartYear(dayjs())
-        setEndYear(dayjs().add(1,'year'))
-        setError('')
-    }
+    setStartYear(defaultStartYear);
+    setEndYear(defaultEndYear);
+    onStartYearChange?.(defaultStartYear.year());
+    onEndYearChange?.(defaultEndYear.year());
+    setError(false);
+  }, [onStartYearChange, onEndYearChange]);
 
-    return {
-        startYear,
-        endYear,
-        error,
-        handleStartYearChange,
-        handleEndYearChange,
-        handleReset
-    }
-}
+  return {
+    startYear,
+    endYear,
+    error,
+    handleStartYearChange,
+    handleEndYearChange,
+    handleReset
+  };
+};
 
-export default useYearPicker
+export default useYearPicker;
