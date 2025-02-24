@@ -109,12 +109,13 @@ const SolarEnergy = () => {
         </div>
 
         <div className="flex justify-between items-center">
-          <YearPicker
-            initialStartYear={selectedStartYear}
-            initialEndYear={selectedEndYear}
-            onStartYearChange={handleStartYearChange}
-            onEndYearChange={handleEndYearChange}
-          />
+        <YearPicker
+    startYear={selectedStartYear}    // Changed from startYear to selectedStartYear
+    endYear={selectedEndYear}        // Changed from endYear to selectedEndYear
+    onStartYearChange={handleStartYearChange}
+    onEndYearChange={handleEndYearChange}
+    className="w-full"
+  />
           <div className="flex gap-2">
             <Button 
               className="whitespace-nowrap bg-[#FFB800] text-white hover:bg-[#F0AB00] transition-colors"
