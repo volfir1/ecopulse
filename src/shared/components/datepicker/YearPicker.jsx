@@ -1,73 +1,82 @@
 import React from 'react';
 import { LocalizationProvider, DatePicker } from '@mui/x-date-pickers';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
-import { Box, Typography } from '@mui/material';
+import { Box, Typography, IconButton } from '@mui/material';
 import { RefreshCcw, Calendar } from 'lucide-react';
 import dayjs from 'dayjs';
+import { useYearPicker } from './useYearPicker';
+import { getPickerStyles } from './styles';
 
-export const YearPicker = ({ startYear, endYear, onYearChange }) => {
-  const handleStartYearChange = (newValue) => {
-    if (!newValue) return;
-    onYearChange(newValue, endYear);
-  };
-
-  const handleEndYearChange = (newValue) => {
-    if (!newValue) return;
-    onYearChange(startYear, newValue);
-  };
-
-  const handleReset = () => {
-    onYearChange(dayjs(), dayjs().add(1, 'year'));
-  };
-
-  // Custom styles for the DatePicker
-  const datePickerStyles = {
-    '& .MuiInputBase-root': {
-      height: '40px',  // More compact height
-      borderRadius: '8px',  // Rounded corners
-    },
-    '& .MuiOutlinedInput-input': {
-      padding: '8px 14px',
-      fontSize: '0.875rem',
-    },
-    width: '130px'  // More compact width
-  };
+export const YearPicker = ({
+  initialStartYear,
+  initialEndYear,
+  onStartYearChange,
+  onEndYearChange
+}) => {
+  const {
+    startYear,
+    endYear,
+    error,
+    handleStartYearChange,
+    handleEndYearChange,
+    handleReset
+  } = useYearPicker({
+    initialStartYear,
+    initialEndYear,
+    onStartYearChange,
+    onEndYearChange
+  });
 
   return (
     <LocalizationProvider dateAdapter={AdapterDayjs}>
-      <Box className="flex items-center gap-3">  {/* Reduced gap */}
+      <Box className="flex items-center gap-3">
         <DatePicker
           views={['year']}
-          value={startYear}
+          value={dayjs(startYear)}
           onChange={handleStartYearChange}
-          maxDate={endYear}
-          sx={datePickerStyles}
+          maxDate={dayjs(endYear)}
           slots={{
-            openPickerIcon: () => <Calendar size={18} />
+            openPickerIcon: () => <Calendar className="h-4 w-4 text-gray-500" />
+          }}
+          slotProps={{
+            textField: {
+              sx: getPickerStyles(error),
+              inputProps: {
+                placeholder: 'Start Year'
+              },
+              format: 'YYYY'
+            }
           }}
         />
 
-        <Typography className="text-gray-500 font-normal mx-0">
-          to
-        </Typography>
+        <Typography className="text-gray-500 text-sm">to</Typography>
 
         <DatePicker
           views={['year']}
-          value={endYear}
+          value={dayjs(endYear)}
           onChange={handleEndYearChange}
-          minDate={startYear}
-          sx={datePickerStyles}
+          minDate={dayjs(startYear)}
           slots={{
-            openPickerIcon: () => <Calendar size={18} />
+            openPickerIcon: () => <Calendar className="h-4 w-4 text-gray-500" />
+          }}
+          slotProps={{
+            textField: {
+              sx: getPickerStyles(error),
+              inputProps: {
+                placeholder: 'End Year'
+              },
+              format: 'YYYY'
+            }
           }}
         />
 
-        <button
+        <IconButton
           onClick={handleReset}
-          className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors"  
+          className="p-1.5 hover:bg-gray-100 rounded-full"
+          size="small"
         >
-          <RefreshCcw size={18} className="text-gray-500" />
-        </button>
+          <RefreshCcw className="h-4 w-4 text-gray-500" />
+        </IconButton>
       </Box>
     </LocalizationProvider>
   );
