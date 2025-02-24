@@ -1,56 +1,20 @@
+// hooks/useLogin.js
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useLoader } from '@components/loaders/useLoader';
 import { useSnackbar } from '@shared/index';
-import * as Yup from 'yup';
-
-// Validation schema - can be extended later
-export const LoginSchema = Yup.object().shape({
-  email: Yup.string()
-    .email('Invalid email address')
-    .required('Email is required'),
-  password: Yup.string()
-    .min(8, 'Password must be at least 8 characters')
-    .matches(
-      /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/,
-      'Must contain at least one uppercase letter, one lowercase letter, and one number'
-    )
-    .required('Password is required')
-});
-
-// Mock authentication service - replace with real auth later
-const authService = {
-  login: async (email, password) => {
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    // Prototype validation
-    if (email === 'test@example.com' && password === 'Test1234') {
-      return { success: true, user: { email, name: 'Test User' }};
-    }
-    throw new Error('Invalid credentials');
-  },
-  
-  googleSignIn: async () => {
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    return { success: true, user: { email: 'google@example.com', name: 'Google User' }};
-  },
-
-  // Add more auth methods here later
-};
+import { LoginSchema } from './validation';
+import { authService } from './authService';
 
 export const useLogin = () => {
   const navigate = useNavigate();
   const { startLoading, stopLoading } = useLoader();
   const toast = useSnackbar();
   const [authError, setAuthError] = useState(null);
-
-  // Store user data - integrate with your state management later
   const [user, setUser] = useState(null);
 
   const handleAuthSuccess = (userData) => {
     setUser(userData);
-    // You can add token storage, user data persistence, etc. here later
     localStorage.setItem('user', JSON.stringify(userData));
     toast.success('Welcome back! Successfully logged in.');
     
@@ -100,7 +64,6 @@ export const useLogin = () => {
     }
   };
 
-  // Helper method to check auth state - can be extended later
   const checkAuth = () => {
     const storedUser = localStorage.getItem('user');
     if (storedUser) {
@@ -115,7 +78,6 @@ export const useLogin = () => {
     return false;
   };
 
-  // Logout function - can be extended later
   const logout = () => {
     setUser(null);
     localStorage.removeItem('user');
@@ -138,5 +100,3 @@ export const useLogin = () => {
     isAuthenticated: !!user
   };
 };
-
-export default useLogin;
