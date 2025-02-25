@@ -1,40 +1,45 @@
 // components/Login.jsx
 import React from 'react';
 import { User, Lock, Mail } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Button, p, t } from '@shared/index';
 import { Formik, Form, Field, ErrorMessage } from 'formik';
 import Loader from '@shared/components/loaders/Loader';
 import { useLogin } from './loginHook';
+import { useAuth } from '@context/AuthContext';
 import crosswalk from '../../../../assets/images/vectors/crosswalk.jpg';
 
 const Login = () => {
+  // We'll use both hooks during this transition
   const {
     handleGoogleSignIn,
     handleSubmit,
     initialValues,
     validationSchema
   } = useLogin();
+  
+  // Get loading state from AuthContext for more accurate loading status
+  const { isLoading } = useAuth();
 
   return (
     <>
-      <Loader />
+      {isLoading && <Loader />}
       
       <div className="flex min-h-screen">
         {/* Left Side - Primary Color Background */}
-       <div 
-                 className="flex flex-col items-center justify-center flex-1 p-12 text-center" 
-                 style={{ 
-                   background: `linear-gradient(135deg, ${p.main}, ${p.dark})` 
-                 }}
-               >
-                 <img src="/logo.png" alt="EcoPulse Logo" className="w-32 h-32 mb-6" />
-                 <h1 className="mb-6 text-5xl font-bold text-white">EcoPulse</h1>
-                 <p className="text-lg leading-relaxed text-white/80 max-w-md">
-                   Join our community of eco-conscious individuals and businesses.
-                   Together, we can make a difference for a sustainable future.
-                 </p>
-               </div>
+        <div 
+          className="flex flex-col items-center justify-center flex-1 p-12 text-center" 
+          style={{ 
+            background: `linear-gradient(135deg, ${p.main}, ${p.dark})` 
+          }}
+        >
+          <img src="/logo.png" alt="EcoPulse Logo" className="w-32 h-32 mb-6" />
+          <h1 className="mb-6 text-5xl font-bold text-white">EcoPulse</h1>
+          <p className="text-lg leading-relaxed text-white/80 max-w-md">
+            Join our community of eco-conscious individuals and businesses.
+            Together, we can make a difference for a sustainable future.
+          </p>
+        </div>
 
         {/* Right Side - Background Image */}
         <div 
@@ -121,10 +126,10 @@ const Login = () => {
 
                   <button
                     type="submit"
-                    disabled={isSubmitting}
+                    disabled={isSubmitting || isLoading}
                     className="w-full h-10 bg-green-700 text-white rounded-lg font-medium hover:bg-green-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm"
                   >
-                    {isSubmitting ? 'Logging in...' : 'Login'}
+                    {isSubmitting || isLoading ? 'Logging in...' : 'Login'}
                   </button>
 
                   <div className="relative py-2">
@@ -141,6 +146,7 @@ const Login = () => {
                   <button
                     type="button"
                     onClick={handleGoogleSignIn}
+                    disabled={isLoading}
                     className="w-full h-10 flex items-center justify-center gap-2 border border-gray-300 rounded-lg text-gray-700 font-medium hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm"
                   >
                     <img src="/public/google.svg" alt="Google" className="w-4 h-4" />

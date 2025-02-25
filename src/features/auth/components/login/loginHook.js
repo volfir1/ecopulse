@@ -4,22 +4,33 @@ import { useNavigate } from 'react-router-dom';
 import { useLoader } from '@components/loaders/useLoader';
 import { useSnackbar } from '@shared/index';
 import { LoginSchema } from './validation';
-import  authService  from '../../services/authService';
+import { useAuth } from '@context/AuthContext';
 
 export const useLogin = () => {
   const navigate = useNavigate();
   const { startLoading, stopLoading } = useLoader();
   const toast = useSnackbar();
   const [authError, setAuthError] = useState(null);
-  const [user, setUser] = useState(null);
+  
+  // Use the AuthContext
+  const { 
+    login: contextLogin, 
+    googleSignIn: contextGoogleSignIn,
+    logout: contextLogout,
+    user
+  } = useAuth();
 
+  // Modified to handle role-based redirection
   const handleAuthSuccess = (userData) => {
-    setUser(userData);
-    localStorage.setItem('user', JSON.stringify(userData));
     toast.success('Welcome back! Successfully logged in.');
     
     setTimeout(() => {
-      navigate('/dashboard');
+      // Redirect based on user role
+      if (userData.role === 'admin') {
+        navigate('/admin/dashboard');
+      } else {
+        navigate('/dashboard');
+      }
     }, 800);
   };
 
@@ -35,7 +46,8 @@ export const useLogin = () => {
     startLoading();
     
     try {
-      const result = await authService.login(values.email, values.password);
+      // Use the login function from AuthContext
+      const result = await contextLogin(values.email, values.password);
       if (result.success) {
         handleAuthSuccess(result.user);
       }
@@ -53,7 +65,8 @@ export const useLogin = () => {
     startLoading();
     
     try {
-      const result = await authService.googleSignIn();
+      // Use the googleSignIn function from AuthContext
+      const result = await contextGoogleSignIn();
       if (result.success) {
         handleAuthSuccess(result.user);
       }
@@ -64,25 +77,16 @@ export const useLogin = () => {
     }
   };
 
-  const checkAuth = () => {
-    const storedUser = localStorage.getItem('user');
-    if (storedUser) {
-      try {
-        const userData = JSON.parse(storedUser);
-        setUser(userData);
-        return true;
-      } catch (error) {
-        console.error('Error parsing stored user data:', error);
-      }
+  const logout = async () => {
+    try {
+      // Call the logout function from AuthContext
+      await contextLogout();
+      toast.success('Successfully logged out');
+      navigate('/login');
+    } catch (error) {
+      console.error('Logout error:', error);
+      toast.error('Logout failed. Please try again.');
     }
-    return false;
-  };
-
-  const logout = () => {
-    setUser(null);
-    localStorage.removeItem('user');
-    toast.success('Successfully logged out');
-    navigate('/login');
   };
 
   return {
@@ -94,9 +98,10 @@ export const useLogin = () => {
     handleSubmit,
     handleGoogleSignIn,
     logout,
-    checkAuth,
     user,
     authError,
-    isAuthenticated: !!user
+    isAuthenticated: !!user,
+    hasRole: (role) => user?.role === role,
+    userRole: user?.role || 'user'
   };
 };
