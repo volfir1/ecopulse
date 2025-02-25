@@ -1,5 +1,4 @@
 import React from 'react';
-import { Card, AppIcon } from '@shared/index';
 import { 
   Box, 
   Typography, 
@@ -10,138 +9,85 @@ import {
   TableRow,
   Chip,
   IconButton,
-  TextField,
-  Select,
-  MenuItem,
-  Dialog
+  Paper,
+  TableContainer
 } from '@mui/material';
-import { useUserManagement } from '../users/userManageHook';
+import { Edit, Delete } from '@mui/icons-material';
+import { useUserManagement } from './userManageHook';
 
-export default function UserManagement() {
+export default function UserControl() {
   const {
     data,
     loading,
-    selectedUser,
-    filters,
-    handleUserStatusChange,
     handleUserDelete,
-    handleSearch,
-    handleFilterChange,
     setSelectedUser
   } = useUserManagement();
 
+  if (loading) {
+    return <Box className="p-4">Loading...</Box>;
+  }
+
   return (
-    <div className="p-6 max-w-7xl mx-auto">
-      {/* Header with Stats */}
-      <Box className="mb-6">
-        <Typography variant="h4" className="mb-6">User Management</Typography>
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          {Object.entries(data.statistics).map(([key, value]) => (
-            <Card.Base key={key}>
-              <Box className="p-4">
-                <Typography color="text.secondary" variant="body2">
-                  {key.replace(/([A-Z])/g, ' $1').trim()}
-                </Typography>
-                <Typography variant="h4" className="mt-2">{value}</Typography>
-              </Box>
-            </Card.Base>
-          ))}
-        </div>
-      </Box>
-
-      {/* Filters */}
-      <Card.Base className="mb-6">
-        <Box className="p-4 flex gap-4 flex-wrap">
-          <TextField
-            placeholder="Search users..."
-            size="small"
-            onChange={(e) => handleSearch(e.target.value)}
-            value={filters.search}
-          />
-          <Select
-            size="small"
-            value={filters.role}
-            onChange={(e) => handleFilterChange('role', e.target.value)}
-          >
-            <MenuItem value="all">All Roles</MenuItem>
-            {data.roles.map(role => (
-              <MenuItem key={role} value={role}>{role}</MenuItem>
-            ))}
-          </Select>
-          <Select
-            size="small"
-            value={filters.status}
-            onChange={(e) => handleFilterChange('status', e.target.value)}
-          >
-            <MenuItem value="all">All Statuses</MenuItem>
-            {data.statuses.map(status => (
-              <MenuItem key={status} value={status}>{status}</MenuItem>
-            ))}
-          </Select>
-        </Box>
-      </Card.Base>
-
-      {/* Users Table */}
-      <Card.Base>
+    <Box className="p-4">
+      <Typography variant="h5" className="mb-4">
+        Users List
+      </Typography>
+      
+      <TableContainer component={Paper}>
         <Table>
           <TableHead>
             <TableRow>
-              <TableCell>User</TableCell>
+              <TableCell>Name</TableCell>
+              <TableCell>Email</TableCell>
               <TableCell>Role</TableCell>
               <TableCell>Status</TableCell>
-              <TableCell>Energy Usage</TableCell>
               <TableCell>Last Active</TableCell>
-              <TableCell>Actions</TableCell>
+              <TableCell align="right">Actions</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
-            {data.usersList.map(user => (
+            {data.usersList.map((user) => (
               <TableRow key={user.id}>
+                <TableCell>{user.name}</TableCell>
+                <TableCell>{user.email}</TableCell>
                 <TableCell>
-                  <div className="flex items-center gap-2">
-                    <div className="flex flex-col">
-                      <Typography variant="body2">{user.name}</Typography>
-                      <Typography variant="caption" color="text.secondary">
-                        {user.email}
-                      </Typography>
-                    </div>
-                  </div>
-                </TableCell>
-                <TableCell>
-                  <Chip label={user.role} size="small" />
+                  <Chip 
+                    label={user.role}
+                    color={user.role === 'admin' ? 'primary' : 'default'}
+                    size="small"
+                  />
                 </TableCell>
                 <TableCell>
                   <Chip 
                     label={user.status}
-                    color={user.status === 'active' ? 'success' : 'default'}
+                    color={user.status === 'active' ? 'success' : 'error'}
                     size="small"
                   />
                 </TableCell>
-                <TableCell>{user.energyUsage}</TableCell>
                 <TableCell>
                   {new Date(user.lastActive).toLocaleDateString()}
                 </TableCell>
-                <TableCell>
-                  <Box className="flex gap-2">
-                    <IconButton
-                      size="small"
-                      onClick={() => setSelectedUser(user)}
-                    >
-                      <AppIcon name="edit" />
-                    </IconButton>
-                    <IconButton
-                      size="small"
-                      onClick={() => handleUserDelete(user.id)}
-                    >
-                      <AppIcon name="delete" />
-                    </IconButton>
-                  </Box>
+                <TableCell align="right">
+                  <IconButton 
+                    size="small" 
+                    onClick={() => setSelectedUser(user)}
+                    className="mr-1"
+                  >
+                    <Edit fontSize="small" />
+                  </IconButton>
+                  <IconButton 
+                    size="small" 
+                    onClick={() => handleUserDelete(user.id)}
+                    color="error"
+                  >
+                    <Delete fontSize="small" />
+                  </IconButton>
                 </TableCell>
               </TableRow>
             ))}
           </TableBody>
         </Table>
-      </Card.Base>
-    </div>
+      </TableContainer>
+    </Box>
   );
 }
