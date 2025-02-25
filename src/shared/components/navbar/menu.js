@@ -3,14 +3,25 @@ import { Menu, MenuItem, Avatar, ListItemIcon, Divider } from "@mui/material";
 import { AppIcon } from "../ui/icons";
 import { useNavigate } from "react-router-dom";
 import { Logout } from "@mui/icons-material";
+import { useAuth } from "@context/AuthContext";
 
 export default function NavMenu({ anchorEl, open, onClose }) {
-  const navigate = useNavigate()
+  const navigate = useNavigate();
+  const { logout } = useAuth();
   
   const handleNavigate = () => {
-    onClose()
-    navigate('/profile')
-  }
+    onClose();
+    navigate('/profile');
+  };
+
+  const handleLogout = async () => {
+    try {
+      await logout();
+      onClose();
+    } catch (error) {
+      console.error('Logout failed:', error);
+    }
+  };
 
   return (
     <Menu
@@ -26,8 +37,8 @@ export default function NavMenu({ anchorEl, open, onClose }) {
             overflow: "visible",
             filter: "drop-shadow(0px 2px 8px rgba(0,0,0,0.32))",
             mt: 1.5,
-            p: 0.5, // Add padding to the menu container
-            minWidth: 200, // Set minimum width
+            p: 0.5,
+            minWidth: 200,
             "& .MuiAvatar-root": {
               width: 32,
               height: 32,
@@ -55,9 +66,9 @@ export default function NavMenu({ anchorEl, open, onClose }) {
       <MenuItem 
         onClick={handleNavigate}
         sx={{ 
-          py: 1, // Vertical padding
-          px: 2, // Horizontal padding
-          gap: 1.5 // Gap between icon and text
+          py: 1,
+          px: 2,
+          gap: 1.5
         }}
       >
         <Avatar /> Profile
@@ -73,7 +84,7 @@ export default function NavMenu({ anchorEl, open, onClose }) {
         <AppIcon name="myaccount" />
         My Account
       </MenuItem>
-      <Divider sx={{ my: 1 }} /> {/* Add margin to divider */}
+      <Divider sx={{ my: 1 }} />
       <MenuItem 
         onClick={onClose}
         sx={{ 
@@ -87,12 +98,12 @@ export default function NavMenu({ anchorEl, open, onClose }) {
         Add Account
       </MenuItem>
       <MenuItem 
-        onClick={handleNavigate}
+        onClick={handleLogout}
         sx={{ 
           py: 1,
           px: 2,
           gap: 1.5,
-          color: 'error.main' // Make logout red
+          color: 'error.main'
         }}
       >
         <Logout fontSize="small" />
