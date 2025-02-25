@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { useLoader } from '@components/loaders/useLoader';
 import { useSnackbar } from '@shared/index';
 import { LoginSchema } from './validation';
-import { authService } from './authService';
+import  authService  from '../../services/authService';
 
 export const useLogin = () => {
   const navigate = useNavigate();
