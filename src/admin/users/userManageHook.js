@@ -1,65 +1,56 @@
-import { useState } from 'react';
-import { userManagementData } from './data';
+import { useState, useEffect } from 'react';
+import { userService } from '../../services/userService';
 
 export const useUserManagement = () => {
-  const [data, setData] = useState(userManagementData);
-  const [loading, setLoading] = useState(false);
-  const [selectedUser, setSelectedUser] = useState(null);
-  const [filters, setFilters] = useState({
-    role: 'all',
-    status: 'all',
-    search: ''
+  const [data, setData] = useState({
+    usersList: [],
   });
+  const [loading, setLoading] = useState(true);
+  const [selectedUser, setSelectedUser] = useState(null);
 
-  const handleUserStatusChange = async (userId, newStatus) => {
-    setLoading(true);
-    try {
-      // API call would go here
-      setData(prev => ({
-        ...prev,
-        usersList: prev.usersList.map(user => 
-          user.id === userId ? { ...user, status: newStatus } : user
-        )
-      }));
-    } catch (error) {
-      console.error('Failed to update user status:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
+  useEffect(() => {
+    const fetchUsers = async () => {
+      try {
+        const response = await userService.getAllUsers();
+        const users = response.users;
+        
+        setData({
+          usersList: users.map(user => ({
+            id: user._id,
+            name: `${user.firstName} ${user.lastName}`,
+            email: user.email,
+            role: user.role,
+            status: user.lastLogin ? 'active' : 'inactive',
+            lastActive: user.updatedAt || new Date()
+          }))
+        });
+      } catch (error) {
+        console.error('Failed to fetch users:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchUsers();
+  }, []);
 
   const handleUserDelete = async (userId) => {
-    setLoading(true);
     try {
-      // API call would go here
+      // Add API call here when backend is ready
       setData(prev => ({
         ...prev,
         usersList: prev.usersList.filter(user => user.id !== userId)
       }));
     } catch (error) {
       console.error('Failed to delete user:', error);
-    } finally {
-      setLoading(false);
     }
-  };
-
-  const handleSearch = (searchTerm) => {
-    setFilters(prev => ({ ...prev, search: searchTerm }));
-  };
-
-  const handleFilterChange = (filterType, value) => {
-    setFilters(prev => ({ ...prev, [filterType]: value }));
   };
 
   return {
     data,
     loading,
     selectedUser,
-    filters,
-    handleUserStatusChange,
     handleUserDelete,
-    handleSearch,
-    handleFilterChange,
     setSelectedUser
   };
 };
