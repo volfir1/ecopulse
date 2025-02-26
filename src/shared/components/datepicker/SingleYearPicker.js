@@ -1,4 +1,4 @@
-// YearRangePicker.jsx
+// SingleYearPicker.jsx
 import React, { useState, useCallback } from 'react';
 import { LocalizationProvider, DatePicker } from '@mui/x-date-pickers';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
@@ -6,7 +6,7 @@ import { Box, Typography, IconButton } from '@mui/material';
 import { RefreshCcw } from 'lucide-react';
 import dayjs from 'dayjs';
 
-// Styles for the date pickers
+// Styles for the date picker
 const getPickerStyles = (error) => ({
   '& .MuiOutlinedInput-root': {
     borderRadius: '8px',
@@ -20,57 +20,34 @@ const getPickerStyles = (error) => ({
   },
 });
 
-export const YearRangePicker = ({
-  initialStartYear = dayjs().year(),
-  initialEndYear = dayjs().add(1, 'year').year(),
-  onStartYearChange,
-  onEndYearChange,
+export const SingleYearPicker = ({
+  initialYear = dayjs().year(),
+  onYearChange,
 }) => {
   // State management
-  const [startYear, setStartYear] = useState(dayjs(initialStartYear.toString()));
-  const [endYear, setEndYear] = useState(dayjs(initialEndYear.toString()));
+  const [singleYear, setSingleYear] = useState(dayjs(initialYear.toString()));
   const [error, setError] = useState(false);
 
-  // Handlers for year changes
-  const handleStartYearChange = useCallback((newValue) => {
+  // Handler for year change
+  const handleYearChange = useCallback((newValue) => {
     if (!newValue || !newValue.isValid()) {
       setError(true);
       return;
     }
     setError(false);
-    setStartYear(newValue);
-    onStartYearChange?.(newValue.year());
-  }, [onStartYearChange]);
-
-  const handleEndYearChange = useCallback((newValue) => {
-    if (!newValue || !newValue.isValid()) {
-      setError(true);
-      return;
-    }
-    
-    // Validate that end year is after start year
-    if (newValue.year() < startYear.year()) {
-      setError(true);
-      return;
-    }
-    
-    setError(false);
-    setEndYear(newValue);
-    onEndYearChange?.(newValue.year());
-  }, [onEndYearChange, startYear]);
+    setSingleYear(newValue);
+    onYearChange?.(newValue.year());
+  }, [onYearChange]);
 
   // Reset handler
   const handleReset = useCallback(() => {
     const currentYear = dayjs().year();
-    const defaultStartYear = dayjs(currentYear.toString());
-    const defaultEndYear = dayjs((currentYear + 1).toString());
+    const defaultYear = dayjs(currentYear.toString());
     
-    setStartYear(defaultStartYear);
-    setEndYear(defaultEndYear);
-    onStartYearChange?.(defaultStartYear.year());
-    onEndYearChange?.(defaultEndYear.year());
+    setSingleYear(defaultYear);
+    onYearChange?.(defaultYear.year());
     setError(false);
-  }, [onStartYearChange, onEndYearChange]);
+  }, [onYearChange]);
 
   return (
     <LocalizationProvider dateAdapter={AdapterDayjs}>
@@ -78,31 +55,13 @@ export const YearRangePicker = ({
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
           <DatePicker
             views={['year']}
-            value={startYear}
-            onChange={handleStartYearChange}
+            value={singleYear}
+            onChange={handleYearChange}
             slotProps={{
               textField: {
                 sx: getPickerStyles(error),
                 inputProps: {
-                  placeholder: 'Start Year'
-                },
-                size: "small",
-                format: 'YYYY'
-              }
-            }}
-          />
-
-          <Typography variant="body2">to</Typography>
-
-          <DatePicker
-            views={['year']}
-            value={endYear}
-            onChange={handleEndYearChange}
-            slotProps={{
-              textField: {
-                sx: getPickerStyles(error),
-                inputProps: {
-                  placeholder: 'End Year'
+                  placeholder: 'Year'
                 },
                 size: "small",
                 format: 'YYYY'
@@ -129,7 +88,7 @@ export const YearRangePicker = ({
         
         {error && (
           <Typography variant="caption" color="error">
-            Invalid year range
+            Invalid year
           </Typography>
         )}
       </Box>
@@ -137,4 +96,4 @@ export const YearRangePicker = ({
   );
 };
 
-export default YearRangePicker;
+export default SingleYearPicker;

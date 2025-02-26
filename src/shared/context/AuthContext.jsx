@@ -55,66 +55,52 @@ export const AuthProvider = ({ children }) => {
 
   // Verify authentication with the server on component mount
   useEffect(() => {
+    let isMounted = true;
+    const controller = new AbortController();
+
     const verifyAuth = async () => {
-      if (!user) {
+      // Skip if already checking or no stored token
+      if (authCheckInProgress || !localStorage.getItem('authToken')) {
         setIsLoading(false);
         return;
       }
 
-      // Prevent multiple simultaneous auth checks
-      if (authCheckInProgress) return;
-
-      setIsLoading(true);
       setAuthCheckInProgress(true);
-      
+
       try {
-        // Verify token with backend
-        const result = await authService.checkAuthStatus();
+        const result = await authService.checkAuthStatus(controller.signal);
         
-        // If request was aborted, just return without changing state
-        if (result.aborted) return;
-        
+        if (!isMounted) return;
+
         if (result.success && result.user) {
-          // Update user data with fresh data from server
           setUser(result.user);
           setIsAuthenticated(true);
-          localStorage.setItem('user', JSON.stringify(result.user));
         } else {
-          // If verification fails, clear authentication state
-          console.log('Auth verification failed, logging out');
           setUser(null);
           setIsAuthenticated(false);
-          localStorage.removeItem('user');
           localStorage.removeItem('authToken');
         }
       } catch (err) {
+        if (!isMounted) return;
         console.error('Auth verification error:', err);
-        // Don't automatically log out on network errors to allow offline usage
-        // Just set the error state
         setError(err.message);
+        setUser(null);
+        setIsAuthenticated(false);
       } finally {
-        setIsLoading(false);
-        setAuthCheckInProgress(false);
+        if (isMounted) {
+          setIsLoading(false);
+          setAuthCheckInProgress(false);
+        }
       }
     };
 
-    // Clear any existing timer
-    if (authCheckTimerRef.current) {
-      clearTimeout(authCheckTimerRef.current);
-    }
-    
-    // Set a new timer with a small delay to debounce multiple calls
-    authCheckTimerRef.current = setTimeout(() => {
-      verifyAuth();
-    }, 100);
-    
-    // Cleanup timer on unmount
+    verifyAuth();
+
     return () => {
-      if (authCheckTimerRef.current) {
-        clearTimeout(authCheckTimerRef.current);
-      }
+      isMounted = false;
+      controller.abort();
     };
-  }, [user, authCheckInProgress]);
+  }, []); // Empty dependency array - only run on mount
 
   // Login function
   const login = async (email, password) => {
