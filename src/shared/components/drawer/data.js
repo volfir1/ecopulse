@@ -3,24 +3,8 @@ import { AppIcon } from '../ui/icons';
 export const USER_NAVIGATION = [
   {
     kind: 'header',
-    segment: 'header-main',
-    title: 'Main Menu',
-  },
-  {
-    kind: 'item',
-    segment: 'dashboard',
-    title: 'Dashboard',
-    icon: <AppIcon name="dashboard" />,
-    path: '/dashboard',
-  },
-  {
-    kind: 'divider',
-    segment: 'divider-modules',
-  },
-  {
-    kind: 'header',
     segment: 'header-modules',
-    title: 'Energy Modules',
+    title: 'Main Menu',
   },
   {
     kind: 'item',
@@ -142,7 +126,6 @@ export const ADMIN_NAVIGATION = [
     segment: 'modules',
     title: 'Modules',
     icon: <AppIcon name="modules" />,
-    path: '/admin/modules',
     children: [
       {
         kind: 'item',
@@ -151,6 +134,34 @@ export const ADMIN_NAVIGATION = [
         icon: <AppIcon name="solar" />,
         path: '/admin/modules/solar',
       },
+      {
+        kind: 'item',
+        segment: 'wind',
+        title: 'Wind Energy',
+        icon: <AppIcon name="wind" />,
+        path: '/admin/modules/wind',
+      },
+      {
+        kind: 'item',
+        segment: 'geothermal',
+        title: 'Geothermal',
+        icon: <AppIcon name="geothermal" />,
+        path: '/admin/modules/geothermal',
+      },
+      {
+        kind: 'item',
+        segment: 'hydropower',
+        title: 'Hydropower',
+        icon: <AppIcon name="hydropower" />,
+        path: '/admin/modules/hydropower',
+      },
+      {
+        kind: 'item',
+        segment: 'biomass',
+        title: 'Biomass',
+        icon: <AppIcon name="biomass" />,
+        path: '/admin/modules/biomass',
+      },
       
     ],
   },
@@ -158,14 +169,7 @@ export const ADMIN_NAVIGATION = [
     kind: 'item',
     segment: 'energy-share',
     title: 'Manage Users',
-    icon: <AppIcon name="energyshare" />,
+    icon: <AppIcon name="profile" />,
     path: '/admin/users',
-  },
-  {
-    kind: 'item',
-    segment: 'admin-analytics',
-    title: 'Admin Analytics',
-    icon: <AppIcon name="analytics" />,
-    path: '/admin/analytics',
   },
 ];

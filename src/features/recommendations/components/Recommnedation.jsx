@@ -1,119 +1,29 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { 
   Button, 
   Card, 
   p, s, t, bg, elements,
   AppIcon,
-  InputBox,
   NumberBox,
-  YearPicker
+  SingleYearPicker // Changed from YearPicker to SingleYearPicker
 } from '@shared/index';
+import { useRecommendations } from './reommendHook';
 
 const EnergyRecommendations = () => {
-  const [budget, setBudget] = useState("300000");
-  const [year, setYear] = useState("2025");
+  const {
+    cityData,
+    projections,
+    costBenefits,
+    energyPotential,
+    handleDownloadPDF,
+    year,
+    handleYearChange,
+    handleBudgetChange,
+    isLoading
+  } = useRecommendations();
 
-  // Static data
-  const cityData = {
-    city: "Taguig City",
-    period: "2024-2026 Analysis",
-    location: {
-      coordinates: "14.5176° N, 121.0509° E"
-    }
-  };
-
-  const energyPotential = [
-    {
-      type: "Solar",
-      potential: "High",
-      icon: 'solar',
-      color: elements.solar,
-      details: "Average 5.5 kWh/m²/day"
-    },
-    {
-      type: "Wind",
-      potential: "Moderate",
-      icon: 'wind',
-      color: elements.wind,
-      details: "Average speed 12 km/h"
-    },
-    {
-      type: "Hydro",
-      potential: "Available",
-      icon: 'hydropower',
-      color: elements.hydropower,
-      details: "2 viable water sources"
-    }
-  ];
-
-  const projections = [
-    {
-      year: 2024,
-      title: "Add 500 kWh solar capacity",
-      progress: 30,
-      details: [
-        "Install rooftop solar panels",
-        "Set up monitoring systems",
-        "Train maintenance staff"
-      ]
-    },
-    {
-      year: 2025,
-      title: "Implement hydro connection",
-      progress: 60,
-      details: [
-        "Connect to local water system",
-        "Install micro-hydro generators",
-        "Upgrade grid infrastructure"
-      ]
-    },
-    {
-      year: 2026,
-      title: "Smart grid integration",
-      progress: 90,
-      details: [
-        "Deploy smart meters",
-        "Implement AI-based management",
-        "Enable demand response"
-      ]
-    }
-  ];
-
-  const costBenefits = [
-    {
-      label: "Initial Investment",
-      value: "₱15M",
-      icon: 'battery',
-      description: "Total upfront costs including equipment and installation"
-    },
-    {
-      label: "ROI Timeline",
-      value: "3.5 years",
-      icon: 'trending-up',
-      description: "Expected period to recover investment through savings"
-    },
-    {
-      label: "Monthly Savings",
-      value: "₱350,000",
-      icon: 'line-chart',
-      description: "Projected monthly reduction in energy costs"
-    },
-    {
-      label: "Gov't Incentives",
-      value: "₱2.5M",
-      icon: 'solar',
-      description: "Available government subsidies and tax benefits"
-    }
-  ];
-
-  const handleBudgetChange = (event) => {
-    const value = event.target.value.replace(/[^0-9]/g, '');
-    setBudget(value);
-  };
-
-  const handleYearChange = (date) => {
-    setYear(date);
-  };
+  // Extract budget value without the ₱ symbol for the input
+  const budgetValue = cityData.budget ? cityData.budget.replace('₱', '') : '';
 
   return (
     <div className="p-6 max-w-7xl mx-auto" style={{ backgroundColor: bg.subtle }}>
@@ -133,48 +43,47 @@ const EnergyRecommendations = () => {
             </button>
           </div>
           <div className="flex gap-4 mt-4">
-  <div>
-    <label 
-      className="block text-sm font-medium mb-1" 
-      style={{ color: t.secondary }}
-    >
-      Budget
-    </label>
-    <NumberBox
-      placeholder="Enter Budget"
-      value={budget}
-      onChange={handleBudgetChange}
-      size="medium"
-      variant="outlined"
-      className="w-40"
-      prefix="₱"
-    />
-  </div>
-  <div>
-    <label 
-      className="block text-sm font-medium mb-1" 
-      style={{ color: t.secondary }}
-    >
-      Year
-    </label>
-    <YearPicker
-      value={year}
-      onChange={handleYearChange}
-      endYear={year}
-      showRange={false}
-      className="w-32"
-    />
-  </div>
-</div>
-
+            <div>
+              <label 
+                className="block text-sm font-medium mb-1" 
+                style={{ color: t.secondary }}
+              >
+                Budget
+              </label>
+              <NumberBox
+                placeholder="Enter Budget"
+                value={budgetValue}
+                onChange={handleBudgetChange}
+                size="medium"
+                variant="outlined"
+                className="w-40"
+                prefix="₱"
+              />
+            </div>
+            <div>
+              <label 
+                className="block text-sm font-medium mb-1" 
+                style={{ color: t.secondary }}
+              >
+                Year
+              </label>
+              {/* Replaced YearPicker with SingleYearPicker */}
+              <SingleYearPicker
+                initialYear={year}
+                onYearChange={handleYearChange}
+              />
+            </div>
+          </div>
         </div>
         
         <Button
           variant="primary"
           size="medium"
           className="gap-2 transition-all hover:shadow-md bg-green-700 hover:bg-green-800"
+          onClick={handleDownloadPDF}
+          disabled={isLoading}
         >
-          <AppIcon name="save" size={18} />
+          <AppIcon name={isLoading ? "loading" : "save"} size={18} />
           Download PDF
         </Button>
       </div>
@@ -182,30 +91,28 @@ const EnergyRecommendations = () => {
       {/* Energy Potential Cards */}
       <h2 className="text-xl font-semibold mb-4" style={{ color: t.main }}>Renewable Energy Potential</h2>
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-        {energyPotential.map((energy) => (
-          <Card.Base 
-            key={energy.type} 
-            className="hover:shadow-lg transition-all duration-300 transform hover:-translate-y-1"
-            style={{ backgroundColor: bg.paper }}
-          >
-            <div className="p-6">
-              <div className="flex items-center gap-4 mb-4">
-                <div className="p-2 rounded-lg transition-colors" 
-                     style={{ 
-                       backgroundColor: `${energy.color}20`,
-                       color: energy.color
-                     }}>
-                  <AppIcon name={energy.icon} size={24} />
-                </div>
-                <div>
-                  <h3 className="text-lg font-semibold" style={{ color: t.main }}>{energy.type}</h3>
-                  <p style={{ color: t.secondary }}>Potential: {energy.potential}</p>
-                </div>
+        {/* Creating energy potential cards from location data */}
+        <Card.Base 
+          className="hover:shadow-lg transition-all duration-300 transform hover:-translate-y-1"
+          style={{ backgroundColor: bg.paper }}
+        >
+          <div className="p-6">
+            <div className="flex items-center gap-4 mb-4">
+              <div className="p-2 rounded-lg transition-colors" 
+                   style={{ 
+                     backgroundColor: `${elements.solar}20`,
+                     color: elements.solar
+                   }}>
+                <AppIcon name="solar" size={24} />
               </div>
-              <p className="text-sm" style={{ color: t.hint }}>{energy.details}</p>
+              <div>
+                <h3 className="text-lg font-semibold" style={{ color: t.main }}>Solar</h3>
+                <p style={{ color: t.secondary }}>Potential: {cityData.location.solarPotential}</p>
+              </div>
             </div>
-          </Card.Base>
-        ))}
+            <p className="text-sm" style={{ color: t.hint }}>Average 5.5 kWh/m²/day</p>
+          </div>
+        </Card.Base>
       </div>
 
       {/* Future Projections */}
@@ -264,6 +171,15 @@ const EnergyRecommendations = () => {
           </Card.Base>
         ))}
       </div>
+      
+      {isLoading && (
+        <div className="fixed inset-0 bg-black bg-opacity-20 flex items-center justify-center z-50">
+          <div className="bg-white p-4 rounded-lg shadow-lg flex items-center gap-3">
+            <AppIcon name="loading" size={24} className="animate-spin" />
+            <span>Loading data...</span>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

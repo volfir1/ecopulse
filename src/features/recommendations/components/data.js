@@ -66,34 +66,11 @@ export const initialData = {
       description: "Projected monthly reduction in energy costs"
     },
     {
-      label: "Gov't Incentives",
-      value: "₱2.5M",
+      label: "Monthly Power Generation",
+      value: "5.5 kWh/m²/day",
       icon: 'solar',
-      description: "Available government subsidies and tax benefits"
     }
   ],
 
-  energyPotential: [
-    {
-      type: "Solar",
-      potential: "High",
-      icon: 'solar',
-      color: 'warning.main',
-      details: "Average 5.5 kWh/m²/day"
-    },
-    {
-      type: "Wind",
-      potential: "Moderate",
-      icon: 'wind',
-      color: 'info.main',
-      details: "Average speed 12 km/h"
-    },
-    {
-      type: "Hydro",
-      potential: "Available",
-      icon: 'hydropower',
-      color: 'primary.main',
-      details: "2 viable water sources"
-    }
-  ]
+ 
 };

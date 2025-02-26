@@ -29,7 +29,7 @@ export const useLogin = () => {
       if (userData.role === 'admin') {
         navigate('/admin/dashboard');
       } else {
-        navigate('/dashboard');
+        navigate('/modules/solar');
       }
     }, 800);
   };

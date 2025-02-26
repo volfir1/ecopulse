@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react';
 import { useSnackbar } from '@shared/index';
 import dayjs from 'dayjs';
-import { initialData } from './recommendationsData';
+import { initialData } from './data';
 
 export const useRecommendations = () => {
   const toast = useSnackbar();
