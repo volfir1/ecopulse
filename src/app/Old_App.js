@@ -8,8 +8,6 @@ import LandingPage from '../features/LandingPage';
 import { Login, Register } from '@features/index';
 import PrivateRoute from './routes/PrivateRoute';
 import { AuthProvider } from '@context/AuthContext';
-// Import DevToolbar correctly from its source location
-import DevToolbar from '@config/DevToolbar.jsx'; // Adjust path as needed
 
 // Helper function to create protected routes
 const createProtectedRoute = (path, Component, allowedRoles) => (
@@ -62,7 +60,6 @@ const App = () => {
         <AppProvider>
           <Router>
             <AuthProvider>
-              <DevToolbar />
               <Suspense fallback={<Loader />}>
                 <Routes>
                   {/* Public Routes */}
