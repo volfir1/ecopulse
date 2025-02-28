@@ -12,6 +12,7 @@
         "@admin/*": ["./admin/*"],
         "@exceptions/*": ["./exceptions/*"],
         "@config/*": ["./config/*"],
+        "@services/*": ["./shared/*"]
       }
     }
   }

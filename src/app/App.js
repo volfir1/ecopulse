@@ -48,11 +48,15 @@ const App = () => {
     { path: '/admin/modules/hydropower', component: <adminRoutes.HydroAdmin/>, roles: ['admin'] },
     { path: '/admin/modules/biomass', component: <adminRoutes.BioAdmin />, roles: ['admin'] },
     
-    // Admin routes
+    // Admin routes - removed the nested array brackets
     { path: '/admin/dashboard', component: <adminRoutes.Dashboard />, roles: ['admin'] },
     { path: '/admin/analytics', component: <adminRoutes.Analytics />, roles: ['admin'] },
     { path: '/admin/users', component: <adminRoutes.UserManagement />, roles: ['admin'] },
-    {path: '/admin/profile', component: <adminRoutes.UserProfile />, roles: ['admin']}
+    { path: '/admin/profile', component: <adminRoutes.UserProfile />, roles: ['admin'] },
+    // Ticket management routes
+    { path: '/admin/tickets', component: <adminRoutes.TicketDashboard />, roles: ['admin'] },
+    { path: '/admin/tickets/:id', component: <adminRoutes.AdminDetailView />, roles: ['admin'] },
+    { path: '/admin/ticket', component: <adminRoutes.AdminTicket />, roles: ['admin'] }
   ];
 
 

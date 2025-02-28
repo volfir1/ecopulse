@@ -29,7 +29,11 @@ export const adminRoutes = {
   WindAdmin: lazy(() => import('@admin/modules/Wind/WindAdmin')),
   GeoAdmin: lazy(() => import('@admin/modules/Geo/GeoAdmin')),
   HydroAdmin: lazy(() => import('@admin/modules/Hydro/HydroAdmin')),
-  BioAdmin: lazy(() => import('@admin/modules/Bio/BioAdmin'))
+  BioAdmin: lazy(() => import('@admin/modules/Bio/BioAdmin')),
+  // Ticket management routes
+  AdminDetailView: lazy(() => import('@admin/ticket/TicketDetail/AdminDetailView')),
+  AdminTicket: lazy(() => import('@admin/ticket/AdminTicket')),
+  TicketDashboard: lazy(() => import('@admin/ticket/TicketDashboard'))
 };
 
 // Error Pages

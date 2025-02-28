@@ -27,7 +27,8 @@ import {
     AlertTriangle,
     Key,
     Clock,
-    FileText
+    FileText,
+    Ticket
 } from 'lucide-react';
 import { useTheme } from "@emotion/react";
 
@@ -44,7 +45,7 @@ export const IconLibrary = {
     help: HeartHandshake,
     recommendation: BadgeCheck,
     myaccount: UserPen,
-
+    ticket: Ticket,
     // Profile Related Icons
     profile: User,
     email: Mail,
