@@ -1,25 +1,55 @@
 // src/contexts/AuthContext.jsx
 import React, { createContext, useContext, useEffect, useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { CONFIG } from '@config/configIndex';
+// Import authService dynamically to avoid circular dependencies
 import authService from '@features/auth/services/authService';
 
-// Create the Auth Context
+// Create the Auth Context first
 const AuthContext = createContext(null);
 
-// Custom hook to use the Auth Context
+// Export the context directly for advanced use cases
+export default AuthContext;
+
+// Then define the hook with a fallback return for safety
 export const useAuth = () => {
   const context = useContext(AuthContext);
   if (!context) {
-    throw new Error('useAuth must be used within an AuthProvider');
+    console.warn('useAuth used outside AuthProvider - returning fallback auth');
+    // Return a fallback auth object for development
+    return {
+      user: null,
+      isAuthenticated: false,
+      isLoading: false,
+      error: null,
+      login: () => console.error('Auth not initialized'),
+      logout: () => console.error('Auth not initialized'),
+      register: () => console.error('Auth not initialized'),
+      googleSignIn: () => console.error('Auth not initialized'),
+      hasRole: () => false,
+      getUserRole: () => 'user'
+    };
   }
   return context;
 };
 
 // Auth Provider component
 export const AuthProvider = ({ children }) => {
-  const navigate = useNavigate(); // Add navigation capability
+  const navigate = useNavigate();
   
   const [user, setUser] = useState(() => {
+    // Only create mock user if explicitly in development mode with SKIP_AUTH
+    if (CONFIG.SKIP_AUTH && process.env.NODE_ENV === 'development') {
+      console.log('Development mode with SKIP_AUTH: Using mock user');
+      return {
+        id: 'dev-user-id',
+        firstName: 'Development',
+        lastName: 'User',
+        email: 'dev@example.com',
+        role: CONFIG.DEFAULT_ROLE || 'admin',
+      };
+    }
+    
     // Initialize user from localStorage on component mount
     try {
       const storedUser = localStorage.getItem('user');
@@ -31,11 +61,21 @@ export const AuthProvider = ({ children }) => {
   });
   
   const [isAuthenticated, setIsAuthenticated] = useState(() => {
+    // Only auto-authenticate if explicitly in development mode with SKIP_AUTH
+    if (CONFIG.SKIP_AUTH && process.env.NODE_ENV === 'development') {
+      console.log('Development mode with SKIP_AUTH: Auto-authenticated');
+      return true;
+    }
+    
     // Initialize authentication state based on presence of user in localStorage
     return localStorage.getItem('user') ? true : false;
   });
   
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(() => {
+    // Don't show loading in dev mode with SKIP_AUTH
+    return !(CONFIG.SKIP_AUTH && process.env.NODE_ENV === 'development');
+  });
+  
   const [error, setError] = useState(null);
   const [authCheckInProgress, setAuthCheckInProgress] = useState(false);
   
@@ -55,6 +95,13 @@ export const AuthProvider = ({ children }) => {
 
   // Verify authentication with the server on component mount
   useEffect(() => {
+    // Skip authentication check in development mode with SKIP_AUTH
+    if (CONFIG.SKIP_AUTH && process.env.NODE_ENV === 'development') {
+      console.log('Development mode: Authentication check bypassed');
+      setIsLoading(false);
+      return;
+    }
+    
     let isMounted = true;
     const controller = new AbortController();
 
@@ -100,10 +147,31 @@ export const AuthProvider = ({ children }) => {
       isMounted = false;
       controller.abort();
     };
-  }, []); // Empty dependency array - only run on mount
+  }, []);
 
   // Login function
   const login = async (email, password) => {
+    // In development mode with SKIP_AUTH, simulate successful login
+    if (CONFIG.SKIP_AUTH && process.env.NODE_ENV === 'development') {
+      console.log('Development mode: Login bypassed');
+      const mockUser = {
+        id: 'dev-user-id',
+        firstName: 'Development',
+        lastName: 'User',
+        email: email || 'dev@example.com',
+        role: CONFIG.DEFAULT_ROLE || 'admin',
+      };
+      
+      setUser(mockUser);
+      setIsAuthenticated(true);
+      localStorage.setItem('user', JSON.stringify(mockUser));
+      
+      // Add automatic redirection after login
+      redirectToUserDashboard(mockUser);
+      
+      return { success: true, user: mockUser };
+    }
+    
     setIsLoading(true);
     setError(null);
     
@@ -130,29 +198,68 @@ export const AuthProvider = ({ children }) => {
 
   // Logout function
   const logout = async () => {
+    // Special handling for development mode
+    if (CONFIG.SKIP_AUTH && process.env.NODE_ENV === 'development') {
+      console.log('Development mode: Simulating logout but maintaining dev access');
+      
+      // Instead of clearing user, reset to default dev user
+      const mockUser = {
+        id: 'dev-user-id',
+        firstName: 'Development',
+        lastName: 'User',
+        email: 'dev@example.com',
+        role: CONFIG.DEFAULT_ROLE || 'admin',
+      };
+      
+      setUser(mockUser);
+      localStorage.setItem('user', JSON.stringify(mockUser));
+      
+      // Still redirect to login page for flow testing
+      window.location.href = '/login';
+      return;
+    }
+    
+    // Normal logout process for production
     setIsLoading(true);
     
     try {
       await authService.logout();
     } catch (err) {
       console.error('Logout API error:', err);
-      // Continue with local logout even if API fails
     } finally {
-      // Always clear local state
+      // Clear ALL user data and tokens
       setUser(null);
       setIsAuthenticated(false);
       localStorage.removeItem('user');
       localStorage.removeItem('authToken');
+      sessionStorage.removeItem('user');
+      sessionStorage.removeItem('authToken');
+      
+      // Delete all cookies
+      document.cookie.split(";").forEach(function(c) { 
+        document.cookie = c.replace(/^ +/, "").replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/"); 
+      });
+      
       setError(null);
       setIsLoading(false);
       
-      // Redirect to login page after logout
-      navigate('/login');
+      // Force redirect to login page
+      window.location.href = '/login';
     }
   };
 
   // Register function
   const register = async (firstName, lastName, email, password) => {
+    // In development mode, simulate successful registration
+    if (CONFIG.SKIP_AUTH && process.env.NODE_ENV === 'development') {
+      console.log('Development mode: Registration bypassed');
+      navigate('/login', { 
+        state: { message: 'Development mode: Registration successful! Please log in.' }
+      });
+      
+      return { success: true };
+    }
+    
     setIsLoading(true);
     setError(null);
     
@@ -177,6 +284,27 @@ export const AuthProvider = ({ children }) => {
 
   // Google sign in
   const googleSignIn = async () => {
+    // In development mode, simulate successful Google sign-in
+    if (CONFIG.SKIP_AUTH && process.env.NODE_ENV === 'development') {
+      console.log('Development mode: Google sign-in bypassed');
+      const mockUser = {
+        id: 'dev-user-id',
+        firstName: 'Development',
+        lastName: 'User',
+        email: 'dev-google@example.com',
+        role: CONFIG.DEFAULT_ROLE || 'admin',
+      };
+      
+      setUser(mockUser);
+      setIsAuthenticated(true);
+      localStorage.setItem('user', JSON.stringify(mockUser));
+      
+      // Add automatic redirection after Google sign-in
+      redirectToUserDashboard(mockUser);
+      
+      return { success: true, user: mockUser };
+    }
+    
     setIsLoading(true);
     setError(null);
     
@@ -214,7 +342,9 @@ export const AuthProvider = ({ children }) => {
   // Create the context value
   const contextValue = {
     user,
+    setUser, // Expose setUser for development tools
     isAuthenticated,
+    setIsAuthenticated, // Expose setIsAuthenticated for development tools
     isLoading,
     error,
     login,
@@ -223,7 +353,8 @@ export const AuthProvider = ({ children }) => {
     googleSignIn,
     hasRole,
     getUserRole,
-    redirectToUserDashboard // Add the redirect function to the context
+    redirectToUserDashboard,
+    isDevelopmentMode: CONFIG.SKIP_AUTH && process.env.NODE_ENV === 'development'
   };
 
   return (
@@ -232,5 +363,3 @@ export const AuthProvider = ({ children }) => {
     </AuthContext.Provider>
   );
 };
-
-export default AuthContext;
