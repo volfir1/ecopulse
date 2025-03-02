@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useRef } from 'react';
 import {
   LineChart, Line, XAxis, YAxis, Tooltip,
   AreaChart, Area, ResponsiveContainer, CartesianGrid,
@@ -64,7 +64,8 @@ const Biomass = () => {
     selectedEndYear,
     handleStartYearChange,
     handleEndYearChange,
-    handleDownload
+    handleDownload,
+    chartRef // Add chartRef to the destructured object
   } = useBiomassAnalytics();
 
   const areaChartConfig = getAreaChartConfig();
@@ -157,7 +158,7 @@ const Biomass = () => {
     {currentProjection} GWH
   </div>
   <p className="text-gray-600 mb-4">Predictive Analysis Generation projection</p>
-  <div className="h-[250px]"> {/* Reduced from 300px to 250px */}
+  <div className="h-[250px]" ref={chartRef}> {/* Reduced from 300px to 250px */}
     <ResponsiveContainer width="100%" height="100%">
       <AreaChart data={generationData}>
         <defs>

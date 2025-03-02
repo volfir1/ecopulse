@@ -1,4 +1,6 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
+import axios from 'axios';
+import api from '@features/modules/api';
 import { 
   Button, 
   Card, 
@@ -18,12 +20,40 @@ const EnergyRecommendations = () => {
     handleDownloadPDF,
     year,
     handleYearChange,
-    handleBudgetChange,
     isLoading
   } = useRecommendations();
 
-  // Extract budget value without the ₱ symbol for the input
-  const budgetValue = cityData.budget ? cityData.budget.replace('₱', '') : '';
+  const [solarRecommendations, setSolarRecommendations] = useState(null);
+
+  // Initialize budget and year with default values
+  const [budgetValue, setBudgetValue] = useState(50000);
+  const [investmentYear, setInvestmentYear] = useState(new Date().getFullYear() + 1);
+
+  useEffect(() => {
+    const fetchSolarRecommendations = async () => {
+      try {
+        const response = await api.get('/api/solar_recommendations', {
+          params: { year: investmentYear, budget: budgetValue }
+        });
+        setSolarRecommendations(response.data.recommendations);
+      } catch (error) {
+        console.error("Error fetching solar recommendations:", error);
+      }
+    };
+
+    fetchSolarRecommendations();
+  }, [investmentYear, budgetValue]);
+
+  // Handle budget change with minimum value of 15,000
+  const handleBudgetChange = (event) => {
+    const value = event.target.value;
+    if (/^\d*$/.test(value)) {
+      const numericValue = parseInt(value, 10);
+      if (numericValue >= 15000 || value === '') {
+        setBudgetValue(value === '' ? '' : numericValue);
+      }
+    }
+  };
 
   return (
     <div className="p-6 max-w-7xl mx-auto" style={{ backgroundColor: bg.subtle }}>
@@ -69,8 +99,8 @@ const EnergyRecommendations = () => {
               </label>
               {/* Replaced YearPicker with SingleYearPicker */}
               <SingleYearPicker
-                initialYear={year}
-                onYearChange={handleYearChange}
+                initialYear={investmentYear}
+                onYearChange={(year) => setInvestmentYear(year)}
               />
             </div>
           </div>
@@ -142,6 +172,14 @@ const EnergyRecommendations = () => {
                 </ul>
               </div>
             ))}
+            {solarRecommendations && (
+              <div className="group">
+                <h3 className="text-lg font-semibold" style={{ color: t.main }}>{solarRecommendations.future_projections.year}</h3>
+                <p style={{ color: t.secondary }} className="mb-2">{solarRecommendations.future_projections.title}</p>
+                <p style={{ color: t.secondary }} className="mb-2">{solarRecommendations.future_projections['Predicted MERALCO Rate']}</p>
+                <p style={{ color: t.secondary }} className="mb-2">{solarRecommendations.future_projections['Installable Solar Capacity']}</p>
+              </div>
+            )}
           </div>
         </div>
       </Card.Base>
@@ -150,6 +188,27 @@ const EnergyRecommendations = () => {
       <h2 className="text-xl font-semibold mb-4" style={{ color: t.main }}>Cost-Benefit Analysis</h2>
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
         {costBenefits.map((item) => (
+          <Card.Base 
+            key={item.label} 
+            className="hover:shadow-lg transition-all duration-300 transform hover:-translate-y-1"
+            style={{ backgroundColor: bg.paper }}
+          >
+            <div className="p-6">
+              <div className="flex items-center gap-2 mb-2">
+                <AppIcon name={item.icon} size={20} />
+                <span style={{ color: t.secondary }}>{item.label}</span>
+                <button 
+                  className="p-1 hover:bg-gray-100 rounded-full transition-colors"
+                  title={item.description}
+                >
+                  <AppIcon name="info" size={16} />
+                </button>
+              </div>
+              <p className="text-2xl font-semibold" style={{ color: t.main }}>{item.value}</p>
+            </div>
+          </Card.Base>
+        ))}
+        {solarRecommendations && solarRecommendations.cost_benefit_analysis.map((item) => (
           <Card.Base 
             key={item.label} 
             className="hover:shadow-lg transition-all duration-300 transform hover:-translate-y-1"

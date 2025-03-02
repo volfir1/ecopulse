@@ -1,7 +1,10 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import api from '@features/modules/api';
 import { useSnackbar } from '@shared/index';
 import { downloadSummary } from './bioUtils';
+import jsPDF from 'jspdf';
+import 'jspdf-autotable';
+import html2canvas from 'html2canvas';
 
 export const useBiomassAnalytics = () => {
   const [generationData, setGenerationData] = useState([]);
@@ -11,6 +14,7 @@ export const useBiomassAnalytics = () => {
   const [selectedEndYear, setSelectedEndYear] = useState(new Date().getFullYear() + 1);
   
   const toast = useSnackbar();
+  const chartRef = useRef(null);
 
   useEffect(() => {
     fetchData(selectedStartYear, selectedEndYear);
@@ -56,21 +60,88 @@ export const useBiomassAnalytics = () => {
     setSelectedEndYear(year);
   };
 
-  const handleDownload = async () => {
+  const handleDownload = useCallback(async () => {
     try {
       toast.info('Preparing your download...');
-      // Wait for the download summary function to complete
-      const result = await downloadSummary(generationData);
       
-      // If we get here, the user has completed the save dialog
-      if (result === 'saved') {
-        toast.success('Summary downloaded successfully!');
+      // Create new PDF
+      const doc = new jsPDF({
+        orientation: 'portrait',
+        unit: 'mm',
+        format: 'a4'
+      });
+      
+      // Add title and metadata
+      doc.setFontSize(16);
+      doc.text('Biomass Power Generation Summary', 15, 15);
+      
+      doc.setFontSize(11);
+      doc.text(`Year Range: ${selectedStartYear} - ${selectedEndYear}`, 15, 25);
+      doc.text(`Current Projection: ${currentProjection ? currentProjection.toFixed(2) : 'N/A'} GWh`, 15, 30);
+      doc.text(`Generated on: ${new Date().toLocaleDateString()}`, 15, 35);
+      
+      // If there's a chart reference, capture it
+      if (chartRef.current) {
+        try {
+          // Capture chart as image
+          const chartElement = chartRef.current;
+          const canvas = await html2canvas(chartElement, {
+            scale: 2,
+            useCORS: true,
+            logging: false
+          });
+          
+          const chartImageData = canvas.toDataURL('image/png');
+          
+          // Add chart image to PDF
+          doc.addImage(
+            chartImageData, 
+            'PNG', 
+            15, // x position
+            45, // y position
+            180, // width
+            80  // height
+          );
+          
+          // Add chart title
+          doc.setFontSize(12);
+          doc.text('Biomass Generation Chart', 15, 45);
+        } catch (chartError) {
+          console.error('Error capturing chart:', chartError);
+          // Continue without chart if it fails
+        }
       }
+      
+      // Add table data - position depends on if chart was included
+      const tableY = chartRef.current ? 140 : 45;
+      
+      // Add table header
+      doc.setFontSize(12);
+      doc.text('Biomass Generation Data Table', 15, tableY - 5);
+      
+      // Create table data
+      doc.autoTable({
+        head: [['Year', 'Predicted Production (GWh)']],
+        body: generationData.map(item => [item.date, item.value.toFixed(2)]),
+        startY: tableY,
+        margin: { left: 15, right: 15 },
+        headStyles: { fillColor: [22, 163, 74] }, // Green color for biomass
+        styles: {
+          fontSize: 10,
+          cellPadding: 3
+        }
+      });
+      
+      // Save PDF
+      doc.save('Biomass_Power_Generation_Summary.pdf');
+      
+      toast.success('Summary downloaded successfully!');
     } catch (error) {
       console.error('Download error:', error);
       toast.error('Failed to download summary. Please try again.');
     }
-  };
+  }, [generationData, selectedStartYear, selectedEndYear, currentProjection, toast, chartRef]);
+
   // Mock data for feedstock and efficiency since they're not in the API
   const feedstockData = Array.from({ length: 7 }, (_, i) => ({
     day: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'][i],
@@ -94,7 +165,8 @@ export const useBiomassAnalytics = () => {
     handleEndYearChange,
     handleDownload,
     feedstockData,
-    efficiencyData
+    efficiencyData,
+    chartRef
   };
 };
 
