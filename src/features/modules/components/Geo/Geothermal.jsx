@@ -1,5 +1,5 @@
 // Geothermal.jsx
-import React from 'react';
+import React, { useRef } from 'react';
 import {
   LineChart, Line, XAxis, YAxis, Tooltip,
   AreaChart, Area, ResponsiveContainer, CartesianGrid,
@@ -64,7 +64,8 @@ const Geothermal = () => {
     handleEndYearChange,
     handleDownload,
     temperatureData,
-    wellPerformance
+    wellPerformance,
+    chartRef // Add chartRef to the destructured object
   } = useGeothermalAnalytics();
 
   const areaChartConfig = getAreaChartConfig();
@@ -128,12 +129,12 @@ const Geothermal = () => {
             onEndYearChange={handleEndYearChange}
           />
           <div className="flex gap-2">
-          <Button 
-  className="whitespace-nowrap bg-[#FF6B6B] text-white hover:bg-[#FF5252] transition-colors"
-  onClick={handleDownload}
->
-  Download Summary
-</Button>
+            <Button 
+              className="whitespace-nowrap bg-[#FF6B6B] text-white hover:bg-[#FF5252] transition-colors"
+              onClick={handleDownload}
+            >
+              Download Summary
+            </Button>
           </div>
         </div>
       </div>
@@ -147,7 +148,7 @@ const Geothermal = () => {
           {currentProjection} GWH
         </div>
         <p className="text-gray-600 mb-4">Predictive Analysis Generation projection</p>
-        <div className="h-[250px]">
+        <div className="h-[250px]" ref={chartRef}>
           <ResponsiveContainer width="100%" height="100%">
             <AreaChart data={generationData}>
               <defs>
