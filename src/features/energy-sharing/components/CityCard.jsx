@@ -1,5 +1,5 @@
 import React from 'react';
-import { Paper, IconButton, Chip, Button } from '@mui/material';
+import { Paper, IconButton, Chip } from '@mui/material';
 import { LocateIcon, ArrowDown, ArrowUp } from 'lucide-react';
 import { ENERGY_TYPES } from './scripts/energyType';
 
@@ -13,21 +13,20 @@ const CityCard = ({ location, isExpanded, onToggle, isHovered }) => (
       <div className="flex-1">
         <div className="flex items-center gap-2 mb-2">
           <LocateIcon size={16} className="text-gray-500" />
-          <span className="font-medium">{location.city}</span>
-          <Chip 
-            label={ENERGY_TYPES[location.energyType].label}
-            size="small"
-            className={`${ENERGY_TYPES[location.energyType].textColor}`}
-          />
+          <span className="font-medium">{location.Place}</span>
         </div>
         <div className="text-sm text-gray-600 space-y-1">
-          <div>Expected Annual Capacity: {location.capacity}</div>
-          <div>Distance: {location.distance}</div>
+          <div>Total Predicted Generation: {location.totalPredictedGeneration}</div>
+          <div>Total Predicted Consumption: {location.totalConsumption}</div>
           {isExpanded && (
             <>
-              <div>Predicted Generation: {location.predictedGeneration}</div>
-              <div>Predicted Consumption: {location.predictedConsumption}</div>
-              
+              <div>Total Renewable: {location.totalRenewable}</div>
+              <div>Total Non-Renewable: {location.totalNonRenewable}</div>
+              <div>Solar: {location.solar}</div>
+              <div>Wind: {location.wind}</div>
+              <div>Hydropower: {location.hydropower}</div>
+              <div>Geothermal: {location.geothermal}</div>
+              <div>Biomass: {location.biomass}</div>
             </>
           )}
         </div>
