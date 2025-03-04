@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
-import {theme} from '@shared/index'
+import React, { useState, Suspense, useEffect  } from "react";
+import { Link } from "react-router-dom";
+import { theme } from "@shared/index";
 import {
   Box,
   Button,
@@ -10,10 +10,10 @@ import {
   Grid,
   IconButton,
   Stack,
-  Typography
-} from '@mui/material';
-import { 
-  ChevronLeft, 
+  Typography,
+} from "@mui/material";
+import {
+  ChevronLeft,
   ChevronRight,
   ArrowRight,
   CloudSun,
@@ -24,37 +24,49 @@ import {
   Linkedin,
   Activity,
   LineChart,
-  PieChart
-} from 'lucide-react';
+  PieChart,
+} from "lucide-react";
 
-import logo from '../assets/images/logo.png';
+import logo from "../assets/images/logo.png";
 
 import { Canvas } from "@react-three/fiber";
-import { useGLTF, Stage, PresentationControls } from "@react-three/drei";
+import { OrbitControls, Environment, useGLTF } from "@react-three/drei";
+
+const models = [
+  "/solar.glb",
+  "/wind.glb",
+  "/dam.glb"
+];
 
 // Data arrays
 const carouselData = [
   {
-    image: '/assets/images/landing/hydro.jpg',
+    image: "/assets/images/landing/hydro.jpg",
     title: "Hydro Power Energy",
-    description: "Hydropower energy uses flowing or falling water to generate electricity, making it one of the most widely used renewable energy sources globally.",
-    details: "In the Philippines, hydropower supplies about 10-12% of the country's electricity. With its abundant rivers and high rainfall, the nation hosts significant projects.",
-    color: theme.palette.elements.hydropower
+    description:
+      "Hydropower energy uses flowing or falling water to generate electricity, making it one of the most widely used renewable energy sources globally.",
+    details:
+      "In the Philippines, hydropower supplies about 10-12% of the country's electricity. With its abundant rivers and high rainfall, the nation hosts significant projects.",
+    color: theme.palette.elements.hydropower,
   },
   {
-    image: '/assets/images/landing/solar.jpg',
+    image: "/assets/images/landing/solar.jpg",
     title: "Solar Energy",
-    description: "Solar power harnesses the sun's energy to generate clean electricity, providing a sustainable solution for our growing energy needs.",
-    details: "The Philippines has great potential for solar energy with an average of 5.1 kWh/m² per day of solar radiation.",
-    color: theme.palette.elements.solar
+    description:
+      "Solar power harnesses the sun's energy to generate clean electricity, providing a sustainable solution for our growing energy needs.",
+    details:
+      "The Philippines has great potential for solar energy with an average of 5.1 kWh/m² per day of solar radiation.",
+    color: theme.palette.elements.solar,
   },
   {
-    image: '/assets/images/landing/wind.webp',
+    image: "/assets/images/landing/wind.webp",
     title: "Wind Power",
-    description: "Wind energy captures the natural power of wind through turbines, converting it into renewable electricity.",
-    details: "The Philippines' wind energy sector is growing, with several wind farms contributing to the national power grid.",
-    color: theme.palette.elements.wind
-  }
+    description:
+      "Wind energy captures the natural power of wind through turbines, converting it into renewable electricity.",
+    details:
+      "The Philippines' wind energy sector is growing, with several wind farms contributing to the national power grid.",
+    color: theme.palette.elements.wind,
+  },
 ];
 
 const energyTypes = [
@@ -62,114 +74,122 @@ const energyTypes = [
     type: "Solar",
     icon: <CloudSun size={32} />,
     color: theme.palette.elements.solar,
-    description: "Harnessing the sun's power for sustainable energy"
+    description: "Harnessing the sun's power for sustainable energy",
   },
   {
     type: "Wind",
     icon: <Wind size={32} />,
     color: theme.palette.elements.wind,
-    description: "Converting wind power into clean electricity"
+    description: "Converting wind power into clean electricity",
   },
   {
     type: "Geothermal",
     icon: <Flower size={32} />,
     color: theme.palette.elements.geothermal,
-    description: "Utilizing Earth's heat for renewable energy"
+    description: "Utilizing Earth's heat for renewable energy",
   },
   {
     type: "Hydropower",
     icon: <Droplets size={32} />,
     color: theme.palette.elements.hydropower,
-    description: "Generating power from flowing water"
+    description: "Generating power from flowing water",
   },
   {
     type: "Biomass",
     icon: <Flower size={32} />,
     color: theme.palette.elements.biomass,
-    description: "Converting organic matter into sustainable energy"
-  }
+    description: "Converting organic matter into sustainable energy",
+  },
 ];
 
 const features = [
   {
     icon: <Activity size={32} />,
     title: "Real-time Monitoring",
-    description: "Track energy production and consumption with instant updates"
+    description: "Track energy production and consumption with instant updates",
   },
   {
     icon: <LineChart size={32} />,
     title: "Advanced Analytics",
-    description: "Detailed insights and performance metrics for optimization"
+    description: "Detailed insights and performance metrics for optimization",
   },
   {
     icon: <PieChart size={32} />,
     title: "Resource Distribution",
-    description: "Efficient allocation and management of energy resources"
-  }
+    description: "Efficient allocation and management of energy resources",
+  },
 ];
 
-const Model = () => {
-  const { scene } = useGLTF("/alter.glb");
-  return <primitive object={scene} scale={2} position={[0, -1.5, 0]} />;
+const Model = ({ modelPath }) => {
+  const { scene } = useGLTF(modelPath);
+  return <primitive object={scene} scale={1.5} position={[0, -1, 0]} />;
 };
 
 const LandingPage = () => {
   const [currentSlide, setCurrentSlide] = useState(0);
+  const [currentModelIndex, setCurrentModelIndex] = useState(0);
 
   useEffect(() => {
-    const timer = setInterval(() => {
-      setCurrentSlide((prev) => (prev + 1) % carouselData.length);
-    }, 5000);
-    return () => clearInterval(timer);
+    const interval = setInterval(() => {
+      setCurrentModelIndex((prevIndex) => (prevIndex + 1) % models.length);
+    }, 20000); // Switch model every 7 seconds
+
+    return () => clearInterval(interval);
   }, []);
 
   return (
     <Box sx={{ bgcolor: theme.palette.background.default }}>
       {/* Navbar */}
-      <Box 
-        component="nav" 
-        sx={{ 
-          position: 'fixed',
-          width: '100%',
+      <Box
+        component="nav"
+        sx={{
+          position: "fixed",
+          width: "100%",
           zIndex: 1000,
-          bgcolor: 'rgba(255, 255, 255, 0.95)',
+          bgcolor: "rgba(255, 255, 255, 0.95)",
           borderBottom: `1px solid ${theme.palette.text.disabled}`,
-          py: 2
+          py: 2,
         }}
       >
         <Container maxWidth="lg">
-          <Stack direction="row" justifyContent="space-between" alignItems="center">
-            <Link to="/" style={{ textDecoration: 'none' }}>
+          <Stack
+            direction="row"
+            justifyContent="space-between"
+            alignItems="center"
+          >
+            <Link to="/" style={{ textDecoration: "none" }}>
               <Stack direction="row" alignItems="center" spacing={2}>
-                <Box 
+                <Box
                   component="img"
                   src={logo}
                   alt="Logo"
                   sx={{ height: 40 }}
                 />
-                <Typography 
-                  variant="h5" 
-                  sx={{ 
+                <Typography
+                  variant="h5"
+                  sx={{
                     color: theme.palette.primary.main,
-                    fontWeight: 500
+                    fontWeight: 500,
                   }}
                 >
                   EcoPulse
                 </Typography>
               </Stack>
             </Link>
-            
+
             <Stack direction="row" spacing={3}>
               <Button sx={{ color: theme.palette.text.primary }}>About</Button>
-              <Button sx={{ color: theme.palette.text.primary }}>Contact</Button>
-              <Button 
+              <Button sx={{ color: theme.palette.text.primary }}>
+                Contact
+              </Button>
+              <Button
                 variant="contained"
                 sx={{
                   bgcolor: theme.palette.primary.main,
                   color: theme.palette.primary.text,
-                  '&:hover': {
-                    bgcolor: theme.palette.hovers.primary
-                  }
+                  "&:hover": {
+                    bgcolor: theme.palette.hovers.primary,
+                  },
                 }}
               >
                 Get Started
@@ -180,58 +200,64 @@ const LandingPage = () => {
       </Box>
 
       {/* Hero Section */}
-      <Box 
-        sx={{ 
-          position: 'relative',
-          height: '100vh',
-          overflow: 'hidden'
+      <Box
+        sx={{
+          position: "relative",
+          height: "100vh",
+          overflow: "hidden",
         }}
       >
         {/* Hero Background */}
         <Box
           sx={{
-            position: 'absolute',
-            width: '100%',
-            height: '100%',
-            zIndex: 1
+            position: "absolute",
+            width: "100%",
+            height: "100%",
+            zIndex: 1,
           }}
         >
-          <Canvas camera={{ position: [0, 0, 5], fov: 50 }}>
-            <PresentationControls snap global zoom={1.2}>
-              <Stage>
-                <Model />
-              </Stage>
-            </PresentationControls>
+          <Canvas camera={{ position: [0, 0, -5], fov: 60 }}>
+            <Suspense fallback={null}>
+              <ambientLight intensity={0.5} />
+              <directionalLight position={[5, 5, 5]} intensity={1} />
+              <Model modelPath={models[currentModelIndex]} />
+              <Environment preset="studio" />
+              <OrbitControls
+                enableZoom={true}
+                enablePan={true}
+                enableRotate={true}
+              />
+            </Suspense>
           </Canvas>
         </Box>
 
         {/* Hero Content */}
-        <Container 
-          sx={{ 
-            position: 'relative',
+        <Container
+          sx={{
+            position: "relative",
             zIndex: 2,
-            height: '100%',
+            height: "100%",
             pt: 16,
-            pb: 8
+            pb: 8,
           }}
         >
-          <Grid 
-            container 
+          <Grid
+            container
             spacing={6}
-            sx={{ 
-              height: '100%',
-              alignItems: 'center'
+            sx={{
+              height: "100%",
+              alignItems: "center",
             }}
           >
             <Grid item xs={12} md={6}>
               <Stack spacing={4}>
-                <Typography 
+                <Typography
                   variant="h1"
                   sx={{
-                    color: '#fff',
-                    fontSize: { xs: '3rem', md: '4.5rem' },
+                    color: "#fff",
+                    fontSize: { xs: "3rem", md: "4.5rem" },
                     fontWeight: 600,
-                    lineHeight: 1.2
+                    lineHeight: 1.2,
                   }}
                 >
                   {carouselData[currentSlide].title}
@@ -239,8 +265,8 @@ const LandingPage = () => {
                 <Typography
                   variant="h5"
                   sx={{
-                    color: 'rgba(255,255,255,0.9)',
-                    maxWidth: 600
+                    color: "rgba(255,255,255,0.9)",
+                    maxWidth: 600,
                   }}
                 >
                   {carouselData[currentSlide].description}
@@ -251,45 +277,45 @@ const LandingPage = () => {
                   sx={{
                     bgcolor: theme.palette.primary.main,
                     color: theme.palette.primary.text,
-                    width: 'fit-content',
+                    width: "fit-content",
                     px: 4,
                     py: 1.5,
                     borderRadius: 2,
-                    '&:hover': {
-                      bgcolor: theme.palette.hovers.primary
-                    }
+                    "&:hover": {
+                      bgcolor: theme.palette.hovers.primary,
+                    },
                   }}
                 >
                   Learn More
                 </Button>
               </Stack>
             </Grid>
-            
+
             <Grid item xs={12} md={6}>
-              <Card 
-                sx={{ 
-                  bgcolor: 'rgba(255,255,255,0.98)',
+              <Card
+                sx={{
+                  bgcolor: "rgba(255,255,255,0.98)",
                   borderRadius: 4,
-                  boxShadow: '0 8px 32px rgba(0,0,0,0.1)'
+                  boxShadow: "0 8px 32px rgba(0,0,0,0.1)",
                 }}
               >
                 <CardContent sx={{ p: 4 }}>
                   <Stack spacing={3}>
-                    <Typography 
+                    <Typography
                       variant="h3"
                       sx={{
                         color: carouselData[currentSlide].color,
-                        fontWeight: 600
+                        fontWeight: 600,
                       }}
                     >
                       {carouselData[currentSlide].title}
                     </Typography>
-                    <Typography 
+                    <Typography
                       variant="body1"
                       sx={{
                         color: theme.palette.text.primary,
-                        fontSize: '1.1rem',
-                        lineHeight: 1.7
+                        fontSize: "1.1rem",
+                        lineHeight: 1.7,
                       }}
                     >
                       {carouselData[currentSlide].details}
@@ -302,15 +328,15 @@ const LandingPage = () => {
         </Container>
 
         {/* Carousel Navigation */}
-        <Stack 
-          direction="row" 
+        <Stack
+          direction="row"
           spacing={2}
           sx={{
-            position: 'absolute',
+            position: "absolute",
             bottom: 40,
-            left: '50%',
-            transform: 'translateX(-50%)',
-            zIndex: 2
+            left: "50%",
+            transform: "translateX(-50%)",
+            zIndex: 2,
           }}
         >
           {carouselData.map((_, index) => (
@@ -321,16 +347,18 @@ const LandingPage = () => {
                 width: currentSlide === index ? 24 : 8,
                 height: 8,
                 borderRadius: 4,
-                bgcolor: currentSlide === index 
-                  ? theme.palette.primary.main 
-                  : 'rgba(255,255,255,0.5)',
-                cursor: 'pointer',
-                transition: 'all 0.3s ease',
-                '&:hover': {
-                  bgcolor: currentSlide === index 
-                    ? theme.palette.primary.main 
-                    : 'rgba(255,255,255,0.8)'
-                }
+                bgcolor:
+                  currentSlide === index
+                    ? theme.palette.primary.main
+                    : "rgba(255,255,255,0.5)",
+                cursor: "pointer",
+                transition: "all 0.3s ease",
+                "&:hover": {
+                  bgcolor:
+                    currentSlide === index
+                      ? theme.palette.primary.main
+                      : "rgba(255,255,255,0.8)",
+                },
               }}
             />
           ))}
@@ -338,39 +366,41 @@ const LandingPage = () => {
 
         {/* Carousel Controls */}
         <IconButton
-          onClick={() => setCurrentSlide((prev) => 
-            (prev - 1 + carouselData.length) % carouselData.length
-          )}
+          onClick={() =>
+            setCurrentSlide(
+              (prev) => (prev - 1 + carouselData.length) % carouselData.length
+            )
+          }
           sx={{
-            position: 'absolute',
+            position: "absolute",
             left: { xs: 8, md: 24 },
-            top: '50%',
-            transform: 'translateY(-50%)',
-            color: '#fff',
-            bgcolor: 'rgba(255,255,255,0.1)',
+            top: "50%",
+            transform: "translateY(-50%)",
+            color: "#fff",
+            bgcolor: "rgba(255,255,255,0.1)",
             zIndex: 2,
-            '&:hover': {
-              bgcolor: 'rgba(255,255,255,0.2)'
-            }
+            "&:hover": {
+              bgcolor: "rgba(255,255,255,0.2)",
+            },
           }}
         >
           <ChevronLeft />
         </IconButton>
         <IconButton
-          onClick={() => setCurrentSlide((prev) => 
-            (prev + 1) % carouselData.length
-          )}
+          onClick={() =>
+            setCurrentSlide((prev) => (prev + 1) % carouselData.length)
+          }
           sx={{
-            position: 'absolute',
+            position: "absolute",
             right: { xs: 8, md: 24 },
-            top: '50%',
-            transform: 'translateY(-50%)',
-            color: '#fff',
-            bgcolor: 'rgba(255,255,255,0.1)',
+            top: "50%",
+            transform: "translateY(-50%)",
+            color: "#fff",
+            bgcolor: "rgba(255,255,255,0.1)",
             zIndex: 2,
-            '&:hover': {
-              bgcolor: 'rgba(255,255,255,0.2)'
-            }
+            "&:hover": {
+              bgcolor: "rgba(255,255,255,0.2)",
+            },
           }}
         >
           <ChevronRight />
@@ -378,32 +408,32 @@ const LandingPage = () => {
       </Box>
 
       {/* Energy Types Section */}
-      <Box sx={{ py: 12, bgcolor: '#fff' }}>
+      <Box sx={{ py: 12, bgcolor: "#fff" }}>
         <Container>
           <Stack spacing={8}>
-            <Typography 
+            <Typography
               variant="h3"
               align="center"
               sx={{
                 color: theme.palette.text.primary,
-                fontWeight: 600
+                fontWeight: 600,
               }}
             >
               Energy Sources We Monitor
             </Typography>
-            
+
             <Grid container spacing={4}>
               {energyTypes.map((energy, index) => (
                 <Grid item xs={12} sm={6} md={4} key={index}>
                   <Card
                     sx={{
-                      height: '100%',
+                      height: "100%",
                       borderRadius: 3,
-                      transition: 'all 0.3s ease',
-                      '&:hover': {
-                        transform: 'translateY(-8px)',
-                        boxShadow: '0 8px 30px rgba(0,0,0,0.12)'
-                      }
+                      transition: "all 0.3s ease",
+                      "&:hover": {
+                        transform: "translateY(-8px)",
+                        boxShadow: "0 8px 30px rgba(0,0,0,0.12)",
+                      },
                     }}
                   >
                     <CardContent sx={{ p: 4 }}>
@@ -411,9 +441,9 @@ const LandingPage = () => {
                         <Box
                           sx={{
                             p: 2,
-                            borderRadius: '50%',
+                            borderRadius: "50%",
                             bgcolor: `${energy.color}20`,
-                            color: energy.color
+                            color: energy.color,
                           }}
                         >
                           {energy.icon}
@@ -422,7 +452,7 @@ const LandingPage = () => {
                           variant="h5"
                           sx={{
                             fontWeight: 600,
-                            color: theme.palette.text.primary
+                            color: theme.palette.text.primary,
                           }}
                         >
                           {energy.type}
@@ -431,7 +461,7 @@ const LandingPage = () => {
                           variant="body1"
                           align="center"
                           sx={{
-                            color: theme.palette.text.secondary
+                            color: theme.palette.text.secondary,
                           }}
                         >
                           {energy.description}
@@ -455,24 +485,24 @@ const LandingPage = () => {
               align="center"
               sx={{
                 color: theme.palette.primary.main,
-                fontWeight: 600
+                fontWeight: 600,
               }}
             >
               Key Features
             </Typography>
-            
+
             <Grid container spacing={4}>
               {features.map((feature, index) => (
                 <Grid item xs={12} md={4} key={index}>
                   <Card
                     sx={{
-                      height: '100%',
+                      height: "100%",
                       borderRadius: 3,
-                      transition: 'all 0.3s ease',
-                      '&:hover': {
-                        transform: 'translateY(-8px)',
-                        boxShadow: '0 8px 30px rgba(0,0,0,0.12)'
-                      }
+                      transition: "all 0.3s ease",
+                      "&:hover": {
+                        transform: "translateY(-8px)",
+                        boxShadow: "0 8px 30px rgba(0,0,0,0.12)",
+                      },
                     }}
                   >
                     <CardContent sx={{ p: 4 }}>
@@ -480,12 +510,12 @@ const LandingPage = () => {
                         <Box
                           sx={{
                             color: theme.palette.primary.main,
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
                             width: 64,
                             height: 64,
-                            borderRadius: '50%',
+                            borderRadius: "50%",
                             bgcolor: `${theme.palette.primary.main}15`,
                           }}
                         >
@@ -495,7 +525,7 @@ const LandingPage = () => {
                           variant="h5"
                           sx={{
                             fontWeight: 600,
-                            color: theme.palette.text.primary
+                            color: theme.palette.text.primary,
                           }}
                         >
                           {feature.title}
@@ -504,7 +534,7 @@ const LandingPage = () => {
                           variant="body1"
                           sx={{
                             color: theme.palette.text.secondary,
-                            lineHeight: 1.7
+                            lineHeight: 1.7,
                           }}
                         >
                           {feature.description}
