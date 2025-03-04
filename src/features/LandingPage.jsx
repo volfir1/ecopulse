@@ -28,6 +28,10 @@ import {
 } from 'lucide-react';
 
 import logo from '../assets/images/logo.png';
+
+import { Canvas } from "@react-three/fiber";
+import { useGLTF, Stage, PresentationControls } from "@react-three/drei";
+
 // Data arrays
 const carouselData = [
   {
@@ -103,6 +107,11 @@ const features = [
     description: "Efficient allocation and management of energy resources"
   }
 ];
+
+const Model = () => {
+  const { scene } = useGLTF("/alter.glb");
+  return <primitive object={scene} scale={2} position={[0, -1.5, 0]} />;
+};
 
 const LandingPage = () => {
   const [currentSlide, setCurrentSlide] = useState(0);
@@ -184,29 +193,16 @@ const LandingPage = () => {
             position: 'absolute',
             width: '100%',
             height: '100%',
-            '&::before': {
-              content: '""',
-              position: 'absolute',
-              top: 0,
-              left: 0,
-              right: 0,
-              bottom: 0,
-              bgcolor: 'rgba(0,0,0,0.4)',
-              zIndex: 1
-            }
+            zIndex: 1
           }}
         >
-          <Box
-            component="img"
-            src={carouselData[currentSlide].image}
-            alt={carouselData[currentSlide].title}
-            sx={{
-              width: '100%',
-              height: '100%',
-              objectFit: 'cover',
-              transition: 'all 0.5s ease-in-out'
-            }}
-          />
+          <Canvas camera={{ position: [0, 0, 5], fov: 50 }}>
+            <PresentationControls snap global zoom={1.2}>
+              <Stage>
+                <Model />
+              </Stage>
+            </PresentationControls>
+          </Canvas>
         </Box>
 
         {/* Hero Content */}

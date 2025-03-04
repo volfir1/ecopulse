@@ -10,6 +10,8 @@
     "@mui/material": "^6.4.1",
     "@mui/x-date-pickers": "^7.24.1",
     "@react-google-maps/api": "^2.20.5",
+    "@react-three/drei": "^10.0.3",
+    "@react-three/fiber": "^9.0.4",
     "@toolpad/core": "^0.12.0",
     "axios": "^1.7.9",
     "cors": "^2.8.5",
