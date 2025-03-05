@@ -93,33 +93,19 @@ export const USER_NAVIGATION = [
   {
     kind: 'item',
     segment: 'settings',
-    title: 'Settings',
+    title: 'Mails',
     icon: <AppIcon name="settings" />,
-    path: '/settings',
+    path: '/mails',
   }
+  
 ];
 
 export const ADMIN_NAVIGATION = [
+
   {
     kind: 'header',
-    segment: 'header-main',
+    segment: 'main-menu',
     title: 'Main Menu',
-  },
-  {
-    kind: 'item',
-    segment: 'dashboard',
-    title: 'Dashboard',
-    icon: <AppIcon name="dashboard" />,
-    path: '/admin/dashboard',
-  },
-  {
-    kind: 'divider',
-    segment: 'divider-admin',
-  },
-  {
-    kind: 'header',
-    segment: 'header-admin',
-    title: 'Admin Panel',
   },
   {
     kind: 'item',
@@ -167,9 +153,16 @@ export const ADMIN_NAVIGATION = [
   },
   {
     kind: 'item',
-    segment: 'energy-share',
+    segment: 'manage-users',
     title: 'Manage Users',
     icon: <AppIcon name="profile" />,
     path: '/admin/users',
+  },
+  {
+    kind: 'item',
+    segment: 'client-tickets',
+    title: 'Tickets',
+    icon: <AppIcon name="ticket" />,
+    path: '/admin/tickets',
   },
 ];

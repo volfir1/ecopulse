@@ -6,6 +6,10 @@ import { Layout, Loader, theme, SnackbarProvider } from '@shared/index.js';
 import { userRoutes, moduleRoutes, adminRoutes, errorRoutes } from './routes/routes';
 import LandingPage from '../features/LandingPage';
 import { Login, Register } from '@features/index';
+// Import verification and password reset components
+import VerifyEmail from '@features/auth/verification/VerifiEmail';
+import ForgotPassword from '@features/auth/password/ForgotPassword.jsx';
+import ResetPassword from '@features/auth/password/resetPassword';
 import PrivateRoute from './routes/PrivateRoute';
 import { AuthProvider } from '@context/AuthContext';
 // Import DevToolbar correctly from its source location
@@ -33,6 +37,9 @@ const App = () => {
     { path: '/help-support', component: <userRoutes.HelpSupport />, roles: ['user'] },
     { path: '/recommendations', component: <userRoutes.Recommendations />, roles: ['user'] },
     { path: '/profile', component: <userRoutes.UserProfile />, roles: ['user'] },
+    { path : '/mails', component: <userRoutes.UserMails />, roles: ['user']},
+    { path: '/mails/:ticketId', component: <userRoutes.TicketConversation />, roles: ['user'] },
+  
     
     // Module routes - create separate routes for each role
     { path: '/modules/solar', component: <moduleRoutes.Solar />, roles: ['user'] },
@@ -48,11 +55,15 @@ const App = () => {
     { path: '/admin/modules/hydropower', component: <adminRoutes.HydroAdmin/>, roles: ['admin'] },
     { path: '/admin/modules/biomass', component: <adminRoutes.BioAdmin />, roles: ['admin'] },
     
-    // Admin routes
+    // Admin routes - removed the nested array brackets
     { path: '/admin/dashboard', component: <adminRoutes.Dashboard />, roles: ['admin'] },
     { path: '/admin/analytics', component: <adminRoutes.Analytics />, roles: ['admin'] },
     { path: '/admin/users', component: <adminRoutes.UserManagement />, roles: ['admin'] },
-    {path: '/admin/profile', component: <adminRoutes.UserProfile />, roles: ['admin']}
+    { path: '/admin/profile', component: <adminRoutes.UserProfile />, roles: ['admin'] },
+    // Ticket management routes
+    { path: '/admin/tickets', component: <adminRoutes.TicketDashboard />, roles: ['admin'] },
+    { path: '/admin/tickets/:id', component: <adminRoutes.AdminDetailView />, roles: ['admin'] },
+    { path: '/admin/ticket', component: <adminRoutes.AdminTicket />, roles: ['admin'] }
   ];
 
 
@@ -69,6 +80,13 @@ const App = () => {
                   <Route path="/" element={<LandingPage />} />
                   <Route path="/login" element={<Login />} />
                   <Route path="/register" element={<Register />} />
+                  
+                  {/* Email Verification Route */}
+                  <Route path="/verify-email" element={<VerifyEmail />} />
+                  
+                  {/* Password Reset Routes - Add these new routes */}
+                  <Route path="/forgot-password" element={<ForgotPassword />} />
+                  <Route path="/reset-password" element={<ResetPassword />} />
                   
                   {/* Protected Routes with Layout as parent */}
                   <Route element={<Layout />}>

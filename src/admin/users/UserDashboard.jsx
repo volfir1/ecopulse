@@ -361,13 +361,7 @@ export const UsersList = ({ users, handleEdit, handleDelete, updateUserRole }) =
                 </TableCell>
                 <TableCell>{formatDate(user.lastActive)} {/* Format the date here */}</TableCell>
                 <TableCell align="right">
-                  <IconButton 
-                    size="small" 
-                    onClick={() => handleEdit(user)}
-                    sx={{ mr: 1 }}
-                  >
-                    <Edit fontSize="small" />
-                  </IconButton>
+                 
                   <IconButton 
                     size="small" 
                     onClick={() => handleDelete(user.id)}

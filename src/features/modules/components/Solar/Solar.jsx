@@ -58,7 +58,8 @@ const SolarEnergy = () => {
     selectedEndYear,
     handleStartYearChange,
     handleEndYearChange,
-    handleDownload
+    handleDownload,
+    chartRef // Add the chartRef from the hook
   } = useSolarAnalytics();
 
   const areaChartConfig = getAreaChartConfig();
@@ -109,13 +110,13 @@ const SolarEnergy = () => {
         </div>
 
         <div className="flex justify-between items-center">
-        <YearPicker
-    startYear={selectedStartYear}    // Changed from startYear to selectedStartYear
-    endYear={selectedEndYear}        // Changed from endYear to selectedEndYear
-    onStartYearChange={handleStartYearChange}
-    onEndYearChange={handleEndYearChange}
-    className="w-full"
-  />
+          <YearPicker
+            startYear={selectedStartYear}
+            endYear={selectedEndYear}
+            onStartYearChange={handleStartYearChange}
+            onEndYearChange={handleEndYearChange}
+            className="w-full"
+          />
           <div className="flex gap-2">
             <Button 
               className="whitespace-nowrap bg-[#FFB800] text-white hover:bg-[#F0AB00] transition-colors"
@@ -135,7 +136,8 @@ const SolarEnergy = () => {
           {currentProjection} GWH
         </div>
         <p className="text-gray-600 mb-4">Predictive Analysis Generation projection</p>
-        <div className="h-[250px]">
+        {/* Add ref to the chart container */}
+        <div className="h-[250px]" ref={chartRef}>
           <ResponsiveContainer width="100%" height="100%">
             <AreaChart data={generationData}>
               <defs>

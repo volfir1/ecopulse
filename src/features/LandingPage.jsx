@@ -1,527 +1,326 @@
-import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
-import {theme} from '@shared/index'
-import {
-  Box,
-  Button,
-  Card,
-  CardContent,
-  Container,
-  Grid,
-  IconButton,
-  Stack,
-  Typography
-} from '@mui/material';
-import { 
-  ChevronLeft, 
-  ChevronRight,
-  ArrowRight,
-  CloudSun,
-  Wind,
-  Flower,
-  Droplets,
-  Github,
-  Linkedin,
-  Activity,
-  LineChart,
-  PieChart
-} from 'lucide-react';
-
+import React from 'react';
+import { Box, Typography, Container, Stack, Button } from '@mui/material';
 import logo from '../assets/images/logo.png';
-// Data arrays
-const carouselData = [
-  {
-    image: '/assets/images/landing/hydro.jpg',
-    title: "Hydro Power Energy",
-    description: "Hydropower energy uses flowing or falling water to generate electricity, making it one of the most widely used renewable energy sources globally.",
-    details: "In the Philippines, hydropower supplies about 10-12% of the country's electricity. With its abundant rivers and high rainfall, the nation hosts significant projects.",
-    color: theme.palette.elements.hydropower
-  },
-  {
-    image: '/assets/images/landing/solar.jpg',
-    title: "Solar Energy",
-    description: "Solar power harnesses the sun's energy to generate clean electricity, providing a sustainable solution for our growing energy needs.",
-    details: "The Philippines has great potential for solar energy with an average of 5.1 kWh/m² per day of solar radiation.",
-    color: theme.palette.elements.solar
-  },
-  {
-    image: '/assets/images/landing/wind.webp',
-    title: "Wind Power",
-    description: "Wind energy captures the natural power of wind through turbines, converting it into renewable electricity.",
-    details: "The Philippines' wind energy sector is growing, with several wind farms contributing to the national power grid.",
-    color: theme.palette.elements.wind
-  }
-];
+import { Grid, Card } from '@mui/material';
+import { get3DEffect } from './Landing/theme';
+// Import custom hooks
+import { useCarousel, useResponsive, useScrollEffect } from './Landing/hook';
 
-const energyTypes = [
-  {
-    type: "Solar",
-    icon: <CloudSun size={32} />,
-    color: theme.palette.elements.solar,
-    description: "Harnessing the sun's power for sustainable energy"
-  },
-  {
-    type: "Wind",
-    icon: <Wind size={32} />,
-    color: theme.palette.elements.wind,
-    description: "Converting wind power into clean electricity"
-  },
-  {
-    type: "Geothermal",
-    icon: <Flower size={32} />,
-    color: theme.palette.elements.geothermal,
-    description: "Utilizing Earth's heat for renewable energy"
-  },
-  {
-    type: "Hydropower",
-    icon: <Droplets size={32} />,
-    color: theme.palette.elements.hydropower,
-    description: "Generating power from flowing water"
-  },
-  {
-    type: "Biomass",
-    icon: <Flower size={32} />,
-    color: theme.palette.elements.biomass,
-    description: "Converting organic matter into sustainable energy"
-  }
-];
+// Import data and utility functions
+import { carouselData, energyTypes, features, teamMembers, statistics } from './Landing/util';
+import { CloudSun, Activity, Globe, ThumbsUp, ArrowRight } from 'lucide-react';
 
-const features = [
-  {
-    icon: <Activity size={32} />,
-    title: "Real-time Monitoring",
-    description: "Track energy production and consumption with instant updates"
-  },
-  {
-    icon: <LineChart size={32} />,
-    title: "Advanced Analytics",
-    description: "Detailed insights and performance metrics for optimization"
-  },
-  {
-    icon: <PieChart size={32} />,
-    title: "Resource Distribution",
-    description: "Efficient allocation and management of energy resources"
-  }
-];
+// Import design components
+import {
+  Navbar,
+  HeroSection,
+  ContentSection,
+  CardGrid,
+  EnergyTypeCard,
+  FeatureCard,
+  TeamMemberCard,
+  StatCard,
+  Footer
+} from './Landing/Design';
 
+// Import theme
+import { theme } from './Landing/theme';
+
+// Main Landing Page Component
 const LandingPage = () => {
-  const [currentSlide, setCurrentSlide] = useState(0);
+  // Get responsive state
+  const { isMobile, isTablet, isDesktop } = useResponsive();
+  const { isScrolled } = useScrollEffect();
+  
+  // Initialize carousel with navigation functions
+  const { 
+    currentSlide, 
+    goToNextSlide, 
+    goToPrevSlide, 
+    goToSlide 
+  } = useCarousel(carouselData.length, null);
 
-  useEffect(() => {
-    const timer = setInterval(() => {
-      setCurrentSlide((prev) => (prev + 1) % carouselData.length);
-    }, 5000);
-    return () => clearInterval(timer);
-  }, []);
+  // Decorative element for the Energy Types section
+  const EnergyDecoration = (
+    <>
+      <Box
+        sx={{
+          position: 'absolute',
+          top: 40,
+          right: 40,
+          width: 200,
+          height: 200,
+          borderRadius: '50%',
+          background: 'radial-gradient(circle, rgba(50, 168, 50, 0.05) 0%, rgba(50, 168, 50, 0) 70%)',
+        }}
+      />
+      <Box
+        sx={{
+          position: 'absolute',
+          bottom: 60,
+          left: 80,
+          width: 300,
+          height: 300,
+          borderRadius: '50%',
+          background: 'radial-gradient(circle, rgba(50, 168, 50, 0.07) 0%, rgba(50, 168, 50, 0) 70%)',
+        }}
+      />
+    </>
+  );
 
   return (
     <Box sx={{ bgcolor: theme.palette.background.default }}>
-      {/* Navbar */}
-      <Box 
-        component="nav" 
-        sx={{ 
-          position: 'fixed',
-          width: '100%',
-          zIndex: 1000,
-          bgcolor: 'rgba(255, 255, 255, 0.95)',
-          borderBottom: `1px solid ${theme.palette.text.disabled}`,
-          py: 2
-        }}
-      >
-        <Container maxWidth="lg">
-          <Stack direction="row" justifyContent="space-between" alignItems="center">
-            <Link to="/" style={{ textDecoration: 'none' }}>
-              <Stack direction="row" alignItems="center" spacing={2}>
-                <Box 
-                  component="img"
-                  src={logo}
-                  alt="Logo"
-                  sx={{ height: 40 }}
-                />
-                <Typography 
-                  variant="h5" 
-                  sx={{ 
-                    color: theme.palette.primary.main,
-                    fontWeight: 500
-                  }}
-                >
-                  EcoPulse
-                </Typography>
-              </Stack>
-            </Link>
-            
-            <Stack direction="row" spacing={3}>
-              <Button sx={{ color: theme.palette.text.primary }}>About</Button>
-              <Button sx={{ color: theme.palette.text.primary }}>Contact</Button>
-              <Button 
-                variant="contained"
-                sx={{
-                  bgcolor: theme.palette.primary.main,
-                  color: theme.palette.primary.text,
-                  '&:hover': {
-                    bgcolor: theme.palette.hovers.primary
-                  }
-                }}
-              >
-                Get Started
-              </Button>
-            </Stack>
-          </Stack>
-        </Container>
-      </Box>
+      {/* Navbar with login and signup buttons */}
+      <Navbar logo={logo} />
 
-      {/* Hero Section */}
-      <Box 
-        sx={{ 
-          position: 'relative',
-          height: '100vh',
-          overflow: 'hidden'
-        }}
-      >
-        {/* Hero Background */}
-        <Box
-          sx={{
-            position: 'absolute',
-            width: '100%',
-            height: '100%',
-            '&::before': {
-              content: '""',
-              position: 'absolute',
-              top: 0,
-              left: 0,
-              right: 0,
-              bottom: 0,
-              bgcolor: 'rgba(0,0,0,0.4)',
-              zIndex: 1
-            }
-          }}
-        >
-          <Box
-            component="img"
-            src={carouselData[currentSlide].image}
-            alt={carouselData[currentSlide].title}
-            sx={{
-              width: '100%',
-              height: '100%',
-              objectFit: 'cover',
-              transition: 'all 0.5s ease-in-out'
-            }}
-          />
-        </Box>
-
-        {/* Hero Content */}
-        <Container 
-          sx={{ 
-            position: 'relative',
-            zIndex: 2,
-            height: '100%',
-            pt: 16,
-            pb: 8
-          }}
-        >
-          <Grid 
-            container 
-            spacing={6}
-            sx={{ 
-              height: '100%',
-              alignItems: 'center'
-            }}
-          >
-            <Grid item xs={12} md={6}>
-              <Stack spacing={4}>
-                <Typography 
-                  variant="h1"
-                  sx={{
-                    color: '#fff',
-                    fontSize: { xs: '3rem', md: '4.5rem' },
-                    fontWeight: 600,
-                    lineHeight: 1.2
-                  }}
-                >
-                  {carouselData[currentSlide].title}
-                </Typography>
-                <Typography
-                  variant="h5"
-                  sx={{
-                    color: 'rgba(255,255,255,0.9)',
-                    maxWidth: 600
-                  }}
-                >
-                  {carouselData[currentSlide].description}
-                </Typography>
-                <Button
-                  variant="contained"
-                  endIcon={<ArrowRight />}
-                  sx={{
-                    bgcolor: theme.palette.primary.main,
-                    color: theme.palette.primary.text,
-                    width: 'fit-content',
-                    px: 4,
-                    py: 1.5,
-                    borderRadius: 2,
-                    '&:hover': {
-                      bgcolor: theme.palette.hovers.primary
-                    }
-                  }}
-                >
-                  Learn More
-                </Button>
-              </Stack>
-            </Grid>
-            
-            <Grid item xs={12} md={6}>
-              <Card 
-                sx={{ 
-                  bgcolor: 'rgba(255,255,255,0.98)',
-                  borderRadius: 4,
-                  boxShadow: '0 8px 32px rgba(0,0,0,0.1)'
-                }}
-              >
-                <CardContent sx={{ p: 4 }}>
-                  <Stack spacing={3}>
-                    <Typography 
-                      variant="h3"
-                      sx={{
-                        color: carouselData[currentSlide].color,
-                        fontWeight: 600
-                      }}
-                    >
-                      {carouselData[currentSlide].title}
-                    </Typography>
-                    <Typography 
-                      variant="body1"
-                      sx={{
-                        color: theme.palette.text.primary,
-                        fontSize: '1.1rem',
-                        lineHeight: 1.7
-                      }}
-                    >
-                      {carouselData[currentSlide].details}
-                    </Typography>
-                  </Stack>
-                </CardContent>
-              </Card>
-            </Grid>
-          </Grid>
-        </Container>
-
-        {/* Carousel Navigation */}
-        <Stack 
-          direction="row" 
-          spacing={2}
-          sx={{
-            position: 'absolute',
-            bottom: 40,
-            left: '50%',
-            transform: 'translateX(-50%)',
-            zIndex: 2
-          }}
-        >
-          {carouselData.map((_, index) => (
-            <Box
-              key={index}
-              onClick={() => setCurrentSlide(index)}
-              sx={{
-                width: currentSlide === index ? 24 : 8,
-                height: 8,
-                borderRadius: 4,
-                bgcolor: currentSlide === index 
-                  ? theme.palette.primary.main 
-                  : 'rgba(255,255,255,0.5)',
-                cursor: 'pointer',
-                transition: 'all 0.3s ease',
-                '&:hover': {
-                  bgcolor: currentSlide === index 
-                    ? theme.palette.primary.main 
-                    : 'rgba(255,255,255,0.8)'
-                }
-              }}
-            />
-          ))}
-        </Stack>
-
-        {/* Carousel Controls */}
-        <IconButton
-          onClick={() => setCurrentSlide((prev) => 
-            (prev - 1 + carouselData.length) % carouselData.length
-          )}
-          sx={{
-            position: 'absolute',
-            left: { xs: 8, md: 24 },
-            top: '50%',
-            transform: 'translateY(-50%)',
-            color: '#fff',
-            bgcolor: 'rgba(255,255,255,0.1)',
-            zIndex: 2,
-            '&:hover': {
-              bgcolor: 'rgba(255,255,255,0.2)'
-            }
-          }}
-        >
-          <ChevronLeft />
-        </IconButton>
-        <IconButton
-          onClick={() => setCurrentSlide((prev) => 
-            (prev + 1) % carouselData.length
-          )}
-          sx={{
-            position: 'absolute',
-            right: { xs: 8, md: 24 },
-            top: '50%',
-            transform: 'translateY(-50%)',
-            color: '#fff',
-            bgcolor: 'rgba(255,255,255,0.1)',
-            zIndex: 2,
-            '&:hover': {
-              bgcolor: 'rgba(255,255,255,0.2)'
-            }
-          }}
-        >
-          <ChevronRight />
-        </IconButton>
-      </Box>
+      {/* Hero Section with Carousel and 3D Models */}
+      <HeroSection
+        currentSlide={currentSlide}
+        carouselData={carouselData}
+        goToNextSlide={goToNextSlide}
+        goToPrevSlide={goToPrevSlide}
+        goToSlide={goToSlide}
+      />
 
       {/* Energy Types Section */}
-      <Box sx={{ py: 12, bgcolor: '#fff' }}>
-        <Container>
-          <Stack spacing={8}>
-            <Typography 
-              variant="h3"
-              align="center"
+      <ContentSection 
+        title="Energy Sources We Monitor"
+        subtitle="Comprehensive tracking and analysis of diverse renewable energy sources with real-time data collection and advanced analytics"
+        bgColor={theme.palette.background.paper}
+        decorativeElement={EnergyDecoration}
+      >
+        <CardGrid 
+          items={energyTypes}
+          renderItem={(energy) => (
+            <EnergyTypeCard energy={energy} />
+          )}
+        />
+      </ContentSection>
+
+      {/* Features Section */}
+      <ContentSection
+        title="Key Features"
+        subtitle="Innovative tools and technologies to optimize renewable energy management and maximize efficiency"
+        bgColor={theme.palette.background.subtle}
+      >
+        <CardGrid 
+          items={features}
+          renderItem={(feature) => (
+            <FeatureCard feature={feature} />
+          )}
+        />
+      </ContentSection>
+
+      {/* Meet the Team Section */}
+      <ContentSection
+        title="Meet Our Team"
+        subtitle="The experts behind EcoPulse's innovative renewable energy solutions bringing decades of combined experience"
+        bgColor={theme.palette.background.paper}
+      >
+        <CardGrid 
+          items={teamMembers}
+          renderItem={(member) => (
+            <TeamMemberCard member={member} />
+          )}
+          columns={{ xs: 12, sm: 6, md: 3 }}
+        />
+      </ContentSection>
+
+      {/* Statistics Section */}
+      {/* Mission and Vision Section (replacing Statistics Section) */}
+<ContentSection
+  title="Mission and Vision"
+  subtitle="Guiding principles that drive our innovation and commitment to renewable energy"
+  bgColor={theme.palette.background.subtle}
+>
+  <Grid container spacing={6} sx={{ mt: 4 }}>
+    <Grid item xs={12} md={6}>
+      <Card
+        sx={{
+          height: '100%',
+          p: 4,
+          borderRadius: 3,
+          boxShadow: get3DEffect(2),
+          transition: 'all 0.3s ease',
+          '&:hover': {
+            transform: 'translateY(-8px)',
+            boxShadow: get3DEffect(4),
+          },
+          position: 'relative',
+          overflow: 'hidden',
+          '&::before': {
+            content: '""',
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            width: '100%',
+            height: '5px',
+            background: theme.palette.primary.main,
+          }
+        }}
+      >
+        <Stack spacing={3}>
+          <Typography 
+            variant="h4" 
+            fontWeight={600}
+            color={theme.palette.primary.main}
+          >
+            Our Mission
+          </Typography>
+          <Typography variant="body1" sx={{ fontSize: '1.1rem', lineHeight: 1.8 }}>
+          Our mission is to make renewable energy more accessible, reliable, and sustainable for the Philippines. Through EcoPulse, we aim to help communities, energy providers, and policymakers make smarter energy decisions by providing accurate forecasting and practical solutions. By combining local knowledge with innovative technology, we strive to bridge the gap between renewable energy potential and real-world application, ensuring a cleaner and more resilient future for all.  
+          </Typography>
+        </Stack>
+      </Card>
+    </Grid>
+    <Grid item xs={12} md={6}>
+      <Card
+        sx={{
+          height: '100%',
+          p: 4,
+          borderRadius: 3,
+          boxShadow: get3DEffect(2),
+          transition: 'all 0.3s ease',
+          '&:hover': {
+            transform: 'translateY(-8px)',
+            boxShadow: get3DEffect(4),
+          },
+          position: 'relative',
+          overflow: 'hidden',
+          '&::before': {
+            content: '""',
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            width: '100%',
+            height: '5px',
+            background: theme.palette.secondary.main,
+          }
+        }}
+      >
+        <Stack spacing={3}>
+          <Typography 
+            variant="h4" 
+            fontWeight={600}
+            color={theme.palette.secondary.main}
+          >
+            Our Vision
+          </Typography>
+          <Typography variant="body1" sx={{ fontSize: '1.1rem', lineHeight: 1.8 }}>
+          We envision a future where every home and business in the Philippines can confidently rely on renewable energy without worrying about shortages or inefficiencies. With EcoPulse, we hope to build a community-driven energy system where people can produce, share, and optimize their energy use effortlessly. Our ultimate goal is to create a sustainable energy landscape that benefits both the environment and the people who depend on it every day.
+          </Typography>
+        </Stack>
+      </Card>
+    </Grid>
+  </Grid>
+</ContentSection>
+
+      {/* Call to Action Section */}
+      <Box 
+        sx={{ 
+          py: 10, 
+          bgcolor: theme.palette.primary.main,
+          color: theme.palette.primary.text,
+          textAlign: 'center',
+          position: 'relative',
+          overflow: 'hidden',
+          '&::before': {
+            content: '""',
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            width: '100%',
+            height: '100%',
+            background: 'radial-gradient(circle at top right, rgba(91, 192, 91, 0.8) 0%, rgba(50, 168, 50, 0) 50%)',
+            zIndex: 0
+          },
+          '&::after': {
+            content: '""',
+            position: 'absolute',
+            bottom: 0,
+            left: 0,
+            width: '100%',
+            height: '100%',
+            background: 'radial-gradient(circle at bottom left, rgba(38, 125, 38, 0.8) 0%, rgba(50, 168, 50, 0) 50%)',
+            zIndex: 0
+          }
+        }}
+      >
+        <Container sx={{ position: 'relative', zIndex: 1 }}>
+          <Typography 
+            variant="h3" 
+            fontWeight={700} 
+            mb={3}
+            sx={{
+              textShadow: '0 2px 10px rgba(0,0,0,0.1)',
+            }}
+          >
+            Ready to Optimize Your Renewable Energy?
+          </Typography>
+          <Typography 
+            variant="h6" 
+            mb={5} 
+            sx={{ 
+              opacity: 0.95,
+              maxWidth: 800,
+              mx: 'auto',
+              lineHeight: 1.6,
+            }}
+          >
+            Join thousands of organizations making a difference with EcoPulse. Start your journey towards a more sustainable future today.
+          </Typography>
+          <Stack 
+            direction={{ xs: 'column', sm: 'row' }} 
+            spacing={3}
+            justifyContent="center"
+          >
+            <Button
+              variant="contained"
+              size="large"
               sx={{
-                color: theme.palette.text.primary,
-                fontWeight: 600
+                bgcolor: '#fff',
+                color: theme.palette.primary.main,
+                px: 4,
+                py: 1.5,
+                fontWeight: 600,
+                boxShadow: '0 4px 20px rgba(0, 0, 0, 0.15)',
+                '&:hover': {
+                  bgcolor: 'rgba(255,255,255,0.9)',
+                  transform: 'translateY(-3px)',
+                  boxShadow: '0 8px 25px rgba(0, 0, 0, 0.2)',
+                },
+                transition: 'all 0.3s ease',
+              }}
+              endIcon={<ArrowRight />}
+            >
+              Get Started
+            </Button>
+            <Button
+              variant="outlined"
+              size="large"
+              sx={{
+                color: '#fff',
+                borderColor: '#fff',
+                px: 4,
+                py: 1.5,
+                fontWeight: 600,
+                '&:hover': {
+                  borderColor: '#fff',
+                  bgcolor: 'rgba(255,255,255,0.1)',
+                  transform: 'translateY(-3px)',
+                  boxShadow: '0 4px 15px rgba(0, 0, 0, 0.1)',
+                },
+                transition: 'all 0.3s ease',
               }}
             >
-              Energy Sources We Monitor
-            </Typography>
-            
-            <Grid container spacing={4}>
-              {energyTypes.map((energy, index) => (
-                <Grid item xs={12} sm={6} md={4} key={index}>
-                  <Card
-                    sx={{
-                      height: '100%',
-                      borderRadius: 3,
-                      transition: 'all 0.3s ease',
-                      '&:hover': {
-                        transform: 'translateY(-8px)',
-                        boxShadow: '0 8px 30px rgba(0,0,0,0.12)'
-                      }
-                    }}
-                  >
-                    <CardContent sx={{ p: 4 }}>
-                      <Stack spacing={3} alignItems="center">
-                        <Box
-                          sx={{
-                            p: 2,
-                            borderRadius: '50%',
-                            bgcolor: `${energy.color}20`,
-                            color: energy.color
-                          }}
-                        >
-                          {energy.icon}
-                        </Box>
-                        <Typography
-                          variant="h5"
-                          sx={{
-                            fontWeight: 600,
-                            color: theme.palette.text.primary
-                          }}
-                        >
-                          {energy.type}
-                        </Typography>
-                        <Typography
-                          variant="body1"
-                          align="center"
-                          sx={{
-                            color: theme.palette.text.secondary
-                          }}
-                        >
-                          {energy.description}
-                        </Typography>
-                      </Stack>
-                    </CardContent>
-                  </Card>
-                </Grid>
-              ))}
-            </Grid>
+              Request Demo
+            </Button>
           </Stack>
         </Container>
       </Box>
 
-      {/* Features Section */}
-      <Box sx={{ py: 12, bgcolor: theme.palette.background.subtle }}>
-        <Container>
-          <Stack spacing={8}>
-            <Typography
-              variant="h3"
-              align="center"
-              sx={{
-                color: theme.palette.primary.main,
-                fontWeight: 600
-              }}
-            >
-              Key Features
-            </Typography>
-            
-            <Grid container spacing={4}>
-              {features.map((feature, index) => (
-                <Grid item xs={12} md={4} key={index}>
-                  <Card
-                    sx={{
-                      height: '100%',
-                      borderRadius: 3,
-                      transition: 'all 0.3s ease',
-                      '&:hover': {
-                        transform: 'translateY(-8px)',
-                        boxShadow: '0 8px 30px rgba(0,0,0,0.12)'
-                      }
-                    }}
-                  >
-                    <CardContent sx={{ p: 4 }}>
-                      <Stack spacing={3}>
-                        <Box
-                          sx={{
-                            color: theme.palette.primary.main,
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            width: 64,
-                            height: 64,
-                            borderRadius: '50%',
-                            bgcolor: `${theme.palette.primary.main}15`,
-                          }}
-                        >
-                          {feature.icon}
-                        </Box>
-                        <Typography
-                          variant="h5"
-                          sx={{
-                            fontWeight: 600,
-                            color: theme.palette.text.primary
-                          }}
-                        >
-                          {feature.title}
-                        </Typography>
-                        <Typography
-                          variant="body1"
-                          sx={{
-                            color: theme.palette.text.secondary,
-                            lineHeight: 1.7
-                          }}
-                        >
-                          {feature.description}
-                        </Typography>
-                      </Stack>
-                    </CardContent>
-                  </Card>
-                </Grid>
-              ))}
-            </Grid>
-          </Stack>
-        </Container>
-      </Box>
+      {/* Footer */}
+      <Footer />
     </Box>
   );
 };

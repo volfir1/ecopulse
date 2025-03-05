@@ -10,20 +10,17 @@ import { useAuth } from '@context/AuthContext';
 import crosswalk from '../../../../assets/images/vectors/crosswalk.jpg';
 
 const Login = () => {
-  // We'll use both hooks during this transition
   const {
     handleGoogleSignIn,
     handleSubmit,
     initialValues,
-    validationSchema
+    validationSchema,
+    isLoading: hookLoading  // IMPORTANT: Use the loading state from the hook
   } = useLogin();
-  
-  // Get loading state from AuthContext for more accurate loading status
-  const { isLoading } = useAuth();
 
   return (
     <>
-      {isLoading && <Loader />}
+      {hookLoading && <Loader />}
       
       <div className="flex min-h-screen">
         {/* Left Side - Primary Color Background */}
@@ -124,12 +121,22 @@ const Login = () => {
                     />
                   </div>
 
+                  {/* Forgot Password Link */}
+                  <div className="text-right">
+                    <Link 
+                      to="/forgot-password" 
+                      className="text-xs text-green-700 hover:underline"
+                    >
+                      Forgot password?
+                    </Link>
+                  </div>
+
                   <button
                     type="submit"
-                    disabled={isSubmitting || isLoading}
+                    disabled={isSubmitting || hookLoading}
                     className="w-full h-10 bg-green-700 text-white rounded-lg font-medium hover:bg-green-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm"
                   >
-                    {isSubmitting || isLoading ? 'Logging in...' : 'Login'}
+                    {isSubmitting || hookLoading ? 'Logging in...' : 'Login'}
                   </button>
 
                   <div className="relative py-2">
@@ -146,7 +153,7 @@ const Login = () => {
                   <button
                     type="button"
                     onClick={handleGoogleSignIn}
-                    disabled={isLoading}
+                    disabled={hookLoading}
                     className="w-full h-10 flex items-center justify-center gap-2 border border-gray-300 rounded-lg text-gray-700 font-medium hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm"
                   >
                     <img src="/public/google.svg" alt="Google" className="w-4 h-4" />

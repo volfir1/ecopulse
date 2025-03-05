@@ -19,7 +19,8 @@ export default defineConfig({
       '@components': path.resolve(__dirname, './src/shared/components/'),
       '@admin' : path.resolve(__dirname, './src/admin/'),
       '@exceptions': path.resolve(__dirname, './src/exceptions/'),
-      '@config': path.resolve(__dirname, './src/config/')
+      '@config': path.resolve(__dirname, './src/config/'),
+      '@services': path.resolve(__dirname, './src/services/*  '),
     }
   },
   esbuild: {

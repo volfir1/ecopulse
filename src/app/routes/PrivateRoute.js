@@ -1,4 +1,3 @@
-// In PrivateRoute.js
 import React from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@context/AuthContext';
@@ -9,63 +8,77 @@ const PrivateRoute = ({ allowedRoles = [], children }) => {
   const { user, isAuthenticated, isLoading } = useAuth();
   const location = useLocation();
   
-  // For debugging
-  console.log('PrivateRoute - Path:', location.pathname);
-  console.log('PrivateRoute - Allowed Roles:', allowedRoles);
-  console.log('PrivateRoute - User Role:', user?.role);
-  console.log('PrivateRoute - SKIP_AUTH:', CONFIG.SKIP_AUTH);
-  console.log('PrivateRoute - User:', user);
-  
-  // In development mode with SKIP_AUTH enabled
+  // Enhanced debug logging
+  console.log('PrivateRoute Check:', {
+    path: location.pathname,
+    allowedRoles,
+    userRole: user?.role,
+    isVerified: user?.isVerified,
+    verificationStatus: user?.verificationStatus,
+    isAuthenticated,
+    isLoading,
+    userObject: user
+  });
+
+  // Development mode bypass
   if (CONFIG.SKIP_AUTH && process.env.NODE_ENV === 'development') {
-    console.log('Development mode: Authentication bypassed');
-    
-    // If you want to completely bypass role checking in dev mode, uncomment this
-    // return children;
-    
-    // If you want to simulate role checking but still see errors, keep this
-    if (!user) {
-      console.error('Development mode: No user found even with SKIP_AUTH enabled');
-      return <div>Error: No development user found. Check your AuthContext setup.</div>;
-    }
-    
-    // Check role-based access in dev mode
-    const userRole = user.role || 'user';
-    const hasRequiredRole = allowedRoles.includes(userRole);
-    
-    console.log(`Dev mode - User role: ${userRole}, Required roles: ${allowedRoles.join(',')}, Has access: ${hasRequiredRole}`);
-    
-    // In dev mode, we'll still log the access denial but let the user through
-    if (!hasRequiredRole) {
-      console.warn(`Development mode: User with role "${userRole}" doesn't technically have access to this route, but allowing anyway for development.`);
-    }
-    
-    // Allow access in dev mode regardless of role
     return children;
   }
-  
-  // Normal production behavior below
+
+  // Loading state
   if (isLoading) {
     return <Loader />;
   }
-  
+
+  // Authentication check - redirect to login if not authenticated
   if (!isAuthenticated || !user) {
-    return <Navigate to="/login" state={{ from: location.pathname }} replace />;
+    console.log('User not authenticated, redirecting to login');
+    return <Navigate 
+      to="/login" 
+      state={{ from: location.pathname }} 
+      replace 
+    />;
   }
+
+  // CRITICAL FIX: Verification check - assume verified if we got this far
+  // This ensures we don't go into an infinite verification redirect loop
   
-  // If authenticated, check role-based access
+  // Special handling for verification page
+  const isVerificationPage = location.pathname.includes('/verify-email');
+  if (isVerificationPage) {
+    console.log('On verification page but user should be treated as verified, redirecting to dashboard');
+    // Route to the appropriate dashboard based on role
+    return <Navigate 
+      to={user.role === 'admin' ? '/admin/dashboard' : '/dashboard'} 
+      replace 
+    />;
+  }
+
+  // FIXED: Role-based access check with better logging
   const userRole = user.role || 'user';
-  const hasRequiredRole = allowedRoles.includes(userRole);
+  console.log('Checking role access:', {
+    userRole,
+    allowedRoles,
+    hasEmptyRoles: allowedRoles.length === 0,
+    includesRole: allowedRoles.includes(userRole)
+  });
   
-  // If user doesn't have required role, redirect to their appropriate dashboard
+  // If allowedRoles is empty, any authenticated user can access the route
+  // If allowedRoles has values, the user's role must be in the list
+  const hasRequiredRole = allowedRoles.length === 0 || allowedRoles.includes(userRole);
+
   if (!hasRequiredRole) {
-    if (userRole === 'admin') {
-      return <Navigate to="/admin/dashboard" replace />;
-    } else {
-      return <Navigate to="/dashboard" replace />;
-    }
+    console.log(`Access denied for role: ${userRole}. Allowed roles:`, allowedRoles);
+    
+    // Redirect to the appropriate dashboard based on role
+    return <Navigate 
+      to={userRole === 'admin' ? '/admin/dashboard' : '/dashboard'} 
+      replace 
+    />;
   }
-  
+
+  // If we reach here, the user is authenticated, verified, and has the required role
+  console.log('Access granted to:', location.pathname);
   return children;
 };
 

@@ -64,7 +64,8 @@ const Hydropower = () => {
     handleEndYearChange,
     handleDownload,
     waterFlowData,
-    turbineEfficiency
+    turbineEfficiency,
+    chartRef // Get the chartRef from the hook
   } = useHydropowerAnalytics();
 
   const areaChartConfig = getAreaChartConfig();
@@ -147,7 +148,9 @@ const Hydropower = () => {
           {currentProjection} GWH
         </div>
         <p className="text-gray-600 mb-4">Predictive Analysis Generation projection</p>
-        <div className="h-[250px]">
+        
+        {/* Add ref to the chart container */}
+        <div className="h-[250px]" ref={chartRef}>
           <ResponsiveContainer width="100%" height="100%">
             <AreaChart data={generationData}>
               <defs>
