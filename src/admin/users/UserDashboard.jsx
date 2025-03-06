@@ -23,7 +23,10 @@ import {
   DialogActions,
   TextField,
   Button,
-  Tooltip
+  Tooltip,
+  Tab,
+  Tabs,
+  Divider
 } from '@mui/material';
 import { 
   Edit, 
@@ -33,7 +36,11 @@ import {
   PersonAdd, 
   VerifiedUser, 
   MoreVert,
-  AdminPanelSettings
+  AdminPanelSettings,
+  RestoreFromTrash,
+  DeleteForever,
+  Block,
+  CheckCircle
 } from '@mui/icons-material';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend, ResponsiveContainer } from 'recharts';
 
@@ -74,7 +81,8 @@ export const UserDashboard = ({ data }) => {
     totalUsers: '0',
     activeUsers: '0',
     newUsers: '0',
-    verifiedUsers: '0'
+    verifiedUsers: '0',
+    deletedUsers: '0'
   };
 
   // Format activity data for chart
@@ -128,6 +136,14 @@ export const UserDashboard = ({ data }) => {
             value={stats.verifiedUsers} 
             icon={<VerifiedUser fontSize="medium" sx={{ color: "white" }} />}
             color="#ffc107"
+          />
+        </Box>
+        <Box sx={{ flex: '1 1 200px' }}>
+          <StatCard 
+            title="Deleted Users" 
+            value={stats.deletedUsers} 
+            icon={<Block fontSize="medium" sx={{ color: "white" }} />}
+            color="#f44336"
           />
         </Box>
       </Box>
@@ -184,10 +200,17 @@ export const UserDashboard = ({ data }) => {
 };
 
 // Users List Component
-export const UsersList = ({ users, handleEdit, handleDelete, updateUserRole }) => {
+export const UsersList = ({ 
+  users, 
+  deletedUsers, 
+  handleEdit, 
+  handleSoftDelete, 
+  handleRestore, 
+  updateUserRole 
+}) => {
   const [anchorEl, setAnchorEl] = useState(null);
   const [menuUser, setMenuUser] = useState(null);
-  const [dialogOpen, setDialogOpen] = useState(false);
+  const [roleDialogOpen, setRoleDialogOpen] = useState(false);
   const [confirmText, setConfirmText] = useState('');
   const [roleChangeDetails, setRoleChangeDetails] = useState({
     userId: null,
@@ -196,22 +219,34 @@ export const UsersList = ({ users, handleEdit, handleDelete, updateUserRole }) =
     newRole: '',
     confirmationPhrase: ''
   });
+  
+  // Action confirmation dialogs
+  const [confirmDialog, setConfirmDialog] = useState({
+    open: false,
+    title: '',
+    message: '',
+    confirmText: '',
+    action: null
+  });
 
-    const formatDate = (dateString) => {
-      if (!dateString) return 'Never';
-      try {
-        return new Date(dateString).toLocaleString('en-US', {
-          year: 'numeric',
-          month: 'short',
-          day: 'numeric',
-          hour: '2-digit',
-          minute: '2-digit'
-        });
-      } catch (error) {
-        console.error('Date formatting error:', error);
-        return 'Invalid date';
-      }
-    };
+  // Table tabs
+  const [tabValue, setTabValue] = useState(0);
+  
+  const formatDate = (dateString) => {
+    if (!dateString) return 'Never';
+    try {
+      return new Date(dateString).toLocaleString('en-US', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+    } catch (error) {
+      console.error('Date formatting error:', error);
+      return 'Invalid date';
+    }
+  };
     
   const handleMenuOpen = (event, user) => {
     setAnchorEl(event.currentTarget);
@@ -238,11 +273,11 @@ export const UsersList = ({ users, handleEdit, handleDelete, updateUserRole }) =
       confirmationPhrase
     });
     
-    setDialogOpen(true);
+    setRoleDialogOpen(true);
   };
 
-  const handleDialogClose = () => {
-    setDialogOpen(false);
+  const handleRoleDialogClose = () => {
+    setRoleDialogOpen(false);
     setConfirmText('');
   };
 
@@ -255,7 +290,7 @@ export const UsersList = ({ users, handleEdit, handleDelete, updateUserRole }) =
       const result = await updateUserRole(roleChangeDetails.userId, roleChangeDetails.newRole);
       
       if (result.success) {
-        handleDialogClose();
+        handleRoleDialogClose();
       } else {
         // Handle error case if needed
         console.error('Failed to update role:', result.error);
@@ -264,73 +299,149 @@ export const UsersList = ({ users, handleEdit, handleDelete, updateUserRole }) =
       console.error('Error updating user role:', error);
     }
   };
-
+  
+  // Handle soft delete confirmation
+  const openSoftDeleteConfirm = (userId, userName) => {
+    setConfirmDialog({
+      open: true,
+      title: 'Confirm User Deactivation',
+      message: `Are you sure you want to deactivate the user "${userName}"? This action can be reversed later.`,
+      confirmText: 'Deactivate',
+      action: () => handleSoftDelete(userId)
+    });
+  };
+  
+  // Handle restore confirmation
+  const openRestoreConfirm = (userId, userName) => {
+    setConfirmDialog({
+      open: true,
+      title: 'Confirm User Restoration',
+      message: `Are you sure you want to restore the user "${userName}"?`,
+      confirmText: 'Restore',
+      action: () => handleRestore(userId)
+    });
+  };
+  
+  // Handle confirm dialog actions
+  const handleConfirmAction = async () => {
+    if (confirmDialog.action) {
+      await confirmDialog.action();
+    }
+    setConfirmDialog({ ...confirmDialog, open: false });
+  };
+  
+  // Handle tab change
+  const handleTabChange = (event, newValue) => {
+    setTabValue(newValue);
+  };
 
   // To filter users
   const [roleFilter, setRoleFilter] = useState('all');
 
-  const filteredUsers = roleFilter === 'all' 
+  const filteredActiveUsers = roleFilter === 'all' 
     ? users 
     : users.filter(user => user.role === roleFilter);
+    
+  const currentUsers = tabValue === 0 ? filteredActiveUsers : deletedUsers;
 
   return (
     <Box sx={{ mt: 2 }}>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
         <Typography variant="h6">
-          Users List
+          Users Management
         </Typography>
         
-        {/* Role filters */}
-        <Box>
-          <Button 
-            variant={roleFilter === 'all' ? 'contained' : 'outlined'} 
-            size="small" 
-            onClick={() => setRoleFilter('all')}
-            sx={{ mr: 1 }}
-          >
-            All Users
-          </Button>
-          <Button 
-            variant={roleFilter === 'admin' ? 'contained' : 'outlined'} 
-            size="small" 
-            onClick={() => setRoleFilter('admin')}
-            sx={{ mr: 1 }}
-            color="primary"
-          >
-            <AdminPanelSettings sx={{ mr: 0.5, fontSize: 18 }} />
-            Admins
-          </Button>
-          <Button 
-            variant={roleFilter === 'user' ? 'contained' : 'outlined'} 
-            size="small" 
-            onClick={() => setRoleFilter('user')}
-            color="info"
-          >
-            <People sx={{ mr: 0.5, fontSize: 18 }} />
-            Regular Users
-          </Button>
-        </Box>
+        {/* Role filters - only show for active users tab */}
+        {tabValue === 0 && (
+          <Box>
+            <Button 
+              variant={roleFilter === 'all' ? 'contained' : 'outlined'} 
+              size="small" 
+              onClick={() => setRoleFilter('all')}
+              sx={{ mr: 1 }}
+            >
+              All Users
+            </Button>
+            <Button 
+              variant={roleFilter === 'admin' ? 'contained' : 'outlined'} 
+              size="small" 
+              onClick={() => setRoleFilter('admin')}
+              sx={{ mr: 1 }}
+              color="primary"
+            >
+              <AdminPanelSettings sx={{ mr: 0.5, fontSize: 18 }} />
+              Admins
+            </Button>
+            <Button 
+              variant={roleFilter === 'user' ? 'contained' : 'outlined'} 
+              size="small" 
+              onClick={() => setRoleFilter('user')}
+              color="info"
+            >
+              <People sx={{ mr: 0.5, fontSize: 18 }} />
+              Regular Users
+            </Button>
+          </Box>
+        )}
       </Box>
       
+      {/* Tabs for active/deleted users */}
+      <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 2 }}>
+        <Tabs 
+          value={tabValue} 
+          onChange={handleTabChange}
+          TabIndicatorProps={{
+            style: {
+              height: '3px',
+              backgroundColor: tabValue === 0 ? '#1b5e20' : '#d32f2f'
+            },
+          }}
+        >
+          <Tab 
+            label="Active Users" 
+            icon={<CheckCircle />} 
+            iconPosition="start"
+            sx={{ 
+              fontWeight: tabValue === 0 ? 'bold' : 'normal',
+              color: tabValue === 0 ? '#1b5e20' : 'inherit'
+            }} 
+          />
+          <Tab 
+            label="Deleted Users" 
+            icon={<DeleteForever />}
+            iconPosition="start"
+            sx={{ 
+              fontWeight: tabValue === 1 ? 'bold' : 'normal',
+              color: tabValue === 1 ? '#d32f2f' : 'inherit'
+            }} 
+          />
+        </Tabs>
+      </Box>
+      
+      {/* Users Table */}
       <TableContainer component={Paper} elevation={0} sx={{ border: '1px solid #e0e0e0' }}>
         <Table>
-          <TableHead sx={{ backgroundColor: '#f5f5f5' }}>
+          <TableHead sx={{ backgroundColor: tabValue === 0 ? '#f5f5f5' : '#ffebee' }}>
             <TableRow>
               <TableCell>Name</TableCell>
               <TableCell>Email</TableCell>
               <TableCell>Role</TableCell>
               <TableCell>Status</TableCell>
-              <TableCell>Last Active</TableCell>
+              {tabValue === 1 && (
+                <TableCell>Deleted At</TableCell>
+              )}
+              <TableCell>{tabValue === 0 ? 'Last Active' : 'Created At'}</TableCell>
               <TableCell align="right">Actions</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
-            {filteredUsers.map((user) => (
+            {currentUsers.map((user) => (
               <TableRow 
                 key={user.id} 
                 sx={{ 
                   '&:last-child td, &:last-child th': { border: 0 },
-                  bgcolor: user.role === 'admin' ? 'rgba(27, 94, 32, 0.04)' : 'transparent' // light green background for admins
+                  bgcolor: tabValue === 0 && user.role === 'admin' ? 'rgba(27, 94, 32, 0.04)' : 
+                          tabValue === 1 ? 'rgba(211, 47, 47, 0.04)' : 'transparent'
                 }}
               >
                 <TableCell>{user.name}</TableCell>
@@ -350,37 +461,77 @@ export const UsersList = ({ users, handleEdit, handleDelete, updateUserRole }) =
                 <TableCell>
                   <Chip 
                     label={user.status}
-                    color={user.status === 'active' ? 'success' : 'error'}
+                    color={
+                      user.status === 'active' ? 'success' : 
+                      user.status === 'deleted' ? 'error' : 
+                      'warning'
+                    }
                     size="small"
                     sx={{ 
-                      bgcolor: user.status === 'active' ? '#4caf50' : '#d32f2f',
+                      bgcolor: 
+                        user.status === 'active' ? '#4caf50' : 
+                        user.status === 'deleted' ? '#d32f2f' :
+                        '#ff9800',
                       color: 'white',
                       fontWeight: 500
                     }}
                   />
                 </TableCell>
-                <TableCell>{formatDate(user.lastActive)} {/* Format the date here */}</TableCell>
+                {tabValue === 1 && (
+                  <TableCell>{formatDate(user.deletedAt)}</TableCell>
+                )}
+                <TableCell>{formatDate(tabValue === 0 ? user.lastActive : user.createdAt)}</TableCell>
                 <TableCell align="right">
-                 
-                  <IconButton 
-                    size="small" 
-                    onClick={() => handleDelete(user.id)}
-                    color="error"
-                    sx={{ mr: 1 }}
-                  >
-                    <Delete fontSize="small" />
-                  </IconButton>
-                  <Tooltip title="More actions">
-                    <IconButton
-                      size="small"
-                      onClick={(e) => handleMenuOpen(e, user)}
-                    >
-                      <MoreVert fontSize="small" />
-                    </IconButton>
-                  </Tooltip>
+                  {tabValue === 0 ? (
+                    // Actions for active users
+                    <>
+                      <Tooltip title="Deactivate User">
+                        <IconButton 
+                          size="small" 
+                          onClick={() => openSoftDeleteConfirm(user.id, user.name)}
+                          color="error"
+                          sx={{ mr: 1 }}
+                        >
+                          <Delete fontSize="small" />
+                        </IconButton>
+                      </Tooltip>
+                      <Tooltip title="More actions">
+                        <IconButton
+                          size="small"
+                          onClick={(e) => handleMenuOpen(e, user)}
+                        >
+                          <MoreVert fontSize="small" />
+                        </IconButton>
+                      </Tooltip>
+                    </>
+                  ) : (
+                    // Actions for deleted users
+                    <Tooltip title="Restore User">
+                      <IconButton 
+                        size="small" 
+                        onClick={() => openRestoreConfirm(user.id, user.name)}
+                        color="primary"
+                        sx={{ mr: 1 }}
+                      >
+                        <RestoreFromTrash fontSize="small" />
+                      </IconButton>
+                    </Tooltip>
+                  )}
                 </TableCell>
               </TableRow>
             ))}
+            
+            {currentUsers.length === 0 && (
+              <TableRow>
+                <TableCell colSpan={tabValue === 0 ? 6 : 7} align="center" sx={{ py: 3 }}>
+                  <Typography variant="body1" color="textSecondary">
+                    {tabValue === 0 
+                      ? "No active users found" 
+                      : "No deleted users found"}
+                  </Typography>
+                </TableCell>
+              </TableRow>
+            )}
           </TableBody>
         </Table>
       </TableContainer>
@@ -405,8 +556,8 @@ export const UsersList = ({ users, handleEdit, handleDelete, updateUserRole }) =
         )}
       </Menu>
       
-      {/* Confirmation Dialog */}
-      <Dialog open={dialogOpen} onClose={handleDialogClose}>
+      {/* Role Change Confirmation Dialog */}
+      <Dialog open={roleDialogOpen} onClose={handleRoleDialogClose}>
         <DialogTitle>
           {roleChangeDetails.newRole === 'admin' ? 'Grant Admin Privileges' : 'Remove Admin Privileges'}
         </DialogTitle>
@@ -431,7 +582,7 @@ export const UsersList = ({ users, handleEdit, handleDelete, updateUserRole }) =
           />
         </DialogContent>
         <DialogActions>
-          <Button onClick={handleDialogClose}>Cancel</Button>
+          <Button onClick={handleRoleDialogClose}>Cancel</Button>
           <Button 
             onClick={handleConfirmRoleChange} 
             color="primary"
@@ -442,21 +593,53 @@ export const UsersList = ({ users, handleEdit, handleDelete, updateUserRole }) =
           </Button>
         </DialogActions>
       </Dialog>
+      
+      {/* Action Confirmation Dialog (Delete/Restore) */}
+      <Dialog open={confirmDialog.open} onClose={() => setConfirmDialog({...confirmDialog, open: false})}>
+        <DialogTitle>{confirmDialog.title}</DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            {confirmDialog.message}
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setConfirmDialog({...confirmDialog, open: false})}>
+            Cancel
+          </Button>
+          <Button 
+            variant="contained" 
+            color={confirmDialog.confirmText === 'Deactivate' ? 'error' : 'primary'}
+            onClick={handleConfirmAction}
+          >
+            {confirmDialog.confirmText}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 };
 
 // Add PropTypes validation
 UsersList.propTypes = {
-    users: PropTypes.arrayOf(PropTypes.shape({
-      id: PropTypes.string.isRequired,
-      name: PropTypes.string.isRequired,
-      email: PropTypes.string.isRequired,
-      role: PropTypes.string.isRequired,
-      status: PropTypes.string.isRequired,
-      lastActive: PropTypes.string 
-    })).isRequired,
-    handleEdit: PropTypes.func.isRequired,
-    handleDelete: PropTypes.func.isRequired,
-    updateUserRole: PropTypes.func.isRequired
-  };
+  users: PropTypes.arrayOf(PropTypes.shape({
+    id: PropTypes.string.isRequired,
+    name: PropTypes.string.isRequired,
+    email: PropTypes.string.isRequired,
+    role: PropTypes.string.isRequired,
+    status: PropTypes.string.isRequired,
+    lastActive: PropTypes.string 
+  })).isRequired,
+  deletedUsers: PropTypes.arrayOf(PropTypes.shape({
+    id: PropTypes.string.isRequired,
+    name: PropTypes.string.isRequired,
+    email: PropTypes.string.isRequired,
+    role: PropTypes.string.isRequired,
+    status: PropTypes.string.isRequired,
+    deletedAt: PropTypes.string,
+    createdAt: PropTypes.string
+  })),
+  handleEdit: PropTypes.func,
+  handleSoftDelete: PropTypes.func.isRequired,
+  handleRestore: PropTypes.func.isRequired,
+  updateUserRole: PropTypes.func.isRequired
+};

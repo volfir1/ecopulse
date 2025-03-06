@@ -18,9 +18,10 @@ export default function UserControl() {
     data, 
     loading, 
     selectedUser, 
-    handleUserDelete, 
     setSelectedUser, 
-    updateUserRole  // Make sure this is included from the hook
+    handleSoftDeleteUser, 
+    handleRestoreUser, 
+    updateUserRole  
   } = useUserManagement();
   
   const [snackbar, setSnackbar] = useState({
@@ -39,7 +40,56 @@ export default function UserControl() {
     // Implement edit functionality 
   };
 
+  // Wrapped handlers with snackbar notifications
+  const handleSoftDelete = async (userId) => {
+    try {
+      const result = await handleSoftDeleteUser(userId);
+      if (result.success) {
+        setSnackbar({
+          open: true,
+          message: 'User has been successfully deactivated',
+          severity: 'success'
+        });
+      } else {
+        setSnackbar({
+          open: true,
+          message: result.error?.message || 'Failed to deactivate user',
+          severity: 'error'
+        });
+      }
+    } catch (error) {
+      setSnackbar({
+        open: true,
+        message: 'An error occurred while deactivating the user',
+        severity: 'error'
+      });
+    }
+  };
 
+  const handleRestore = async (userId) => {
+    try {
+      const result = await handleRestoreUser(userId);
+      if (result.success) {
+        setSnackbar({
+          open: true,
+          message: 'User has been successfully restored',
+          severity: 'success'
+        });
+      } else {
+        setSnackbar({
+          open: true,
+          message: result.error?.message || 'Failed to restore user',
+          severity: 'error'
+        });
+      }
+    } catch (error) {
+      setSnackbar({
+        open: true,
+        message: 'An error occurred while restoring the user',
+        severity: 'error'
+      });
+    }
+  };
 
   const handleCloseSnackbar = () => {
     setSnackbar({ ...snackbar, open: false });
@@ -94,13 +144,15 @@ export default function UserControl() {
       )}
       
       {tabIndex === 1 && (
-      <UsersList 
-        users={data.usersList} 
-        handleEdit={handleEditUser} 
-        handleDelete={handleUserDelete}
-        updateUserRole={updateUserRole} // Pass the function directly
-      />
-    )}
+        <UsersList 
+          users={data.usersList} 
+          deletedUsers={data.deletedUsers}
+          handleEdit={handleEditUser} 
+          handleSoftDelete={handleSoftDelete}
+          handleRestore={handleRestore}
+          updateUserRole={updateUserRole}
+        />
+      )}
 
       {/* Notifications */}
       <Snackbar

@@ -101,7 +101,22 @@ export const USER_NAVIGATION = [
 ];
 
 export const ADMIN_NAVIGATION = [
-
+  {
+    kind: 'header',
+    segment: 'main-apps',
+    title: 'Main App',
+  },
+  {
+    kind: 'item',
+    segment: 'Admin',
+    title: 'Admin Dashboard',
+    icon: <AppIcon name="shield" />,
+    path: '/admin/dashboard',
+  },
+  {
+    kind: 'divider', // Added divider here
+    segment: 'admin-divider',
+  },
   {
     kind: 'header',
     segment: 'main-menu',
@@ -147,8 +162,7 @@ export const ADMIN_NAVIGATION = [
         title: 'Biomass',
         icon: <AppIcon name="biomass" />,
         path: '/admin/modules/biomass',
-      },
-      
+      },     
     ],
   },
   {

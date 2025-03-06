@@ -64,124 +64,273 @@ const authService = {
     }
   },
 
+  // Improved logout that properly clears all auth data
   logout: async () => {
     try {
-      await auth.signOut().catch(console.warn);
+      // First clear local storage
+      localStorage.removeItem('user');
       localStorage.removeItem('authToken');
+      
+      // Then try to sign out from Firebase if applicable
+      try {
+        await auth.signOut();
+      } catch (firebaseError) {
+        console.warn('Firebase signout error:', firebaseError);
+        // Continue with logout even if Firebase fails
+      }
 
+      // Finally clear cookies via server
       const response = await fetch(`${API_URL}/auth/logout`, {
         method: "POST",
         credentials: "include"
       });
 
-      if (!response.ok) throw new Error("Logout failed");
       return { success: true };
     } catch (error) {
-      throw new Error(error.message);
+      console.error("Logout error:", error);
+      // Even if server logout fails, we've already cleared local storage
+      return { success: true, warning: error.message };
     }
   },
-// Fixed checkAuthStatus function for authService.js
-checkAuthStatus: async (signal) => {
-  try {
-    if (currentAuthRequest) currentAuthRequest.abort();
 
-    const controller = signal ? { signal } : new AbortController();
-    if (!signal) {
-      currentAuthRequest = controller;
-      signal = controller.signal;
-    }
-
-    // Get stored user and token
-    const storedUser = localStorage.getItem('user');
-    const localToken = localStorage.getItem('authToken');
-    
-    console.log('Auth check - Stored data:', { 
-      hasToken: !!localToken, 
-      hasUser: !!storedUser
-    });
-
-    if (!localToken) {
-      console.log('No auth token found');
-      return { success: false, error: 'No auth token' };
-    }
-
-    const headers = {
-      "Content-Type": "application/json",
-      "Authorization": `Bearer ${localToken}`
-    };
-
-    console.log('Calling auth verification endpoint');
-    const response = await fetch(`${API_URL}/auth/verify`, {
-      method: "GET",
-      headers,
-      credentials: "include",
-      signal
-    });
-
-    if (currentAuthRequest?.signal === signal) {
-      currentAuthRequest = null;
-    }
-
-    // Get response data
-    const responseData = await response.json();
-    console.log('Auth check response:', responseData);
-
-    if (response.status === 401) {
-      console.log('Auth check: Session expired or invalid (401)');
-      return { success: false, error: responseData.message || 'Session expired or invalid' };
-    }
-
-    if (!response.ok) {
-      console.log(`Auth check: Verification failed (${response.status})`);
-      return { success: false, error: responseData.message || 'Verification failed' };
-    }
-
-    // CRITICAL FIX: Handle successful verification
-    if (responseData.success && responseData.user) {
-      // Get stored user data
-      let userData = responseData.user;
+  // Improved checkAuthStatus with better error handling and offline support
+  checkAuthStatus: async (signal) => {
+    try {
+      // Check if we have a stored user first - critical for offline support
+      const storedUser = localStorage.getItem('user');
+      let userData = null;
       
-      // If we have stored user data with more information, merge it
       if (storedUser) {
         try {
-          const parsedUser = JSON.parse(storedUser);
-          
-          // CRITICAL FIX: Force verification status to be true regardless of server response
-          userData = {
-            ...parsedUser,
-            ...responseData.user,
-            isVerified: true,
-            // Make sure role is preserved
-            role: responseData.user.role || parsedUser.role || 'user'
-          };
+          userData = JSON.parse(storedUser);
+          console.log('Using stored user data while verifying auth');
         } catch (e) {
-          console.error('Error parsing stored user', e);
+          console.error('Error parsing stored user:', e);
         }
       }
       
-      // Set default role if missing
-      if (!userData.role) {
-        userData.role = 'user';
+      // Abort previous request if any
+      if (currentAuthRequest) {
+        currentAuthRequest.abort();
+      }
+
+      const controller = signal ? { signal } : new AbortController();
+      if (!signal) {
+        currentAuthRequest = controller;
+        signal = controller.signal;
+      }
+
+      // Get token from localStorage
+      const localToken = localStorage.getItem('authToken');
+      
+      if (!localToken) {
+        console.warn('No auth token available');
+        return { 
+          success: false, 
+          error: 'No auth token',
+          // Return temporary user data if available
+          ...(userData && { tempUser: userData })
+        };
+      }
+
+      const headers = {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${localToken}`
+      };
+
+      // Check network connection first
+      if (!navigator.onLine) {
+        console.warn('Network appears offline - using cached user data');
+        return { 
+          success: userData != null,
+          user: userData,
+          offline: true
+        };
+      }
+
+      console.log('Verifying auth with server');
+      const response = await fetch(`${API_URL}/auth/verify`, {
+        method: "GET",
+        headers,
+        credentials: "include",
+        signal
+      });
+
+      // Clear current request reference if this is it
+      if (currentAuthRequest?.signal === signal) {
+        currentAuthRequest = null;
+      }
+
+      // Check for token refresh header
+      const newToken = response.headers.get('X-New-Token');
+      if (newToken) {
+        console.log('Received new token from server');
+        localStorage.setItem('authToken', newToken);
+      }
+
+      // Get response data - handle network errors
+      let data;
+      try {
+        data = await response.json();
+      } catch (parseError) {
+        console.error('Error parsing auth response:', parseError);
+        
+        // If we have stored user data, return it as a fallback
+        if (userData) {
+          return { 
+            success: true, 
+            user: userData, 
+            warning: 'Using cached data due to server response error'
+          };
+        }
+        
+        return { success: false, error: 'Invalid server response' };
+      }
+
+      if (!response.ok) {
+        console.warn(`Auth verification failed: ${response.status} - ${data.message || 'Unknown error'}`);
+        
+        // If token expired but we have refresh capability, try to refresh
+        if (response.status === 401 && data.requireRefresh) {
+          try {
+            console.log('Attempting token refresh');
+            const refreshResult = await authService.refreshToken();
+            if (refreshResult.success) {
+              // If refresh succeeded, return the user data
+              return { success: true, user: refreshResult.user || userData };
+            }
+          } catch (refreshError) {
+            console.error('Token refresh failed:', refreshError);
+          }
+        }
+        
+        // Special case: offline but with cached data
+        if (!navigator.onLine && userData) {
+          return { 
+            success: true, 
+            user: userData, 
+            offline: true,
+            warning: 'Using cached data while offline'
+          };
+        }
+        
+        return { 
+          success: false, 
+          error: data.message || 'Verification failed',
+          requireRelogin: response.status === 401
+        };
+      }
+
+      // Handle successful verification
+      if (data.success && data.user) {
+        console.log('Auth verified successfully');
+        
+        // Ensure the user has a role set
+        if (!data.user.role) {
+          data.user.role = userData?.role || 'user';
+        }
+        
+        // Store updated user data
+        localStorage.setItem('user', JSON.stringify(data.user));
+        
+        return { success: true, user: data.user };
       }
       
-      // Update localStorage with enhanced user data
-      localStorage.setItem('user', JSON.stringify(userData));
+      // Fallback to stored user data if server didn't return a user
+      if (userData && (!data.user)) {
+        console.warn('Server did not return user data but we have stored data');
+        return { 
+          success: true, 
+          user: userData,
+          warning: 'Using stored user data'
+        };
+      }
       
-      console.log('Auth check successful with enhanced user data:', userData);
-      return { success: true, user: userData };
-    }
-    
-    return { success: true, user: responseData.user };
-  } catch (error) {
-    if (error.name === 'AbortError') {
-      console.log('Auth check was cancelled by a new request');
-      return { aborted: true };
-    }
+      return { success: false, error: 'Invalid response' };
+    } catch (error) {
+      console.error('Auth check error:', error);
+      
+      // For abort errors, just return quietly
+      if (error.name === 'AbortError') {
+        return { aborted: true };
+      }
+      
+      // For network errors with stored data, use the stored data
+      const storedUser = localStorage.getItem('user');
+      if (error.name === 'TypeError' && error.message.includes('network') && storedUser) {
+        try {
+          const userData = JSON.parse(storedUser);
+          return { 
+            success: true, 
+            user: userData, 
+            offline: true,
+            warning: 'Using cached data due to network error'
+          };
+        } catch (e) {
+          console.error('Error parsing stored user during offline fallback:', e);
+        }
+      }
 
-    console.error('Auth verification error:', error);
-    return { success: false, error: error.message };
-  }
-},
+      return { success: false, error: error.message };
+    }
+  },
+
+  // Add token refresh functionality
+  refreshToken: async () => {
+    try {
+      // First check if we have a stored user
+      const storedUser = localStorage.getItem('user');
+      let userData = null;
+      
+      if (storedUser) {
+        try {
+          userData = JSON.parse(storedUser);
+        } catch (e) {
+          console.error('Error parsing stored user during refresh:', e);
+        }
+      }
+      
+      console.log('Attempting to refresh auth token');
+      const response = await fetch(`${API_URL}/auth/refresh-token`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include" // Important for cookies
+      });
+
+      // Try to parse the response
+      let data;
+      try {
+        data = await response.json();
+      } catch (parseError) {
+        console.error('Error parsing refresh response:', parseError);
+        return { success: false, error: 'Invalid server response' };
+      }
+      
+      if (!response.ok) {
+        return { success: false, error: data.message || 'Token refresh failed' };
+      }
+      
+      if (data.accessToken) {
+        localStorage.setItem('authToken', data.accessToken);
+        
+        // If server returned updated user data, use it
+        if (data.user) {
+          localStorage.setItem('user', JSON.stringify(data.user));
+          return { success: true, user: data.user };
+        }
+        
+        // Otherwise return the stored user data
+        return { success: true, user: userData };
+      }
+      
+      return { success: false, error: 'No token received' };
+    } catch (error) {
+      console.error("Token refresh error:", error);
+      return { success: false, error: error.message };
+    }
+  },
+
+  // Rest of your functions (googleSignIn, verifyEmail, etc.)
   googleSignIn: async () => {
     try {
       console.log('Starting Google sign-in process');
@@ -235,6 +384,11 @@ checkAuthStatus: async (signal) => {
         throw new Error(data.message || "Google sign-in failed");
       }
       
+      // Store the token if we got one
+      if (data.user?.accessToken) {
+        localStorage.setItem('authToken', data.user.accessToken);
+      }
+      
       // Important: Use the server's response about verification
       // Only require verification if the server says so
       return {
@@ -259,6 +413,7 @@ checkAuthStatus: async (signal) => {
     }
   },
 
+  // Email verification function (unchanged)
   verifyEmail: async (userId, verificationCode) => {
     if (!userId || !verificationCode) {
       throw new Error("User ID and verification code are required");
@@ -355,6 +510,7 @@ checkAuthStatus: async (signal) => {
     }
   },
 
+  // Other methods remain the same...
   resendVerificationCode: async (userId) => {
     if (!userId) throw new Error("User ID is required");
 
@@ -492,6 +648,7 @@ checkAuthStatus: async (signal) => {
       throw error;
     }
   },
+  
   forceVerifyUser: (userData) => {
     if (!userData) return null;
     
@@ -511,10 +668,6 @@ checkAuthStatus: async (signal) => {
     return verifiedUser;
   },
   
-  /**
-   * Direct login that bypasses verification checks
-   * This uses the normal login flow but ensures the user is treated as verified
-   */
   directLogin: async (email, password) => {
     try {
       console.log('Using direct login bypass for:', email);

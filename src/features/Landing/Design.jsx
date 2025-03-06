@@ -27,6 +27,8 @@ import { theme, get3DEffect } from './theme';
 import { getColorWithOpacity } from './util';
 import { useScrollEffect } from './hook';
 import SolarPanel3DScene from './SOLAR/SolarPanel3dScene';
+import WindTurbine3DScene from './WIND/WindTurbine3dScene';
+import HydroPower3DScene from './HYDRO/Hydro3dScene';
 // Enhanced Navbar with scroll effect and animations
 export const Navbar = ({ logo }) => {
   const { isScrolled } = useScrollEffect();
@@ -73,7 +75,7 @@ export const Navbar = ({ logo }) => {
           </Link>
 
           <Stack direction="row" spacing={3}>
-            <Button
+            {/* <Button
               sx={{
                 color: isScrolled ? theme.palette.text.primary : 'white',
                 textShadow: isScrolled ? 'none' : '0 1px 3px rgba(0,0,0,0.2)',
@@ -85,8 +87,8 @@ export const Navbar = ({ logo }) => {
               }}
             >
               About
-            </Button>
-            <Button
+            </Button> */}
+            {/* <Button
               sx={{
                 color: isScrolled ? theme.palette.text.primary : 'white',
                 textShadow: isScrolled ? 'none' : '0 1px 3px rgba(0,0,0,0.2)',
@@ -98,7 +100,7 @@ export const Navbar = ({ logo }) => {
               }}
             >
               Contact
-            </Button>
+            </Button> */}
             <Button
               component={Link}
               to="/login"
@@ -119,7 +121,7 @@ export const Navbar = ({ logo }) => {
             </Button>
             <Button
               component={Link}
-              to="/signup"
+              to="/register"
               variant="contained"
               sx={{
                 bgcolor: isScrolled ? theme.palette.primary.main : 'rgba(255,255,255,0.9)',
@@ -250,7 +252,7 @@ export const HeroSection = ({
                   transition: 'all 0.3s ease',
                 }}
               >
-                LEARN MORE
+                Join Now
               </Button>
             </Stack>
           </Grid>
@@ -266,65 +268,18 @@ export const HeroSection = ({
               }}
             >
               {/* 3D-style element based on the current slide */}
+
               {currentSlide === 0 && (
-                <Box sx={{ position: 'relative', transform: 'perspective(1000px) rotateY(-15deg)' }}>
-                  {/* Hydro Power 3D-like element */}
-                  <Box
-                    sx={{
-                      width: 300,
-                      height: 200,
-                      bgcolor: '#3498db',
-                      borderRadius: 4,
-                      position: 'relative',
-                      boxShadow: '0 20px 25px rgba(0,0,0,0.3)',
-                      transform: 'translateZ(20px)',
-                      overflow: 'hidden'
-                    }}
-                  >
-                    {/* Water surface */}
-                    <Box
-                      sx={{
-                        position: 'absolute',
-                        top: 0,
-                        left: 0,
-                        width: '100%',
-                        height: '70%',
-                        bgcolor: '#3498db',
-                        background: 'linear-gradient(135deg, #3498db 0%, #2980b9 100%)',
-                        opacity: 0.8
-                      }}
-                    />
-
-                    {/* Dam structure */}
-                    <Box
-                      sx={{
-                        position: 'absolute',
-                        bottom: 0,
-                        left: 0,
-                        width: '100%',
-                        height: '50%',
-                        bgcolor: '#7f8c8d',
-                        borderTopLeftRadius: 40,
-                        borderTopRightRadius: 40,
-                        boxShadow: '0 -5px 15px rgba(0,0,0,0.2)',
-                      }}
-                    />
-
-                    {/* Dam top */}
-                    <Box
-                      sx={{
-                        position: 'absolute',
-                        bottom: '48%',
-                        left: '10%',
-                        width: '80%',
-                        height: '5%',
-                        bgcolor: '#95a5a6',
-                        borderRadius: 1,
-                      }}
-                    />
-                  </Box>
-
-                  {/* Info card */}
+                <Box
+                  sx={{
+                    display: 'flex',
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                    position: 'relative',
+                    height: 350
+                  }}
+                >
+                  <HydroPower3DScene />
                   <Card
                     sx={{
                       position: 'absolute',
@@ -382,102 +337,36 @@ export const HeroSection = ({
               )}
 
               {currentSlide === 2 && (
-                <Box sx={{ position: 'relative', transform: 'perspective(1000px) rotateY(-15deg)' }}>
-                  {/* Wind Energy 3D-like element */}
-                  <Box
-                    sx={{
-                      width: 300,
-                      height: 200,
-                      bgcolor: '#e8f5e9',
-                      borderRadius: 4,
-                      position: 'relative',
-                      boxShadow: '0 20px 25px rgba(0,0,0,0.3)',
-                      transform: 'translateZ(20px)',
-                      overflow: 'hidden'
-                    }}
-                  >
-                    {/* Sky background */}
-                    <Box
-                      sx={{
-                        position: 'absolute',
-                        top: 0,
-                        left: 0,
-                        width: '100%',
-                        height: '100%',
-                        background: 'linear-gradient(to bottom, #87CEEB 0%, #e0f7fa 100%)',
-                      }}
-                    />
-
-                    {/* Wind turbine towers */}
-                    {[...Array(3)].map((_, i) => (
-                      <Box key={i} sx={{ position: 'absolute', bottom: 0, left: 60 + i * 80 }}>
-                        {/* Tower */}
-                        <Box
-                          sx={{
-                            width: 10,
-                            height: 100 + i * 20,
-                            bgcolor: '#ecf0f1',
-                            boxShadow: '2px 0 5px rgba(0,0,0,0.1)',
-                          }}
-                        />
-
-                        {/* Turbine head */}
-                        <Box
-                          sx={{
-                            position: 'absolute',
-                            top: 100 + i * 20 - 10,
-                            left: -5,
-                            width: 20,
-                            height: 20,
-                            borderRadius: '50%',
-                            bgcolor: '#bdc3c7',
-                          }}
-                        />
-
-                        {/* Blades container - using a CSS animation would make these rotate */}
-                        <Box
-                          sx={{
-                            position: 'absolute',
-                            top: 100 + i * 20 - 5,
-                            left: 0,
-                            width: 10,
-                            height: 10,
-                            borderRadius: '50%',
-                            display: 'flex',
-                            justifyContent: 'center',
-                            alignItems: 'center',
-                          }}
-                        >
-                          {/* Simplified blade representation */}
-                          <Box
-                            sx={{
-                              width: 80,
-                              height: 80,
-                              borderRadius: '50%',
-                              border: '2px solid #ecf0f1',
-                              borderTop: '10px solid #ecf0f1',
-                              transform: 'rotate(' + i * 30 + 'deg)',
-                            }}
-                          />
-                        </Box>
-                      </Box>
-                    ))}
-                  </Box>
-
-                  {/* Info card */}
+                <Box
+                  sx={{
+                    width: '100%',
+                    height: 500,
+                    display: 'flex',
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                  }}
+                >
+                  <WindTurbine3DScene />
                   <Card
                     sx={{
-                      position: 'absolute',
-                      bottom: -30,
-                      right: -30,
-                      width: 200,
-                      p: 2,
-                      borderRadius: 2,
-                      boxShadow: '0 10px 20px rgba(0,0,0,0.15)',
-                      bgcolor: 'rgba(255,255,255,0.95)',
+                      position: "absolute",
+                      bottom: "-30px",
+                      right: "20px",
+                      width: "200px",
+                      bgcolor: 'rgba(255,255,255,0.98)',
+                      borderRadius: 3,
+                      boxShadow: '0 8px 32px rgba(0,0,0,0.12)',
+                      p: 2
                     }}
                   >
-                    <Typography variant="body2" sx={{ fontSize: '0.9rem' }}>
+                    <Typography
+                      variant="body2"
+                      sx={{
+                        color: theme.palette.text.primary,
+                        fontSize: '0.9rem',
+                        lineHeight: 1.5
+                      }}
+                    >
                       {carouselData[currentSlide].details}
                     </Typography>
                   </Card>

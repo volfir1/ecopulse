@@ -169,7 +169,82 @@ export const userService = {
       throw error;
     }
   },
-};
 
+  // Soft delete a user (deactivate)
+  softDeleteUser: async (userId) => {
+    try {
+      const response = await fetch(`http://localhost:5000/api/users/${userId}`, {
+        method: "DELETE", // Using DELETE method for soft delete
+        headers: {
+          "Content-Type": "application/json"
+        },
+        credentials: "include"
+      });
+
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.message || "Failed to deactivate user");
+      }
+
+      return {
+        success: true,
+        message: data.message || "User has been successfully deactivated"
+      };
+    } catch (error) {
+      console.error("Error deactivating user:", error);
+      throw error;
+    }
+  },
+
+  // Restore a soft-deleted user
+  restoreUser: async (userId) => {
+    try {
+      const response = await fetch(`http://localhost:5000/api/users/${userId}/restore`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        credentials: "include"
+      });
+
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.message || "Failed to restore user");
+      }
+
+      return {
+        success: true,
+        message: data.message || "User has been successfully restored",
+        user: data.user
+      };
+    } catch (error) {
+      console.error("Error restoring user:", error);
+      throw error;
+    }
+  },
+
+  // Get all users including deleted ones (admin only)
+  getAllUsersWithDeleted: async () => {
+    try {
+      const response = await fetch("http://localhost:5000/api/users/users/all", {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        credentials: "include"
+      });
+
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.message || "Failed to fetch all users");
+      }
+
+      return data;
+    } catch (error) {
+      console.error("Error fetching all users:", error);
+      throw error;
+    }
+  }
+};
 
 export default userService;

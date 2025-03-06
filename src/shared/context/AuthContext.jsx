@@ -95,6 +95,129 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  // Define verifyAuth outside useEffect so it can be used elsewhere
+  const verifyAuth = async () => {
+    // Don't check auth for public routes
+    const publicPaths = ['/login', '/register', '/forgot-password', '/reset-password', '/verify-email'];
+    const isPublicPath = publicPaths.some(path => window.location.pathname.startsWith(path));
+    
+    if (isPublicPath) {
+      setIsLoading(false);
+      return;
+    }
+  
+    // IMPORTANT: Check for both token AND user before redirecting
+    const hasAuthToken = !!localStorage.getItem('authToken');
+    const hasUserData = !!localStorage.getItem('user');
+  
+    // If we have user data but no authentication check is in progress, use the stored data temporarily
+    if (hasUserData && !authCheckInProgress && !isAuthenticated) {
+      try {
+        const storedUser = JSON.parse(localStorage.getItem('user'));
+        setUser(storedUser);
+        setIsAuthenticated(true);
+      } catch (e) {
+        console.error('Error parsing stored user:', e);
+      }
+    }
+  
+    // Handle cases without auth token
+    if (!hasAuthToken) {
+      if (!isPublicPath) {
+        // Only redirect if we don't have user data either
+        if (!hasUserData) {
+          console.log('No auth token or user data found, redirecting to login');
+          navigate('/login', { replace: true });
+        } else {
+          // We have user data but no token - try to refresh the token instead of redirecting
+          console.log('Missing auth token but found user data - attempting to refresh');
+          try {
+            // You'll need an endpoint for token refresh
+            const refreshResult = await authService.refreshToken();
+            if (refreshResult.success) {
+              return; // Successfully refreshed, don't redirect
+            }
+          } catch (error) {
+            console.warn('Token refresh failed:', error);
+            // Continue with verification to see if we're still authenticated
+          }
+        }
+      }
+      
+      setIsLoading(false);
+      return;
+    }
+  
+    // Prevent multiple simultaneous checks
+    if (authCheckInProgress) {
+      setIsLoading(false);
+      return;
+    }
+  
+    setAuthCheckInProgress(true);
+    console.log('Verifying authentication status');
+  
+    try {
+      const result = await authService.checkAuthStatus();
+      console.log('Auth verification result:', result);
+      
+      if (result.success && result.user) {
+        // Set user and auth state
+        setUser(result.user);
+        setIsAuthenticated(true);
+        localStorage.setItem('user', JSON.stringify(result.user));
+      } else if (result.requireRelogin) {
+        // Session expired, need to login again
+        console.log('Session expired, redirecting to login');
+        setUser(null);
+        setIsAuthenticated(false);
+        localStorage.removeItem('user');
+        localStorage.removeItem('authToken');
+        
+        if (!isPublicPath) {
+          navigate('/login', { 
+            state: { 
+              message: 'Your session has expired. Please log in again.',
+              from: window.location.pathname
+            }
+          });
+        }
+      } else {
+        // Auth failed but don't immediately redirect - check if we have valid user data
+        console.warn('Auth check failed but not requiring re-login');
+        if (!hasUserData) {
+          setUser(null);
+          setIsAuthenticated(false);
+          localStorage.removeItem('user');
+          localStorage.removeItem('authToken');
+          
+          if (!isPublicPath) {
+            navigate('/login');
+          }
+        }
+      }
+    } catch (err) {
+      console.error('Auth verification error:', err);
+      // Don't clear state or redirect on network errors - this keeps the UI working during connection issues
+      if (err.name !== 'AbortError' && !navigator.onLine) {
+        console.log('Network appears offline - not clearing auth state');
+      } else {
+        // Only clear state for other types of errors
+        setUser(null);
+        setIsAuthenticated(false);
+        localStorage.removeItem('user');
+        localStorage.removeItem('authToken');
+        
+        if (!isPublicPath) {
+          navigate('/login');
+        }
+      }
+    } finally {
+      setIsLoading(false);
+      setAuthCheckInProgress(false);
+    }
+  };
+
   // Verify authentication with the server on component mount
   useEffect(() => {
     if (CONFIG.SKIP_AUTH && process.env.NODE_ENV === 'development') {
@@ -102,195 +225,120 @@ export const AuthProvider = ({ children }) => {
       return;
     }
     
-    let isMounted = true;
-    const controller = new AbortController();
-// Fixed verifyAuth function for AuthContext.jsx
-const verifyAuth = async () => {
-  // Don't check auth for public routes
-  const publicPaths = ['/login', '/register', '/forgot-password', '/reset-password'];
-  const isPublicPath = publicPaths.some(path => window.location.pathname.startsWith(path));
-  
-  if (isPublicPath) {
-    setIsLoading(false);
-    return;
-  }
-
-  // Special case for verification page
-  const isVerificationPage = window.location.pathname.includes('/verify-email');
-  
-  // Prevent multiple checks and don't check if no token
-  if (authCheckInProgress || !localStorage.getItem('authToken')) {
-    // If we're not on the verification page and have no token, redirect to login
-    if (!isVerificationPage && !localStorage.getItem('authToken')) {
-      console.log('No auth token found, redirecting to login');
-      navigate('/login', { replace: true });
-    }
+    // Run the initial auth check
+    verifyAuth();
     
-    setIsLoading(false);
-    return;
-  }
-
-  setAuthCheckInProgress(true);
-  console.log('Verifying authentication status');
-
-  try {
-    const result = await authService.checkAuthStatus();
-    console.log('Auth verification result:', result);
+    // Set up interval for periodic checks
+    const interval = setInterval(verifyAuth, 5 * 60 * 1000); // Check every 5 minutes
     
-    if (result.success && result.user) {
-      // CRITICAL FIX: Force user to be treated as verified
-      const enhancedUser = {
-        ...result.user,
-        // Frontend overrides verification status from server
-        isVerified: true
-      };
-      
-      console.log('Enhanced user object with forced verification:', enhancedUser);
-      
-      // Update state with verified user
-      setUser(enhancedUser);
-      setIsAuthenticated(true);
-      
-      // Store in localStorage with verification flag
-      localStorage.setItem('user', JSON.stringify(enhancedUser));
-      
-      console.log('User authenticated and treated as verified');
-      
-      // If on verification page, redirect to appropriate dashboard
-      if (isVerificationPage) {
-        redirectToUserDashboard(enhancedUser);
+    // Cleanup function
+    return () => {
+      clearInterval(interval);
+      if (authCheckTimerRef.current) {
+        clearTimeout(authCheckTimerRef.current);
       }
-    } else {
-      // Auth failed - clear state and redirect
-      console.log('Authentication failed');
-      setUser(null);
-      setIsAuthenticated(false);
-      localStorage.removeItem('user');
-      localStorage.removeItem('authToken');
-      
-      if (!isPublicPath && !isVerificationPage) {
-        navigate('/login', { replace: true });
-      }
-    }
-  } catch (err) {
-    console.error('Auth verification error:', err);
-    
-    // Clear auth state on error
-    setUser(null);
-    setIsAuthenticated(false);
-    localStorage.removeItem('user');
-    localStorage.removeItem('authToken');
-    
-    if (!isPublicPath && !isVerificationPage) {
-      navigate('/login', { replace: true });
-    }
-  } finally {
-    setIsLoading(false);
-    setAuthCheckInProgress(false);
-  }
-};
+    };
   }, [navigate]);
 
-  // FIXED: Improved login function with proper verification checking
- // Fixed login function for AuthContext
-const login = async (email, password) => {
-  if (CONFIG.SKIP_AUTH && process.env.NODE_ENV === 'development') {
-    console.log('Development mode: Login bypassed');
-    const mockUser = {
-      id: 'dev-user-id',
-      firstName: 'Development',
-      lastName: 'User',
-      email: email || 'dev@example.com',
-      role: CONFIG.DEFAULT_ROLE || 'admin',
-      isVerified: true
-    };
-    
-    setUser(mockUser);
-    setIsAuthenticated(true);
-    localStorage.setItem('user', JSON.stringify(mockUser));
-    redirectToUserDashboard(mockUser);
-    return { success: true, user: mockUser };
-  }
-  
-  setIsLoading(true);
-  setError(null);
-  
-  try {
-    console.log('Calling authService.login');
-    const result = await authService.login(email, password);
-    console.log('Login result in AuthContext:', result);
-    
-    if (!result.success || !result.user) {
-      const errorMessage = (result.message || '').includes('User not found') 
-        ? 'Account not found. Please register first.'
-        : result.message || 'Login failed. Please try again.';
-      console.log('Login failed:', errorMessage);
-      
-      return { 
-        success: false, 
-        message: errorMessage 
-      };
-    }
-
-    // FIXED: More robust verification check
-    console.log('Checking verification status:', {
-      isVerified: result.user.isVerified,
-      verificationStatus: result.user.verificationStatus
-    });
-    
-    const isUserVerified = 
-      result.user.isVerified === true || 
-      result.user.verificationStatus === 'verified' ||
-      result.alreadyVerified === true;
-    
-    if (isUserVerified) {
-      // Create a normalized user object with consistent verification status
-      const verifiedUser = {
-        ...result.user,
+  // Fixed login function for AuthContext
+  const login = async (email, password) => {
+    if (CONFIG.SKIP_AUTH && process.env.NODE_ENV === 'development') {
+      console.log('Development mode: Login bypassed');
+      const mockUser = {
+        id: 'dev-user-id',
+        firstName: 'Development',
+        lastName: 'User',
+        email: email || 'dev@example.com',
+        role: CONFIG.DEFAULT_ROLE || 'admin',
         isVerified: true
       };
       
-      console.log('User is verified, updating state');
-      
-      // Update state
-      setUser(verifiedUser);
+      setUser(mockUser);
       setIsAuthenticated(true);
-      
-      // Store in localStorage
-      localStorage.setItem('user', JSON.stringify(verifiedUser));
-      if (result.user.accessToken) {
-        localStorage.setItem('authToken', result.user.accessToken);
-      }
-      
-      // Return consistent result
-      return { 
-        success: true, 
-        user: verifiedUser 
-      };
-    } else {
-      // User is not verified - special return format for handling in loginHook
-      console.log('User is not verified, returning requireVerification flag');
-      return { 
-        success: true, 
-        user: result.user,
-        requireVerification: true
-      };
+      localStorage.setItem('user', JSON.stringify(mockUser));
+      redirectToUserDashboard(mockUser);
+      return { success: true, user: mockUser };
     }
-  } catch (err) {
-    console.error('Login error in AuthContext:', err);
-    setError(err.message);
     
-    return {
-      success: false,
-      message: err.message
-    };
-  } finally {
-    setIsLoading(false);
-  }
-};
+    setIsLoading(true);
+    setError(null);
+    
+    try {
+      console.log('Calling authService.login');
+      const result = await authService.login(email, password);
+      console.log('Login result in AuthContext:', result);
+      
+      if (!result.success || !result.user) {
+        const errorMessage = (result.message || '').includes('User not found') 
+          ? 'Account not found. Please register first.'
+          : result.message || 'Login failed. Please try again.';
+        console.log('Login failed:', errorMessage);
+        
+        return { 
+          success: false, 
+          message: errorMessage 
+        };
+      }
+
+      // More robust verification check
+      console.log('Checking verification status:', {
+        isVerified: result.user.isVerified,
+        verificationStatus: result.user.verificationStatus
+      });
+      
+      const isUserVerified = 
+        result.user.isVerified === true || 
+        result.user.verificationStatus === 'verified' ||
+        result.alreadyVerified === true;
+      
+      if (isUserVerified) {
+        // Create a normalized user object with consistent verification status
+        const verifiedUser = {
+          ...result.user,
+          isVerified: true
+        };
+        
+        console.log('User is verified, updating state');
+        
+        // Update state
+        setUser(verifiedUser);
+        setIsAuthenticated(true);
+        
+        // Store in localStorage
+        localStorage.setItem('user', JSON.stringify(verifiedUser));
+        if (result.user.accessToken) {
+          localStorage.setItem('authToken', result.user.accessToken);
+        }
+        
+        // Return consistent result
+        return { 
+          success: true, 
+          user: verifiedUser 
+        };
+      } else {
+        // User is not verified - special return format for handling in loginHook
+        console.log('User is not verified, returning requireVerification flag');
+        return { 
+          success: true, 
+          user: result.user,
+          requireVerification: true
+        };
+      }
+    } catch (err) {
+      console.error('Login error in AuthContext:', err);
+      setError(err.message);
+      
+      return {
+        success: false,
+        message: err.message
+      };
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   // Register function with verification
-  const register = async (firstName, lastName, email, password) => {
+  const register = async (userData) => {
     if (CONFIG.SKIP_AUTH && process.env.NODE_ENV === 'development') {
       console.log('Development mode: Registration bypassed');
       navigate('/login', { 
@@ -304,13 +352,13 @@ const login = async (email, password) => {
     setError(null);
     
     try {
-      const result = await authService.register(firstName, lastName, email, password);
+      const result = await authService.register(userData);
       
       if (result.success) {
         if (result.requireVerification) {
           // If verification is required, redirect to verification page
-          navigate(`/verify-email?userId=${result.userId}`, { 
-            state: { userId: result.userId, email } 
+          navigate(`/verify-email`, { 
+            state: { userId: result.userId, email: userData.email } 
           });
         } else {
           // Traditional flow - redirect to login
@@ -329,7 +377,7 @@ const login = async (email, password) => {
     }
   };
 
-  // FIXED: Improved googleSignIn function with proper verification checking
+  // Improved googleSignIn function with proper verification checking
   const googleSignIn = async () => {
     if (CONFIG.SKIP_AUTH && process.env.NODE_ENV === 'development') {
       console.log('Development mode: Google sign-in bypassed');
@@ -443,6 +491,36 @@ const login = async (email, password) => {
     }
   };
 
+  // Improved logout function that handles both frontend and backend logout
+  const logout = async () => {
+    try {
+      // Clear auth state first for responsive UI
+      setUser(null);
+      setIsAuthenticated(false);
+      
+      // Clear localStorage items
+      localStorage.removeItem('user');
+      localStorage.removeItem('authToken');
+      
+      // Call the actual logout service
+      await authService.logout();
+      
+      // Navigate to login page
+      navigate('/login');
+      
+      return { success: true };
+    } catch (error) {
+      console.error('Logout error:', error);
+      
+      // Even on error, clear local state
+      localStorage.removeItem('user');
+      localStorage.removeItem('authToken');
+      navigate('/login');
+      
+      return { success: false, error: error.message };
+    }
+  };
+
   // Helper functions for roles
   const hasRole = (role) => {
     if (!user) return false;
@@ -462,11 +540,12 @@ const login = async (email, password) => {
     isLoading,
     error,
     login,
-    logout: authService.logout,
+    logout,
     register,
     googleSignIn,
     verifyEmail,
     resendVerificationCode,
+    verifyAuth,
     hasRole,
     getUserRole,
     redirectToUserDashboard,

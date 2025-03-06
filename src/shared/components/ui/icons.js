@@ -28,7 +28,8 @@ import {
     Key,
     Clock,
     FileText,
-    Ticket
+    Ticket,
+  
 } from 'lucide-react';
 import { useTheme } from "@emotion/react";
 
@@ -57,7 +58,8 @@ export const IconLibrary = {
     alert: AlertTriangle,
     password: Key,
     activity: Clock,
-    document: FileText
+    document: FileText,
+    shield: Shield  
 };
 
 export const IconTools = {

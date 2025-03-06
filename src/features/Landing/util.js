@@ -19,21 +19,21 @@ import {
    */
   export const carouselData = [
     {
-      image: '/assets/images/landing/hydro.jpg',
+      image: '/public/carousel/hydro.jpg',
       title: "Hydro Power Energy",
       description: "Hydropower energy uses flowing or falling water to generate electricity, making it one of the most widely used renewable energy sources globally.",
       details: "In the Philippines, hydropower supplies about 10-12% of the country's electricity. With its abundant rivers and high rainfall, the nation hosts significant projects.",
       color: '#3498db'
     },
     {
-      image: '/assets/images/landing/solar.jpg',
+      image: '/public/carousel/solar.jpg',
       title: "Solar Energy",
       description: "Solar power harnesses the sun's energy to generate clean electricity, providing a sustainable solution for our growing energy needs.",
       details: "The Philippines has great potential for solar energy with an average of 5.1 kWh/m² per day of solar radiation.",
       color: '#f39c12'
     },
     {
-      image: '/assets/images/landing/wind.webp',
+      image: '/public/carousel/wind.webp',
       title: "Wind Power",
       description: "Wind energy captures the natural power of wind through turbines, converting it into renewable electricity.",
       details: "The Philippines' wind energy sector is growing, with several wind farms contributing to the national power grid.",
@@ -150,7 +150,7 @@ import {
     {
       name: "Gwyneth Ortiz",
       role: "Documentation",
-      image: "/assets/images/team/team3.jpg",
+      image: "/team/gwyneth.png",
       bio: "Electrical engineer with expertise in renewable energy integration and smart grids.",
       linkedin: "https://linkedin.com/in/avarodriguez"
     },
