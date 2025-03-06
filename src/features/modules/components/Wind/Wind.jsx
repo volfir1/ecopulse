@@ -4,50 +4,15 @@ import {
   AreaChart, Area, ResponsiveContainer, CartesianGrid
 } from 'recharts';
 import { Wind } from 'lucide-react';
-import { Button, Card, YearPicker } from '@shared/index';
-import { useWindAnalytics } from './windHook';
-import { getAreaChartConfig, getGridConfig } from './windUtil';
-
-// Skeleton components
-const SkeletonPulse = ({ className }) => (
-  <div className={`animate-pulse bg-gradient-to-r from-gray-200 via-gray-300 to-gray-200 rounded ${className}`}></div>
-);
-
-const SkeletonWind = () => (
-  <div className="relative w-6 h-6 rounded-full overflow-hidden">
-    <SkeletonPulse className="absolute inset-0" />
-    <div className="absolute inset-0 rounded-full bg-gradient-to-tr from-slate-200 to-slate-100 opacity-30 animate-pulse"></div>
-  </div>
-);
-
-const SkeletonButton = ({ width = "w-36" }) => (
-  <div className={`${width} h-10 rounded-md overflow-hidden relative`}>
-    <SkeletonPulse className="absolute inset-0" />
-    <div className="absolute inset-0 bg-gradient-to-r from-slate-100 to-slate-50 opacity-30 animate-pulse"></div>
-  </div>
-);
-
-const SkeletonChart = () => (
-  <div className="w-full h-64 relative overflow-hidden">
-    <SkeletonPulse className="absolute inset-0" />
-    {/* Chart grid lines simulation */}
-    <div className="absolute bottom-0 left-0 right-0 h-px bg-gray-300"></div>
-    <div className="absolute top-0 bottom-0 left-0 w-px bg-gray-300"></div>
-    {[...Array(5)].map((_, i) => (
-      <div 
-        key={i} 
-        className="absolute left-0 right-0 h-px bg-gray-300 opacity-50"
-        style={{ top: `${20 + i * 15}%` }}
-      ></div>
-    ))}
-    <div 
-      className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-slate-200 to-transparent animate-pulse"
-      style={{ height: '60%', clipPath: 'polygon(0 100%, 20% 80%, 40% 90%, 60% 60%, 80% 70%, 100% 40%, 100% 100%)' }}
-    ></div>
-  </div>
-);
+import { Button, Card, YearPicker, Skeleton } from '@shared/index';
+import useEnergyAnalytics from '../store/useEnergyAnalytics';
+import * as energyUtils from '../store/energyUtils';
 
 const WindEnergy = () => {
+  const ENERGY_TYPE = 'wind';
+  const colorScheme = energyUtils.getEnergyColorScheme(ENERGY_TYPE);
+  
+  // Use unified hook with 'wind' as the energy type
   const {
     generationData,
     currentProjection,
@@ -59,47 +24,26 @@ const WindEnergy = () => {
     handleDownload,
     windSpeedData,
     turbinePerformance,
-    chartRef // Include chartRef from the hook
-  } = useWindAnalytics();
+    chartRef
+  } = useEnergyAnalytics(ENERGY_TYPE);
 
-  const areaChartConfig = getAreaChartConfig();
-  const gridConfig = getGridConfig();
+  // Get chart configurations from unified utils
+  const areaChartConfig = energyUtils.getAreaChartConfig(ENERGY_TYPE);
+  const gridConfig = energyUtils.getGridConfig();
 
   if (loading) {
-    return (
-      <div className="p-6">
-        <div className="mb-6">
-          <div className="flex justify-between items-center mb-4">
-            <div className="flex items-center gap-2">
-              <SkeletonWind />
-              <div className="space-y-2">
-                <SkeletonPulse className="w-48 h-8" />
-                <SkeletonPulse className="w-24 h-4 opacity-70" />
-              </div>
-            </div>
-            <div className="flex items-center gap-4">
-              <SkeletonPulse className="w-64 h-10 rounded-md" />
-              <SkeletonButton />
-            </div>
-          </div>
-        </div>
-
-        <Card.Wind className="p-6 mb-6">
-          <div className="space-y-2 mb-6">
-            <SkeletonPulse className="w-48 h-7" />
-            <SkeletonPulse className="w-64 h-4 opacity-70" />
-          </div>
-          <SkeletonChart />
-        </Card.Wind>
-      </div>
-    );
+    // Use unified skeleton component with the appropriate energy type
+    return <Skeleton.EnergyPageSkeleton energyType={ENERGY_TYPE} CardComponent={Card.Wind} />;
   }
+
+  // Make sure generation data is properly defined
+  const safeGenerationData = Array.isArray(generationData) ? generationData : [];
 
   return (
     <div className="p-6">
       <div className="mb-6">
         <div className="flex justify-between items-center mb-4">
-          <h1 className="text-2xl font-semibold flex items-center gap-2 text-[#64748B]">
+          <h1 className="text-2xl font-semibold flex items-center gap-2" style={{ color: colorScheme.primaryColor }}>
             <Wind size={24} />
             Wind Energy Analytics
           </h1>
@@ -118,7 +62,13 @@ const WindEnergy = () => {
           />
           <div className="flex gap-2">
             <Button 
-              className="whitespace-nowrap bg-[#64748B] text-white hover:bg-[#475569] transition-colors"
+              className="whitespace-nowrap text-white transition-colors"
+              style={{ 
+                backgroundColor: colorScheme.primaryColor,
+                ':hover': {
+                  backgroundColor: colorScheme.secondaryColor
+                }
+              }}
               onClick={handleDownload}
             >
               Download Summary
@@ -131,14 +81,14 @@ const WindEnergy = () => {
         <h2 className="text-xl font-semibold mb-4 text-gray-800">
           Power Generation Trend
         </h2>
-        <div className="text-3xl font-bold mb-1 text-[#64748B]">
-          {currentProjection} GWH
+        <div className="text-3xl font-bold mb-1" style={{ color: colorScheme.primaryColor }}>
+          {currentProjection} GWh
         </div>
         <p className="text-gray-600 mb-4">Predictive Analysis Generation projection</p>
         {/* Add ref to the chart container */}
         <div className="h-[250px]" ref={chartRef}>
           <ResponsiveContainer width="100%" height="100%">
-            <AreaChart data={generationData}>
+            <AreaChart data={safeGenerationData}>
               <defs>
                 <linearGradient id="windGradient" x1="0" y1="0" x2="0" y2="1">
                   {areaChartConfig.gradient.stops.map((stop, index) => (

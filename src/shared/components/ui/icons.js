@@ -59,7 +59,8 @@ export const IconLibrary = {
     password: Key,
     activity: Clock,
     document: FileText,
-    shield: Shield  
+    shield: Shield,
+    mail: Mail
 };
 
 export const IconTools = {

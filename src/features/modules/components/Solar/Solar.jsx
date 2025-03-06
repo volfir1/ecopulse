@@ -1,55 +1,19 @@
-// SolarEnergy.jsx
 import React from 'react';
 import {
-  LineChart, Line, XAxis, YAxis, Tooltip,
   AreaChart, Area, ResponsiveContainer, CartesianGrid,
-  BarChart, Bar
+  XAxis, YAxis, Tooltip
 } from 'recharts';
 import { Sun } from 'lucide-react';
-import { Button, Card, YearPicker } from '@shared/index';
-import { useSolarAnalytics } from './solarHook';
-import { getAreaChartConfig, getGridConfig } from './solarUtil';
+import { Button, Card, YearPicker, Skeleton } from '@shared/index';
+import useEnergyAnalytics from '../store/useEnergyAnalytics';
+import * as energyUtils from '../store/energyUtils'; // Import unified utils
 
-// Skeleton components
-const SkeletonPulse = ({ className }) => (
-  <div className={`animate-pulse bg-gradient-to-r from-gray-200 via-gray-300 to-gray-200 rounded ${className}`}></div>
-);
-
-const SkeletonSun = () => (
-  <div className="relative w-6 h-6 rounded-full overflow-hidden">
-    <SkeletonPulse className="absolute inset-0" />
-    <div className="absolute inset-0 rounded-full bg-gradient-to-tr from-yellow-200 to-yellow-100 opacity-30 animate-pulse"></div>
-  </div>
-);
-
-const SkeletonButton = ({ width = "w-36" }) => (
-  <div className={`${width} h-10 rounded-md overflow-hidden relative`}>
-    <SkeletonPulse className="absolute inset-0" />
-    <div className="absolute inset-0 bg-gradient-to-r from-yellow-100 to-yellow-50 opacity-30 animate-pulse"></div>
-  </div>
-);
-
-const SkeletonChart = () => (
-  <div className="w-full h-64 relative overflow-hidden">
-    <SkeletonPulse className="absolute inset-0" />
-    {/* Chart grid lines simulation */}
-    <div className="absolute bottom-0 left-0 right-0 h-px bg-gray-300"></div>
-    <div className="absolute top-0 bottom-0 left-0 w-px bg-gray-300"></div>
-    {[...Array(5)].map((_, i) => (
-      <div 
-        key={i} 
-        className="absolute left-0 right-0 h-px bg-gray-300 opacity-50"
-        style={{ top: `${20 + i * 15}%` }}
-      ></div>
-    ))}
-    <div 
-      className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-yellow-200 to-transparent animate-pulse"
-      style={{ height: '60%', clipPath: 'polygon(0 100%, 20% 80%, 40% 90%, 60% 60%, 80% 70%, 100% 40%, 100% 100%)' }}
-    ></div>
-  </div>
-);
 
 const SolarEnergy = () => {
+  const ENERGY_TYPE = 'solar';
+  const colorScheme = energyUtils.getEnergyColorScheme(ENERGY_TYPE);
+  
+  // Use unified hook with 'solar' as the energy type
   const {
     generationData,
     currentProjection,
@@ -59,47 +23,26 @@ const SolarEnergy = () => {
     handleStartYearChange,
     handleEndYearChange,
     handleDownload,
-    chartRef // Add the chartRef from the hook
-  } = useSolarAnalytics();
+    chartRef
+  } = useEnergyAnalytics(ENERGY_TYPE);
 
-  const areaChartConfig = getAreaChartConfig();
-  const gridConfig = getGridConfig();
+  // Get chart configurations from unified utils
+  const areaChartConfig = energyUtils.getAreaChartConfig(ENERGY_TYPE);
+  const gridConfig = energyUtils.getGridConfig();
+  
+  // Get metric card data if needed
+  const metricCardData = energyUtils.getMetricCardData(ENERGY_TYPE, currentProjection);
 
   if (loading) {
-    return (
-      <div className="p-6">
-        <div className="mb-6">
-          <div className="flex justify-between items-center mb-4">
-            <div className="flex items-center gap-2">
-              <SkeletonSun />
-              <div className="space-y-2">
-                <SkeletonPulse className="w-48 h-8" />
-                <SkeletonPulse className="w-24 h-4 opacity-70" />
-              </div>
-            </div>
-            <div className="flex items-center gap-4">
-              <SkeletonPulse className="w-64 h-10 rounded-md" />
-              <SkeletonButton />
-            </div>
-          </div>
-        </div>
-
-        <Card.Solar className="p-6 mb-6">
-          <div className="space-y-2 mb-6">
-            <SkeletonPulse className="w-48 h-7" />
-            <SkeletonPulse className="w-64 h-4 opacity-70" />
-          </div>
-          <SkeletonChart />
-        </Card.Solar>
-      </div>
-    );
+    // Use the unified skeleton with the appropriate energy type
+    return <Skeleton.EnergyPageSkeleton energyType={ENERGY_TYPE} CardComponent={Card.Solar} />;
   }
 
   return (
     <div className="p-6">
       <div className="mb-6">
         <div className="flex justify-between items-center mb-4">
-          <h1 className="text-2xl font-semibold flex items-center gap-2 text-[#FFB800]">
+          <h1 className="text-2xl font-semibold flex items-center gap-2" style={{ color: colorScheme.primaryColor }}>
             <Sun size={24} />
             Solar Energy Analytics
           </h1>
@@ -111,15 +54,21 @@ const SolarEnergy = () => {
 
         <div className="flex justify-between items-center">
           <YearPicker
-            startYear={selectedStartYear}
-            endYear={selectedEndYear}
+            initialStartYear={selectedStartYear}
+            initialEndYear={selectedEndYear}
             onStartYearChange={handleStartYearChange}
             onEndYearChange={handleEndYearChange}
             className="w-full"
           />
           <div className="flex gap-2">
             <Button 
-              className="whitespace-nowrap bg-[#FFB800] text-white hover:bg-[#F0AB00] transition-colors"
+              className="whitespace-nowrap text-white transition-colors"
+              style={{ 
+                backgroundColor: colorScheme.primaryColor,
+                ':hover': {
+                  backgroundColor: colorScheme.secondaryColor
+                }
+              }}
               onClick={handleDownload}
             >
               Download Summary
@@ -132,8 +81,8 @@ const SolarEnergy = () => {
         <h2 className="text-xl font-semibold mb-4 text-gray-800">
           Power Generation Trend
         </h2>
-        <div className="text-3xl font-bold mb-1 text-[#FFB800]">
-          {currentProjection} GWH
+        <div className="text-3xl font-bold mb-1" style={{ color: colorScheme.primaryColor }}>
+          {currentProjection} GWh
         </div>
         <p className="text-gray-600 mb-4">Predictive Analysis Generation projection</p>
         {/* Add ref to the chart container */}

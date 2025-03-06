@@ -77,6 +77,30 @@ export const AuthProvider = ({ children }) => {
   const [authCheckInProgress, setAuthCheckInProgress] = useState(false);
   const authCheckTimerRef = useRef(null);
 
+  // ADD THE NEW useEffect RIGHT HERE, after all state variables
+  useEffect(() => {
+    // Temporary fix to handle development mode auth skipping
+    if (CONFIG.SKIP_AUTH && process.env.NODE_ENV === 'development') {
+      // Force set the dev user and auth token in localStorage
+      const mockUser = {
+        id: 'dev-user-id',
+        firstName: 'Development',
+        lastName: 'User',
+        email: 'dev@example.com',
+        role: CONFIG.DEFAULT_ROLE || 'admin',
+        isVerified: true
+      };
+      
+      localStorage.setItem('user', JSON.stringify(mockUser));
+      localStorage.setItem('authToken', 'dev-mock-token');
+      
+      // Set state directly
+      setUser(mockUser);
+      setIsAuthenticated(true);
+      setIsLoading(false);
+    }
+  }, []); // Empty dependency array - run once on mount
+
   // Improved redirectToUserDashboard function with better logging and error handling
   const redirectToUserDashboard = (userData = user) => {
     console.log('Redirecting based on user role:', userData?.role);
@@ -97,8 +121,14 @@ export const AuthProvider = ({ children }) => {
 
   // Define verifyAuth outside useEffect so it can be used elsewhere
   const verifyAuth = async () => {
+    // Add this check at the very top and ensure it returns early
+    if (CONFIG.SKIP_AUTH && process.env.NODE_ENV === 'development') {
+      setIsLoading(false);
+      return;
+    }
+    
     // Don't check auth for public routes
-    const publicPaths = ['/login', '/register', '/forgot-password', '/reset-password', '/verify-email'];
+    const publicPaths = ['/', '/login', '/register', '/forgot-password', '/reset-password', '/verify-email'];
     const isPublicPath = publicPaths.some(path => window.location.pathname.startsWith(path));
     
     if (isPublicPath) {
@@ -256,6 +286,7 @@ export const AuthProvider = ({ children }) => {
       setUser(mockUser);
       setIsAuthenticated(true);
       localStorage.setItem('user', JSON.stringify(mockUser));
+      localStorage.setItem('authToken', 'dev-mock-token'); // Add mock token
       redirectToUserDashboard(mockUser);
       return { success: true, user: mockUser };
     }
@@ -308,6 +339,8 @@ export const AuthProvider = ({ children }) => {
         localStorage.setItem('user', JSON.stringify(verifiedUser));
         if (result.user.accessToken) {
           localStorage.setItem('authToken', result.user.accessToken);
+        } else if (result.token) {
+          localStorage.setItem('authToken', result.token);
         }
         
         // Return consistent result
@@ -393,6 +426,7 @@ export const AuthProvider = ({ children }) => {
       setUser(mockUser);
       setIsAuthenticated(true);
       localStorage.setItem('user', JSON.stringify(mockUser));
+      localStorage.setItem('authToken', 'dev-mock-token'); // Add mock token
       
       redirectToUserDashboard(mockUser);
       
@@ -415,6 +449,13 @@ export const AuthProvider = ({ children }) => {
           setUser(result.user);
           setIsAuthenticated(true);
           localStorage.setItem('user', JSON.stringify(result.user));
+          
+          // Store token if available
+          if (result.user.accessToken) {
+            localStorage.setItem('authToken', result.user.accessToken);
+          } else if (result.token) {
+            localStorage.setItem('authToken', result.token);
+          }
           
           // Explicitly redirect based on role
           redirectToUserDashboard(result.user);
@@ -462,6 +503,13 @@ export const AuthProvider = ({ children }) => {
         setIsAuthenticated(true);
         localStorage.setItem('user', JSON.stringify(result.user));
         
+        // Store token if available
+        if (result.user.accessToken) {
+          localStorage.setItem('authToken', result.user.accessToken);
+        } else if (result.token) {
+          localStorage.setItem('authToken', result.token);
+        }
+        
         // Redirect based on role after successful verification
         redirectToUserDashboard(result.user);
       }
@@ -491,35 +539,94 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  // Improved logout function that handles both frontend and backend logout
-  const logout = async () => {
-    try {
-      // Clear auth state first for responsive UI
-      setUser(null);
-      setIsAuthenticated(false);
-      
-      // Clear localStorage items
-      localStorage.removeItem('user');
-      localStorage.removeItem('authToken');
-      
-      // Call the actual logout service
-      await authService.logout();
-      
-      // Navigate to login page
-      navigate('/login');
-      
-      return { success: true };
-    } catch (error) {
-      console.error('Logout error:', error);
-      
-      // Even on error, clear local state
-      localStorage.removeItem('user');
-      localStorage.removeItem('authToken');
-      navigate('/login');
-      
-      return { success: false, error: error.message };
+// Improved logout function for AuthContext.jsx
+
+const logout = async () => {
+  try {
+    console.log("Initiating logout process...");
+    
+    // 1. Clear React state first for responsive UI
+    setUser(null);
+    setIsAuthenticated(false);
+    
+    console.log("Cleared auth state");
+    
+    // 2. Clear localStorage items
+    localStorage.removeItem('user');
+    localStorage.removeItem('authToken');
+    
+    console.log("Cleared localStorage");
+    
+    // 3. Try to clear cookies from client side (may not work for httpOnly)
+    // Include ALL possible combinations to ensure it works
+    const cookieNames = ['token', 'refreshToken', 'authToken'];
+    const domains = [window.location.hostname, '', null];
+    const paths = ['/', '/admin', '/dashboard', ''];
+    
+    for (const name of cookieNames) {
+      for (const domain of domains) {
+        for (const path of paths) {
+          // Create expiration date in the past
+          const expireDate = new Date();
+          expireDate.setTime(expireDate.getTime() - 1000);
+          
+          // Basic cookie deletion
+          document.cookie = `${name}=; expires=${expireDate.toUTCString()}; path=${path}`;
+          
+          // With domain
+          if (domain) {
+            document.cookie = `${name}=; expires=${expireDate.toUTCString()}; path=${path}; domain=${domain}`;
+          }
+          
+          // Try all sameSite values
+          ['strict', 'lax', 'none'].forEach(sameSite => {
+            [true, false].forEach(secure => {
+              // Basic sameSite cookie
+              document.cookie = `${name}=; expires=${expireDate.toUTCString()}; path=${path}; sameSite=${sameSite}${sameSite === 'none' ? '; secure' : ''}`;
+              
+              // With domain
+              if (domain) {
+                document.cookie = `${name}=; expires=${expireDate.toUTCString()}; path=${path}; domain=${domain}; sameSite=${sameSite}${sameSite === 'none' ? '; secure' : ''}`;
+              }
+            });
+          });
+        }
+      }
     }
-  };
+    
+    console.log("Attempted to clear cookies client-side");
+    
+    // 4. Call the backend logout service to clear server-side cookies
+    try {
+      console.log("Calling backend logout endpoint");
+      const result = await authService.logout();
+      console.log("Backend logout response:", result);
+    } catch (apiError) {
+      console.error("Backend logout API error:", apiError);
+      // Continue with logout even if API fails
+    }
+    
+    // 5. Final cleanup - force a page reload if needed
+    // This ensures all components are re-rendered with the logged-out state
+    
+    // Navigate to login page
+    console.log("Navigating to login page");
+    navigate('/login', { replace: true });
+    
+    return { success: true };
+  } catch (error) {
+    console.error("Logout error:", error);
+    
+    // Even on error, clear local state
+    localStorage.removeItem('user');
+    localStorage.removeItem('authToken');
+    
+    // Try to navigate anyway
+    navigate('/login', { replace: true });
+    
+    return { success: false, error: error.message };
+  }
+};
 
   // Helper functions for roles
   const hasRole = (role) => {

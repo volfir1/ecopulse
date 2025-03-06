@@ -3,43 +3,22 @@ import React, { Suspense } from 'react';
 import { ThemeProvider } from '@emotion/react';
 import { AppProvider } from '@context/AppContext';
 import { Layout, Loader, theme, SnackbarProvider } from '@shared/index.js';
-import { userRoutes, moduleRoutes, adminRoutes, errorRoutes } from './routes/routes';
-import LandingPage from '../features/LandingPage';
-import { Login, Register } from '@features/index';
-// Import verification and password reset components
-import VerifyEmail from '@features/auth/verification/VerifiEmail';
-import ForgotPassword from '@features/auth/password/ForgotPassword.jsx';
-import ResetPassword from '@features/auth/password/resetPassword';
+import { userRoutes, moduleRoutes, adminRoutes, errorRoutes, publicRoutes } from './routes/routes';
 import PrivateRoute from './routes/PrivateRoute';
 import { AuthProvider } from '@context/AuthContext';
-// Import DevToolbar correctly from its source location
-import DevToolbar from '@config/DevToolbar.jsx'; // Adjust path as needed
-
-// Helper function to create protected routes
-const createProtectedRoute = (path, Component, allowedRoles) => (
-  <Route
-    key={path}
-    path={path}
-    element={
-      <PrivateRoute allowedRoles={allowedRoles}>
-        <Layout />
-      </PrivateRoute>
-    }
-  />
-);
+import DevToolbar from '@config/DevToolbar.jsx';
 
 const App = () => {
-  // Keep your routes array for organization
-  const routes = [
+  // Protected routes array for organization
+  const protectedRoutes = [
     // User routes - strictly for users only
     { path: '/dashboard', component: <userRoutes.Dashboard />, roles: ['user'] },
     { path: '/energy-share', component: <userRoutes.EnergySharing />, roles: ['user'] },
     { path: '/help-support', component: <userRoutes.HelpSupport />, roles: ['user'] },
     { path: '/recommendations', component: <userRoutes.Recommendations />, roles: ['user'] },
     { path: '/profile', component: <userRoutes.UserProfile />, roles: ['user'] },
-    { path : '/mails', component: <userRoutes.UserMails />, roles: ['user']},
+    { path: '/mails', component: <userRoutes.UserMails />, roles: ['user']},
     { path: '/mails/:ticketId', component: <userRoutes.TicketConversation />, roles: ['user'] },
-  
     
     // Module routes - create separate routes for each role
     { path: '/modules/solar', component: <moduleRoutes.Solar />, roles: ['user'] },
@@ -55,7 +34,7 @@ const App = () => {
     { path: '/admin/modules/hydropower', component: <adminRoutes.HydroAdmin/>, roles: ['admin'] },
     { path: '/admin/modules/biomass', component: <adminRoutes.BioAdmin />, roles: ['admin'] },
     
-    // Admin routes - removed the nested array brackets
+    // Admin routes
     { path: '/admin/dashboard', component: <adminRoutes.Dashboard />, roles: ['admin'] },
     { path: '/admin/analytics', component: <adminRoutes.Analytics />, roles: ['admin'] },
     { path: '/admin/users', component: <adminRoutes.UserManagement />, roles: ['admin'] },
@@ -66,7 +45,6 @@ const App = () => {
     { path: '/admin/ticket', component: <adminRoutes.AdminTicket />, roles: ['admin'] }
   ];
 
-
   return (
     <ThemeProvider theme={theme}>
       <SnackbarProvider>
@@ -76,21 +54,17 @@ const App = () => {
               <DevToolbar />
               <Suspense fallback={<Loader />}>
                 <Routes>
-                  {/* Public Routes */}
-                  <Route path="/" element={<LandingPage />} />
-                  <Route path="/login" element={<Login />} />
-                  <Route path="/register" element={<Register />} />
+                  {/* Public routes that don't require authentication */}
+                  <Route path="/" element={<publicRoutes.LandingPage />} />
+                  <Route path="/login" element={<publicRoutes.Login />} />
+                  <Route path="/register" element={<publicRoutes.Register />} />
+                  <Route path="/verify-email" element={<publicRoutes.VerifyEmail />} />
+                  <Route path="/forgot-password" element={<publicRoutes.ForgotPassword />} />
+                  <Route path="/reset-password" element={<publicRoutes.ResetPassword />} />
                   
-                  {/* Email Verification Route */}
-                  <Route path="/verify-email" element={<VerifyEmail />} />
-                  
-                  {/* Password Reset Routes - Add these new routes */}
-                  <Route path="/forgot-password" element={<ForgotPassword />} />
-                  <Route path="/reset-password" element={<ResetPassword />} />
-                  
-                  {/* Protected Routes with Layout as parent */}
+                  {/* Protected Routes wrapped in Layout */}
                   <Route element={<Layout />}>
-                    {routes.map(route => (
+                    {protectedRoutes.map(route => (
                       <Route
                         key={route.path}
                         path={route.path}

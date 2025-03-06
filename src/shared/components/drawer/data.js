@@ -94,7 +94,7 @@ export const USER_NAVIGATION = [
     kind: 'item',
     segment: 'settings',
     title: 'Mails',
-    icon: <AppIcon name="settings" />,
+    icon: <AppIcon name="mail" />,
     path: '/mails',
   }
   

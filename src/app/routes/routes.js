@@ -1,6 +1,15 @@
 // src/routes/routes.js
-import TicketConversation from '@features/help-support/components/mail/TicketConversation';
 import { lazy } from 'react';
+
+// Public Routes
+export const publicRoutes = {
+  LandingPage: lazy(() => import('@features/LandingPage')),
+  Login: lazy(() => import('@features/auth/components/login/Login')),
+  Register: lazy(() => import('@features/auth/components/register/Register')),
+  VerifyEmail: lazy(() => import('@features/auth/verification/VerifiEmail')),
+  ForgotPassword: lazy(() => import('@features/auth/password/ForgotPassword.jsx')),
+  ResetPassword: lazy(() => import('@features/auth/password/resetPassword'))
+};
 
 // User Dashboard & Features
 export const userRoutes = {

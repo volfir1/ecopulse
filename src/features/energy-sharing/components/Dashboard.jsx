@@ -135,19 +135,7 @@ const EnergySharing = () => {
 
   return (
     <div className="max-w-6xl mx-auto p-6">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-semibold text-gray-800">Peer-to-Peer Energy Sharing</h1>
-        <div className="flex items-center gap-2">
-          <div className="flex items-center">
-            <LocateIcon className="text-gray-600" size={20} />
-            <span className="text-gray-600 ml-2">{selectedLocation}</span>
-          </div>
-          <FilterMenu 
-            selectedFilters={[]}
-            onToggleFilter={() => {}}
-          />
-        </div>
-      </div>
+      
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <div className="md:col-span-1">
