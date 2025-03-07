@@ -1,19 +1,18 @@
 import React from 'react';
 import {
-  LineChart, Line, XAxis, YAxis, Tooltip,
   AreaChart, Area, ResponsiveContainer, CartesianGrid,
-  BarChart, Bar
+  XAxis, YAxis, Tooltip
 } from 'recharts';
-import { Leaf } from 'lucide-react';
+import { Thermometer } from 'lucide-react';
 import { Button, Card, YearPicker, Skeleton } from '@shared/index';
-import useEnergyAnalytics from '../store/useEnergyAnalytics';
-import * as energyUtils from '../store/energyUtils';
+import useEnergyAnalytics from '@store/analytics/useEnergyAnalytics';
+import * as energyUtils from '@store/user/energyUtils'
 
-const Biomass = () => {
-  const ENERGY_TYPE = 'biomass';
+const Geothermal = () => {
+  const ENERGY_TYPE = 'geothermal';
   const colorScheme = energyUtils.getEnergyColorScheme(ENERGY_TYPE);
   
-  // Use unified hook with 'biomass' as the energy type
+  // Use unified hook with 'geothermal' as the energy type
   const {
     generationData,
     currentProjection,
@@ -32,25 +31,24 @@ const Biomass = () => {
 
   if (loading) {
     // Use unified skeleton component with the appropriate energy type
-    return <Skeleton.EnergyPageSkeleton energyType={ENERGY_TYPE} CardComponent={Card.Biomass} />;
+    return <Skeleton.EnergyPageSkeleton energyType={ENERGY_TYPE} CardComponent={Card.Geo} />;
   }
 
   // Make sure generation data is properly defined
   const safeGenerationData = Array.isArray(generationData) ? generationData : [];
 
   return (
-    <div className="p-3">
+    <div className="p-6">
       {/* Header Section */}
       <div className="mb-6">
         <div className="flex justify-between items-center mb-4">
           <h1 className="text-2xl font-semibold flex items-center gap-2" style={{ color: colorScheme.primaryColor }}>
-            <Leaf size={24} />
-            Biomass Energy Analytics
+            <Thermometer size={24} />
+            Geothermal Energy Analytics
           </h1>
           <div className="text-gray-500">
-            <div className="text-sm font-medium">
-              Selected Range: {selectedStartYear} - {selectedEndYear}  ({selectedEndYear - selectedStartYear} year/s)
-            </div>
+            Selected Range: {selectedStartYear} - {selectedEndYear}
+            <span className="text-sm ml-1">({selectedEndYear - selectedStartYear} years)</span>
           </div>
         </div>
 
@@ -78,8 +76,8 @@ const Biomass = () => {
         </div>
       </div>
 
-      {/* Charts Section */}
-      <Card.Biomass className="p-6 mb-6 bg-white shadow-sm">
+      {/* Main Chart */}
+      <Card.Geo className="p-6 mb-6">
         <h2 className="text-xl font-semibold mb-4 text-gray-800">
           Power Generation Trend
         </h2>
@@ -91,7 +89,7 @@ const Biomass = () => {
           <ResponsiveContainer width="100%" height="100%">
             <AreaChart data={safeGenerationData}>
               <defs>
-                <linearGradient id="biomassGradient" x1="0" y1="0" x2="0" y2="1">
+                <linearGradient id="geothermalGradient" x1="0" y1="0" x2="0" y2="1">
                   {areaChartConfig.gradient.stops.map((stop, index) => (
                     <stop
                       key={index}
@@ -102,17 +100,40 @@ const Biomass = () => {
                   ))}
                 </linearGradient>
               </defs>
-              <CartesianGrid {...gridConfig.cartesianGrid} />
-              <XAxis {...gridConfig.xAxis} dataKey="date" />
-              <YAxis {...gridConfig.yAxis} />
-              <Tooltip {...areaChartConfig.tooltip} />
-              <Area {...areaChartConfig.area} />
+              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e5e7eb" />
+              <XAxis dataKey="date" stroke="#6b7280" />
+              <YAxis stroke="#6b7280" />
+              <Tooltip contentStyle={{
+                backgroundColor: 'white',
+                border: '1px solid #e5e7eb',
+                borderRadius: '6px',
+                boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+              }} />
+              <Area 
+                type="monotone" 
+                dataKey="value" 
+                stroke={colorScheme.primaryColor}
+                fill="url(#geothermalGradient)"
+                strokeWidth={2}
+                dot={{
+                  r: 4,
+                  fill: colorScheme.primaryColor,
+                  strokeWidth: 2,
+                  stroke: "#FFFFFF"
+                }}
+                activeDot={{
+                  r: 6,
+                  fill: colorScheme.primaryColor,
+                  stroke: "#FFFFFF",
+                  strokeWidth: 2
+                }}
+              />
             </AreaChart>
           </ResponsiveContainer>
         </div>
-      </Card.Biomass>
+      </Card.Geo>
     </div>
   );
 };
 
-export default Biomass;
+export default Geothermal;

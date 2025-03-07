@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import ticketService from '../../features/help-support/components/ticketService';
+import ticketService from '../../services/ticketService';
 import { useSnackbar } from '@components/toast-notif/ToastNotification';
 import Card from '@components/cards/cards';
 import { AppIcon } from '@shared/index';

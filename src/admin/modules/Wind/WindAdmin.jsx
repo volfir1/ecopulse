@@ -1,5 +1,5 @@
 // WindAdmin.jsx
-import React, { useMemo, useState, useCallback } from 'react';
+import React, { useMemo, useState, useCallback, useEffect } from 'react';
 import {
   Dialog,
   DialogTitle,
@@ -10,186 +10,194 @@ import {
   Box
 } from '@mui/material';
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
-import { Wind, X } from 'lucide-react';
+import { Wind, X, Edit, Trash } from 'lucide-react';
 import {
-  DataTable,
   Button,
   Card,
   AppIcon,
   SingleYearPicker,
   YearPicker,
   NumberBox,
-  useDataTable
+  DataTable,
+  useSnackbar
 } from '@shared/index';
 
-import useWindAnalytics from './adminWindHook';
-import { getTableColumns, formatDataForChart, getChartConfig, generateSampleData, validateInputs } from './adminWindUtil';
+// Import from the store instead of the custom hook
+import { stores } from '@store/admin/adminEnergyStrore';
+import adminEnergyUtils from '@store/admin/adminEnergyUtil';
+
+// Import the enhanced export utility
+import { exportEnhancedPDF } from '@store/admin/adminExportUtils';
 
 const WindAdmin = () => {
-  // Custom hooks
-  const {
-    generationData,
-    currentProjection,
-    loading,
-    selectedStartYear,
-    selectedEndYear,
-    handleStartYearChange,
-    handleEndYearChange,
-    handleRefresh,
-    handleDownload,
-    addRecord,
-    updateRecord,
-    deleteRecord,
-    windSpeedData,
-    turbinePerformance,
-    chartRef
-  } = useWindAnalytics();
-
-  // State for modal
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
-  const [generationValue, setGenerationValue] = useState('');
-  const [isEditing, setIsEditing] = useState(false);
-  const [editId, setEditId] = useState(null);
-
-  // Define all handlers at the top of component - BEFORE any useMemo calls
+  // Define energy type and get the store
+  const ENERGY_TYPE = 'wind';
+  const windStore = stores[ENERGY_TYPE];
   
-  // Modal handlers
-  const handleOpenAddModal = useCallback(() => {
-    setIsEditing(false);
-    setSelectedYear(new Date().getFullYear());
-    setGenerationValue('');
-    setIsModalOpen(true);
-  }, []);
+  // Get the toast object from your custom useSnackbar hook
+  const toast = useSnackbar();
+  
+  // State from the store using direct selectors
+  const data = windStore(state => state.data);
+  const generationData = windStore(state => state.generationData);
+  const currentProjection = windStore(state => state.currentProjection);
+  const loading = windStore(state => state.loading);
+  const isModalOpen = windStore(state => state.isModalOpen);
+  const selectedYear = windStore(state => state.selectedYear);
+  const generationValue = windStore(state => state.generationValue);
+  const isEditing = windStore(state => state.isEditing);
+  const selectedStartYear = windStore(state => state.selectedStartYear);
+  const selectedEndYear = windStore(state => state.selectedEndYear);
+  const config = windStore(state => state.config);
+  
+  // Actions from the store
+  const initialize = windStore(state => state.initialize);
+  const handleOpenAddModal = windStore(state => state.openAddModal);
+  const handleOpenEditModal = windStore(state => state.openEditModal);
+  const handleCloseModal = windStore(state => state.closeModal);
+  const handleYearChange = windStore(state => state.setSelectedYear);
+  const handleGenerationChange = windStore(state => state.setGenerationValue);
+  const handleSubmit = windStore(state => state.submitForm);
+  const handleDelete = windStore(state => state.deleteRecord);
+  const handleStartYearChange = windStore(state => state.setYearRange);
+  const handleEndYearChange = useCallback((year) => {
+    windStore.getState().setYearRange(selectedStartYear, year);
+  }, [selectedStartYear]);
+  const handleRefresh = windStore(state => state.refresh);
+  
+  // Chart ref
+  const chartRef = React.useRef(null);
+  
+  // Initialize data on component mount
+  useEffect(() => {
+    initialize();
+    windStore.getState().setChartRef(chartRef);
+  }, [initialize]);
 
-  const handleOpenEditModal = useCallback((row) => {
-    setIsEditing(true);
-    setEditId(row.id);
-    setSelectedYear(row.year);
-    setGenerationValue(row.generation.toString());
-    setIsModalOpen(true);
-  }, []);
+  // For demo purposes, use sample data if no data is available
+  const effectiveData = useMemo(() => {
+    if (data && Array.isArray(data) && data.length > 0) {
+      return data;
+    } else {
+      return adminEnergyUtils.generateSampleData(ENERGY_TYPE);
+    }
+  }, [data, ENERGY_TYPE]);
 
-  const handleCloseModal = useCallback(() => {
-    setIsModalOpen(false);
-  }, []);
-
-  const handleYearChange = useCallback((year) => {
-    setSelectedYear(year);
-  }, []);
-
-  const handleGenerationChange = useCallback((event) => {
-    setGenerationValue(event.target.value);
-  }, []);
-
-  const handleDelete = useCallback(async (id) => {
-    if (!window.confirm('Are you sure you want to delete this record?')) {
-      return;
+  // Filter data based on selected year range - used for both chart and table
+  const filteredData = useMemo(() => {
+    if (!effectiveData || !Array.isArray(effectiveData)) {
+      return [];
     }
     
-    try {
-      await deleteRecord(id);
-    } catch (error) {
-      console.error('Error deleting data:', error);
-    }
-  }, [deleteRecord]);
-
-  // Form submit handler
-  const handleSubmit = useCallback(async () => {
-    if (!selectedYear || !generationValue) {
-      return;
-    }
-
-    try {
-      setIsModalOpen(false);
-      
-      if (isEditing) {
-        await updateRecord(editId, selectedYear, parseFloat(generationValue));
-      } else {
-        await addRecord(selectedYear, parseFloat(generationValue));
-      }
-    } catch (error) {
-      console.error('Error saving data:', error);
-    }
-  }, [selectedYear, generationValue, isEditing, editId, updateRecord, addRecord]);
-
-  // Export data handler - DEFINED BEFORE IT'S USED
-  const handleExportData = useCallback(() => {
-    // Delegate to the download handler from the hook
-    handleDownload();
-  }, [handleDownload]);
-
-  // For demo purposes, use the data from the hook or sample data if empty
-  const effectiveData = useMemo(() => {
-    if (generationData.length > 0) {
-      return generationData.map((item, index) => ({
-        id: index + 1,
-        year: item.date,
-        generation: item.value,
-        dateAdded: new Date().toISOString()
-      }));
-    }
-    return generateSampleData();
-  }, [generationData]);
-
-  // Year range for filtering
-  const yearRange = useMemo(() => ({
-    startYear: selectedStartYear,
-    endYear: selectedEndYear
-  }), [selectedStartYear, selectedEndYear]);
-
-  // Filter data based on selected year range
-  const filteredData = useMemo(() => {
     return effectiveData.filter(item => 
-      item.year >= yearRange.startYear && 
-      item.year <= yearRange.endYear
+      item.year >= selectedStartYear && 
+      item.year <= selectedEndYear
     );
-  }, [effectiveData, yearRange]);
+  }, [effectiveData, selectedStartYear, selectedEndYear]);
 
   // Format data for chart
-  const chartData = useMemo(() => 
-    formatDataForChart(filteredData),
-    [filteredData]
-  );
+  const chartData = useMemo(() => {
+    return adminEnergyUtils.formatDataForChart(filteredData);
+  }, [filteredData]);
 
-  // Configure data table columns
-  const tableColumns = useMemo(() => 
-    getTableColumns(handleOpenEditModal, handleDelete), 
-    [handleOpenEditModal, handleDelete]);
+  // Define custom table columns with explicit id properties instead of field
+  const tableColumns = useMemo(() => [
+    {
+      id: 'year',
+      field: 'year', // Added field for compatibility
+      label: 'Year',
+      headerName: 'Year',
+      align: 'left',
+      sortable: true
+    },
+    {
+      id: 'generation',
+      field: 'generation',
+      label: 'Generation (GWh)',
+      headerName: 'Generation (GWh)',
+      align: 'right',
+      sortable: true,
+      format: (value) => value !== undefined && value !== null 
+        ? typeof value === 'number' ? value.toFixed(2) : value.toString()
+        : 'N/A'
+    },
+    {
+      id: 'dateAdded',
+      field: 'dateAdded',
+      label: 'Date Added',
+      headerName: 'Date Added',
+      align: 'left',
+      sortable: true,
+      format: (value) => {
+        if (!value) return 'N/A';
+        try {
+          return new Date(value).toLocaleDateString();
+        } catch (error) {
+          console.error("Date formatting error:", error);
+          return 'Invalid Date';
+        }
+      }
+    },
+    {
+      id: 'actions',
+      field: 'actions',
+      label: 'Actions',
+      headerName: 'Actions',
+      align: 'center',
+      sortable: false,
+      format: (_, row) => (
+        <div className="flex justify-center gap-2">
+          <IconButton
+            size="small"
+            onClick={(e) => {
+              e.stopPropagation();
+              handleOpenEditModal(row);
+            }}
+            className="text-blue-600 hover:text-blue-800 hover:bg-blue-100"
+          >
+            <Edit size={16} />
+          </IconButton>
+          <IconButton
+            size="small"
+            onClick={(e) => {
+              e.stopPropagation();
+              handleDelete(row.id);
+            }}
+            className="text-red-600 hover:text-red-800 hover:bg-red-100"
+          >
+            <Trash size={16} />
+          </IconButton>
+        </div>
+      )
+    }
+  ], [handleOpenEditModal, handleDelete]);
   
-  // Use useDataTable hook with filtered data - NOW handleExportData is defined BEFORE it's used here
-  const {
-    data: tableData,
-    loading: tableLoading,
-    handleExport,
-    handleRefresh: refreshTable,
-  } = useDataTable({
-    data: filteredData,
-    columns: tableColumns,
-    onExport: handleExportData, // Now this is safe
-    onRefresh: handleRefresh
-  });
-  
+  // Enhanced export to PDF with recommendations and professional formatting
+  const handleExportData = useCallback(() => {
+    // Call the enhanced export function with all required parameters
+    return exportEnhancedPDF({
+      data: filteredData,
+      energyType: ENERGY_TYPE,
+      startYear: selectedStartYear,
+      endYear: selectedEndYear,
+      chartRef: chartRef,
+      currentProjection: currentProjection || 
+        (chartData.length > 0 ? chartData[chartData.length - 1].value : 0),
+      toast // Pass your toast object directly
+    });
+  }, [
+    filteredData, 
+    ENERGY_TYPE, 
+    selectedStartYear, 
+    selectedEndYear, 
+    chartData, 
+    currentProjection, 
+    toast
+  ]);
+
   // Memoize chart config to prevent recreation
   const chartConfig = useMemo(() => {
-    const config = getChartConfig();
-    // Add line chart specific configuration
-    config.line = {
-      stroke: '#64748B', // Slate color for wind
-      strokeWidth: 2,
-      dot: {
-        r: 5,
-        fill: '#64748B',
-        stroke: '#fff',
-        strokeWidth: 2
-      },
-      activeDot: {
-        r: 7,
-        fill: '#64748B',
-        stroke: '#fff',
-        strokeWidth: 2
-      }
-    };
+    const config = adminEnergyUtils.getChartConfig(ENERGY_TYPE);
     
     // Enhanced Y-axis configuration with proper label
     config.yAxis = {
@@ -204,17 +212,17 @@ const WindAdmin = () => {
     };
     
     return config;
-  }, []);
+  }, [ENERGY_TYPE]);
 
   // Form validation
   const formValidation = useMemo(() => {
     if (selectedYear && generationValue) {
-      return validateInputs(selectedYear, generationValue);
+      return adminEnergyUtils.validateInputs(ENERGY_TYPE, selectedYear, generationValue);
     }
     return { isValid: false, errors: {} };
-  }, [selectedYear, generationValue]);
+  }, [selectedYear, generationValue, ENERGY_TYPE]);
 
-  if (loading && generationData.length === 0) {
+  if (loading && !effectiveData.length) {
     return (
       <div className="p-6 max-w-7xl mx-auto">
         <div className="flex justify-between items-center mb-6">
@@ -270,9 +278,9 @@ const WindAdmin = () => {
           </Typography>
           <div className="min-w-64">
             <YearPicker
-              initialStartYear={yearRange.startYear}
-              initialEndYear={yearRange.endYear}
-              onStartYearChange={handleStartYearChange}
+              initialStartYear={selectedStartYear}
+              initialEndYear={selectedEndYear}
+              onStartYearChange={(year) => handleStartYearChange(year, selectedEndYear)}
               onEndYearChange={handleEndYearChange}
             />
           </div>
@@ -280,7 +288,7 @@ const WindAdmin = () => {
       </Card.Base>
 
       {/* Chart Section */}
-      <Card.Base className="mb-6 overflow-hidden">
+      <Card.Base className="mb-6 overflow-hidden" ref={chartRef}>
         <div className="p-4 border-b border-gray-200">
           <h2 className="text-lg font-medium">Generation Overview</h2>
           {currentProjection && (
@@ -290,7 +298,7 @@ const WindAdmin = () => {
             </div>
           )}
         </div>
-        <div className="p-6 h-96" ref={chartRef}>
+        <div className="p-6 h-96">
           <ResponsiveContainer width="100%" height="100%">
             <LineChart data={chartData} margin={{ top: 15, right: 30, left: 20, bottom: 5 }}>
               <CartesianGrid strokeDasharray="3 3" />
@@ -316,24 +324,24 @@ const WindAdmin = () => {
 
       {/* Data Table */}
       <DataTable
-        title={`Wind Generation Records (${yearRange.startYear} - ${yearRange.endYear})`}
+        title={`Wind Generation Records (${selectedStartYear} - ${selectedEndYear})`}
         columns={tableColumns}
-        data={tableData}
-        loading={tableLoading}
+        data={filteredData}
+        loading={loading}
         selectable={true}
         searchable={true}
         exportable={true}
         filterable={true}
         refreshable={true}
         pagination={true}
-        onExport={handleExport}
-        onRefresh={refreshTable}
+        onExport={handleExportData}
+        onRefresh={handleRefresh}
         tableClasses={{
           paper: 'shadow-md rounded-md',
           headerCell: 'bg-gray-50',
           row: 'hover:bg-slate-50'
         }}
-        emptyMessage={`No wind generation data available for years ${yearRange.startYear} - ${yearRange.endYear}`}
+        emptyMessage={`No wind generation data available for years ${selectedStartYear} - ${selectedEndYear}`}
       />
 
       {/* Add/Edit Modal */}

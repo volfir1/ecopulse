@@ -14,13 +14,14 @@ export default defineConfig({
       '@features': path.resolve(__dirname, './src/features'),
       '@shared': path.resolve(__dirname, './src/shared'),
       '@assets': path.resolve(__dirname, './src/assets'), 
-      '@modules': path.resolve(__dirname, './src/features/modules/components/'),
+      '@modules': path.resolve(__dirname, './src/features/modules/'),
       '@images' : path.resolve(__dirname, './src/assets/images'),
       '@components': path.resolve(__dirname, './src/shared/components/'),
       '@admin' : path.resolve(__dirname, './src/admin/'),
       '@exceptions': path.resolve(__dirname, './src/exceptions/'),
       '@config': path.resolve(__dirname, './src/config/'),
-      '@services': path.resolve(__dirname, './src/services/*  '),
+      '@services': path.resolve(__dirname, './src/services/'),
+      '@store': path.resolve(__dirname, './src/store/'),
     }
   },
   esbuild: {

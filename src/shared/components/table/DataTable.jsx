@@ -66,6 +66,10 @@ const DataTable = ({
   tableClasses = {},
   emptyMessage = 'No data available',
 }) => {
+  // Debug log the incoming data and columns
+  console.log("[DataTable] Received data:", data);
+  console.log("[DataTable] Received columns:", columns);
+
   // State management
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
@@ -156,18 +160,31 @@ const DataTable = ({
     setPage(0);
   };
 
+  // Normalize column field names to match data property names
+  const normalizedColumns = useMemo(() => {
+    return columns.map(column => {
+      // Map possible field naming differences
+      // If column has 'field', map to 'id'
+      if (column.field && !column.id) {
+        return { ...column, id: column.field };
+      }
+      return column;
+    });
+  }, [columns]);
+
   // Filter data based on search query
   const filteredData = useMemo(() => {
     if (!searchQuery) return data;
 
     return data.filter(row => {
-      return columns.some(column => {
-        const value = row[column.id];
+      return normalizedColumns.some(column => {
+        const id = column.id || column.field;
+        const value = row[id];
         if (value == null) return false;
         return String(value).toLowerCase().includes(searchQuery.toLowerCase());
       });
     });
-  }, [data, searchQuery, columns]);
+  }, [data, searchQuery, normalizedColumns]);
 
   // Sort and paginate data
   const processedData = useMemo(() => {
@@ -189,6 +206,28 @@ const DataTable = ({
   const emptyRows = pagination
     ? Math.max(0, rowsPerPage - processedData.length)
     : 0;
+
+  // Generate a unique key for each row if id is not available
+  const getRowKey = (row, index) => {
+    // First try to use row.id
+    if (row.id !== undefined && row.id !== null) return `row-${row.id}`;
+    
+    // Try to find a unique combination of properties
+    const uniqueProps = normalizedColumns
+      .slice(0, 3) // Use up to first 3 columns for uniqueness
+      .map(col => {
+        const id = col.id || col.field;
+        return id && row[id] !== undefined ? `${id}-${row[id]}` : '';
+      })
+      .filter(val => val);
+    
+    if (uniqueProps.length > 0) {
+      return `row-${uniqueProps.join('-')}-${index}`;
+    }
+    
+    // Fall back to index as a last resort with a timestamp to ensure uniqueness
+    return `row-index-${index}-${Date.now()}`;
+  };
 
   return (
     <Paper className={`overflow-hidden ${tableClasses.paper || ''}`}>
@@ -247,11 +286,11 @@ const DataTable = ({
       {/* Filter panel */}
       {filterable && expandedFilters && (
         <Box className="px-4 pb-4 pt-0 flex flex-wrap gap-3 items-center bg-blue-50">
-          {columns
+          {normalizedColumns
             .filter(column => column.filterable)
-            .map(column => (
+            .map((column, idx) => (
               <TextField
-                key={column.id}
+                key={`filter-${column.id || column.field || `col-${idx}`}`}
                 label={column.label}
                 size="small"
                 placeholder={`Filter ${column.label}`}
@@ -287,25 +326,25 @@ const DataTable = ({
                 </TableCell>
               )}
               
-              {columns.map((column) => (
+              {normalizedColumns.map((column, idx) => (
                 <TableCell
-                  key={column.id}
+                  key={`header-${column.id || column.field || `col-${idx}`}`}
                   align={column.align || 'left'}
                   padding={column.disablePadding ? 'none' : 'normal'}
                   className={`font-medium ${tableClasses.headerCell || ''}`}
-                  sortDirection={orderBy === column.id ? order : false}
+                  sortDirection={orderBy === (column.id || column.field) ? order : false}
                 >
                   {column.sortable !== false ? (
                     <TableSortLabel
-                      active={orderBy === column.id}
-                      direction={orderBy === column.id ? order : 'asc'}
-                      onClick={() => handleRequestSort(column.id)}
-                      IconComponent={orderBy === column.id ? (order === 'asc' ? ChevronUp : ChevronDown) : ArrowDownUp}
+                      active={orderBy === (column.id || column.field)}
+                      direction={orderBy === (column.id || column.field) ? order : 'asc'}
+                      onClick={() => handleRequestSort(column.id || column.field)}
+                      IconComponent={orderBy === (column.id || column.field) ? (order === 'asc' ? ChevronUp : ChevronDown) : ArrowDownUp}
                     >
-                      {column.label}
+                      {column.label || column.headerName}
                     </TableSortLabel>
                   ) : (
-                    column.label
+                    column.label || column.headerName
                   )}
                 </TableCell>
               ))}
@@ -315,8 +354,9 @@ const DataTable = ({
           <TableBody>
             {processedData.length > 0 ? (
               <>
-                {processedData.map((row, index) => {
+                {processedData.map((row, rowIndex) => {
                   const isItemSelected = isSelected(row.id);
+                  const rowKey = getRowKey(row, rowIndex);
                   
                   return (
                     <TableRow
@@ -325,7 +365,7 @@ const DataTable = ({
                       role="checkbox"
                       aria-checked={isItemSelected}
                       tabIndex={-1}
-                      key={row.id || index}
+                      key={rowKey}
                       selected={isItemSelected}
                       className={`${tableClasses.row || ''} cursor-pointer`}
                     >
@@ -338,16 +378,36 @@ const DataTable = ({
                         </TableCell>
                       )}
                       
-                      {columns.map((column) => {
-                        const value = row[column.id];
+                      {normalizedColumns.map((column, colIndex) => {
+                        const id = column.id || column.field;
+                        const value = row[id];
+                        
+                        // Debug the cell value
+                        console.log(`Cell(${rowIndex},${colIndex}) - Field: ${id}, Value:`, value);
+                        
+                        // Handle different column format props
+                        let formattedValue = value;
+                        
+                        // First try format function
+                        if (column.format) {
+                          formattedValue = column.format(value, row);
+                        } 
+                        // Then try valueFormatter (MUI style)
+                        else if (column.valueFormatter) {
+                          formattedValue = column.valueFormatter({ value, row });
+                        }
+                        // Then try renderCell (MUI style)
+                        else if (column.renderCell) {
+                          formattedValue = column.renderCell({ value, row });
+                        }
                         
                         return (
                           <TableCell 
-                            key={column.id} 
+                            key={`cell-${rowIndex}-${colIndex}-${id || 'col'}`}
                             align={column.align || 'left'}
                             className={tableClasses.cell || ''}
                           >
-                            {column.format ? column.format(value, row) : value}
+                            {formattedValue}
                           </TableCell>
                         );
                       })}
@@ -358,14 +418,14 @@ const DataTable = ({
                 {/* Empty rows to maintain consistent height */}
                 {emptyRows > 0 && pagination && (
                   <TableRow style={{ height: 53 * emptyRows }}>
-                    <TableCell colSpan={columns.length + (selectable ? 1 : 0)} />
+                    <TableCell colSpan={normalizedColumns.length + (selectable ? 1 : 0)} />
                   </TableRow>
                 )}
               </>
             ) : (
               <TableRow>
                 <TableCell 
-                  colSpan={columns.length + (selectable ? 1 : 0)}
+                  colSpan={normalizedColumns.length + (selectable ? 1 : 0)}
                   align="center"
                   className="py-16"
                 >

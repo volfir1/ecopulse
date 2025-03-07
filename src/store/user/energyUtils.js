@@ -340,7 +340,7 @@ export const getMetricCardData = (energyType = 'solar', currentProjection = 0) =
 export const getEnergyColorScheme = (energyType = 'solar') => {
   return energyConfig[energyType] || energyConfig.solar;
 };
-
+  
 export default {
   getAreaChartConfig,
   getLineChartConfig,

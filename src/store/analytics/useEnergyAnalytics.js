@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { useSnackbar } from '@shared/index';
-import createEnergyStore from './useEnergyStore';
+import createEnergyStore from '../user/useEnergyStore';
 
 // Create individual stores for each energy type
 const solarStore = createEnergyStore('solar');

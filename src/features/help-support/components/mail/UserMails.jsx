@@ -18,7 +18,7 @@ import {
   Searchbar
 } from '@shared/index';
 import AuthContext from '@shared/context/AuthContext';
-import ticketService from '../ticketService';
+import ticketService from '../../../../services/ticketService';
 import { formatDate, getStatusColor, getStatusIcon } from './userTicketUtils';
 
 const UserMails = () => {

@@ -1,5 +1,4 @@
-// GeothermalAdmin.jsx
-import React, { useMemo, useState, useCallback, useRef } from 'react';
+import React, { useMemo, useEffect, useCallback } from 'react';
 import {
   Dialog,
   DialogTitle,
@@ -9,189 +8,199 @@ import {
   Typography,
   Box
 } from '@mui/material';
-import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
-import { Thermometer, X } from 'lucide-react';
 import {
-  DataTable,
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  Tooltip,
+  ResponsiveContainer,
+  CartesianGrid
+} from 'recharts';
+import { Thermometer, X, Edit, Trash } from 'lucide-react';
+import {
   Button,
   Card,
   AppIcon,
   SingleYearPicker,
   YearPicker,
   NumberBox,
-  useDataTable
+  DataTable,
+  useSnackbar
 } from '@shared/index';
 
-import useGeothermalAnalytics from './adminGeoHook';
-import { getTableColumns, formatDataForChart, getChartConfig, generateSampleData, validateInputs } from './adminGeoUtil';
+// Import the correct store and utilities
+import { stores } from '@store/admin/adminEnergyStrore';
+import adminEnergyUtils from '@store/admin/adminEnergyUtil';
+
+// Import the enhanced export utility
+import { exportEnhancedPDF } from '@store/admin/adminExportUtils';
 
 const GeothermalAdmin = () => {
-  // Define all handlers at the top of component - BEFORE any useMemo calls
-  
-  // Custom hooks
-  const {
-    generationData,
-    currentProjection,
-    loading,
-    selectedStartYear,
-    selectedEndYear,
-    handleStartYearChange,
-    handleEndYearChange,
-    handleRefresh,
-    handleDownload,
-    addRecord,
-    updateRecord,
-    deleteRecord,
-    temperatureData,
-    wellPerformance,
-    chartRef
-  } = useGeothermalAnalytics();
+  // Define energy type and get the store
+  const ENERGY_TYPE = 'geothermal';
+  const geothermalStore = stores[ENERGY_TYPE];
 
-  // State for modal
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
-  const [generationValue, setGenerationValue] = useState('');
-  const [isEditing, setIsEditing] = useState(false);
-  const [editId, setEditId] = useState(null);
+  // Get the toast object from your custom useSnackbar hook
+  const toast = useSnackbar();
 
-  // Modal handlers
-  const handleOpenAddModal = useCallback(() => {
-    setIsEditing(false);
-    setSelectedYear(new Date().getFullYear());
-    setGenerationValue('');
-    setIsModalOpen(true);
-  }, []);
+  // State from the store using direct selectors
+  const data = geothermalStore(state => state.data);
+  const generationData = geothermalStore(state => state.generationData);
+  const currentProjection = geothermalStore(state => state.currentProjection);
+  const loading = geothermalStore(state => state.loading);
+  const isModalOpen = geothermalStore(state => state.isModalOpen);
+  const selectedYear = geothermalStore(state => state.selectedYear);
+  const generationValue = geothermalStore(state => state.generationValue);
+  const isEditing = geothermalStore(state => state.isEditing);
+  const selectedStartYear = geothermalStore(state => state.selectedStartYear);
+  const selectedEndYear = geothermalStore(state => state.selectedEndYear);
+  const config = geothermalStore(state => state.config);
 
-  const handleOpenEditModal = useCallback((row) => {
-    setIsEditing(true);
-    setEditId(row.id);
-    setSelectedYear(row.year);
-    setGenerationValue(row.generation.toString());
-    setIsModalOpen(true);
-  }, []);
+  // Actions from the store
+  const initialize = geothermalStore(state => state.initialize);
+  const handleOpenAddModal = geothermalStore(state => state.handleOpenAddModal);
+  const handleOpenEditModal = geothermalStore(state => state.handleOpenEditModal);
+  const handleCloseModal = geothermalStore(state => state.handleCloseModal);
+  const handleYearChange = geothermalStore(state => state.handleYearChange);
+  const handleGenerationChange = geothermalStore(state => state.handleGenerationChange);
+  const handleSubmit = geothermalStore(state => state.handleSubmit);
+  const handleDelete = geothermalStore(state => state.handleDelete);
+  const handleStartYearChange = geothermalStore(state => state.handleStartYearChange);
+  const handleEndYearChange = geothermalStore(state => state.handleEndYearChange);
+  const handleRefresh = geothermalStore(state => state.handleRefresh);
 
-  const handleCloseModal = useCallback(() => {
-    setIsModalOpen(false);
-  }, []);
+  // Chart ref
+  const chartRef = React.useRef(null);
 
-  const handleYearChange = useCallback((year) => {
-    setSelectedYear(year);
-  }, []);
+  // Initialize data on component mount
+  useEffect(() => {
+    initialize();
+    geothermalStore.getState().setChartRef(chartRef);
+  }, [initialize]);
 
-  const handleGenerationChange = useCallback((event) => {
-    setGenerationValue(event.target.value);
-  }, []);
-
-  const handleDelete = useCallback(async (id) => {
-    if (!window.confirm('Are you sure you want to delete this record?')) {
-      return;
-    }
-    
-    try {
-      await deleteRecord(id);
-    } catch (error) {
-      console.error('Error deleting data:', error);
-    }
-  }, [deleteRecord]);
-
-  // Form submit handler
-  const handleSubmit = useCallback(async () => {
-    if (!selectedYear || !generationValue) {
-      return;
-    }
-
-    try {
-      setIsModalOpen(false);
-      
-      if (isEditing) {
-        await updateRecord(editId, selectedYear, parseFloat(generationValue));
-      } else {
-        await addRecord(selectedYear, parseFloat(generationValue));
-      }
-    } catch (error) {
-      console.error('Error saving data:', error);
-    }
-  }, [selectedYear, generationValue, isEditing, editId, updateRecord, addRecord]);
-
-  // Export data handler - DEFINED BEFORE IT'S USED
-  const handleExportData = useCallback(() => {
-    // Delegate to the download handler from the hook
-    handleDownload();
-  }, [handleDownload]);
-
-  // For demo purposes, use the data from the hook or sample data if empty
+  // For demo purposes, use sample data if no data is available
   const effectiveData = useMemo(() => {
-    if (generationData.length > 0) {
-      return generationData.map((item, index) => ({
-        id: index + 1,
-        year: item.date,
-        generation: item.value,
-        dateAdded: new Date().toISOString()
-      }));
+    if (data && Array.isArray(data) && data.length > 0) {
+      return data;
+    } else {
+      return adminEnergyUtils.generateSampleData(ENERGY_TYPE);
     }
-    return generateSampleData();
-  }, [generationData]);
-
-  // Year range for filtering
-  const yearRange = useMemo(() => ({
-    startYear: selectedStartYear,
-    endYear: selectedEndYear
-  }), [selectedStartYear, selectedEndYear]);
+  }, [data, ENERGY_TYPE]);
 
   // Filter data based on selected year range
   const filteredData = useMemo(() => {
+    if (!effectiveData || !Array.isArray(effectiveData)) {
+      return [];
+    }
     return effectiveData.filter(item => 
-      item.year >= yearRange.startYear && 
-      item.year <= yearRange.endYear
+      item.year >= selectedStartYear && item.year <= selectedEndYear
     );
-  }, [effectiveData, yearRange]);
+  }, [effectiveData, selectedStartYear, selectedEndYear]);
 
   // Format data for chart
-  const chartData = useMemo(() => 
-    formatDataForChart(filteredData),
-    [filteredData]
-  );
+  const chartData = useMemo(() => {
+    return adminEnergyUtils.formatDataForChart(filteredData);
+  }, [filteredData]);
 
-  // Configure data table columns
-  const tableColumns = useMemo(() => 
-    getTableColumns(handleOpenEditModal, handleDelete), 
-    [handleOpenEditModal, handleDelete]);
-  
-  // Use useDataTable hook with filtered data
-  const {
-    data: tableData,
-    loading: tableLoading,
-    handleExport,
-    handleRefresh: refreshTable,
-  } = useDataTable({
-    data: filteredData,
-    columns: tableColumns,
-    onExport: handleExportData,
-    onRefresh: handleRefresh
-  });
-  
-  // Memoize chart config to prevent recreation
-  const chartConfig = useMemo(() => {
-    const config = getChartConfig();
-    // Add line chart specific configuration
-    config.line = {
-      stroke: '#FF6B6B', // Geothermal color
-      strokeWidth: 2,
-      dot: {
-        r: 5,
-        fill: '#FF6B6B',
-        stroke: '#fff',
-        strokeWidth: 2
-      },
-      activeDot: {
-        r: 7,
-        fill: '#FF6B6B',
-        stroke: '#fff',
-        strokeWidth: 2
+  // Define custom table columns
+  const tableColumns = useMemo(() => [
+    {
+      id: 'year',
+      field: 'year',
+      label: 'Year',
+      headerName: 'Year',
+      align: 'left',
+      sortable: true
+    },
+    {
+      id: 'generation',
+      field: 'generation',
+      label: 'Generation (GWh)',
+      headerName: 'Generation (GWh)',
+      align: 'right',
+      sortable: true,
+      format: (value) =>
+        value !== undefined && value !== null
+          ? typeof value === 'number' ? value.toFixed(2) : value.toString()
+          : 'N/A'
+    },
+    {
+      id: 'dateAdded',
+      field: 'dateAdded',
+      label: 'Date Added',
+      headerName: 'Date Added',
+      align: 'left',
+      sortable: true,
+      format: (value) => {
+        if (!value) return 'N/A';
+        try {
+          return new Date(value).toLocaleDateString();
+        } catch (error) {
+          console.error("Date formatting error:", error);
+          return 'Invalid Date';
+        }
       }
-    };
-    
-    // Enhanced Y-axis configuration with proper label
+    },
+    {
+      id: 'actions',
+      field: 'actions',
+      label: 'Actions',
+      headerName: 'Actions',
+      align: 'center',
+      sortable: false,
+      format: (_, row) => (
+        <div className="flex justify-center gap-2">
+          <IconButton
+            size="small"
+            onClick={(e) => {
+              e.stopPropagation();
+              handleOpenEditModal(row);
+            }}
+            className="text-blue-600 hover:text-blue-800 hover:bg-blue-100"
+          >
+            <Edit size={16} />
+          </IconButton>
+          <IconButton
+            size="small"
+            onClick={(e) => {
+              e.stopPropagation();
+              handleDelete(row.id);
+            }}
+            className="text-red-600 hover:text-red-800 hover:bg-red-100"
+          >
+            <Trash size={16} />
+          </IconButton>
+        </div>
+      )
+    }
+  ], [handleOpenEditModal, handleDelete]);
+
+  // Enhanced export to PDF
+  const handleExportData = useCallback(() => {
+    return exportEnhancedPDF({
+      data: filteredData,
+      energyType: ENERGY_TYPE,
+      startYear: selectedStartYear,
+      endYear: selectedEndYear,
+      chartRef: chartRef,
+      currentProjection: currentProjection ||
+        (chartData.length > 0 ? chartData[chartData.length - 1].value : 0),
+      toast
+    });
+  }, [
+    filteredData,
+    ENERGY_TYPE,
+    selectedStartYear,
+    selectedEndYear,
+    chartData,
+    currentProjection,
+    toast
+  ]);
+
+  // Memoize chart config
+  const chartConfig = useMemo(() => {
+    const config = adminEnergyUtils.getChartConfig(ENERGY_TYPE);
     config.yAxis = {
       ...config.yAxis,
       label: {
@@ -202,43 +211,16 @@ const GeothermalAdmin = () => {
         offset: -5
       }
     };
-    
     return config;
-  }, []);
+  }, [ENERGY_TYPE]);
 
   // Form validation
   const formValidation = useMemo(() => {
     if (selectedYear && generationValue) {
-      return validateInputs(selectedYear, generationValue);
+      return adminEnergyUtils.validateInputs(ENERGY_TYPE, selectedYear, generationValue);
     }
     return { isValid: false, errors: {} };
-  }, [selectedYear, generationValue]);
-
-  // Skeleton loader for initial loading state
-  if (loading && generationData.length === 0) {
-    return (
-      <div className="p-6 max-w-7xl mx-auto">
-        <div className="flex justify-between items-center mb-6">
-          <div className="flex items-center gap-2">
-            <div className="p-2 rounded-lg bg-red-100">
-              <Thermometer className="text-red-500" size={24} />
-            </div>
-            <div>
-              <h1 className="text-2xl font-semibold">Geothermal Generation Data</h1>
-              <p className="text-gray-500">Loading geothermal generation data...</p>
-            </div>
-          </div>
-        </div>
-        <Card.Base className="mb-6 p-4 flex justify-center items-center h-96">
-          <div className="animate-pulse flex flex-col items-center">
-            <div className="w-16 h-16 bg-red-200 rounded-full mb-4"></div>
-            <div className="h-4 w-36 bg-red-200 rounded mb-2"></div>
-            <div className="h-3 w-24 bg-red-200 rounded"></div>
-          </div>
-        </Card.Base>
-      </div>
-    );
-  }
+  }, [selectedYear, generationValue, ENERGY_TYPE]);
 
   return (
     <div className="p-6 max-w-7xl mx-auto">
@@ -271,8 +253,8 @@ const GeothermalAdmin = () => {
           </Typography>
           <div className="min-w-64">
             <YearPicker
-              initialStartYear={yearRange.startYear}
-              initialEndYear={yearRange.endYear}
+              initialStartYear={selectedStartYear}
+              initialEndYear={selectedEndYear}
               onStartYearChange={handleStartYearChange}
               onEndYearChange={handleEndYearChange}
             />
@@ -281,17 +263,11 @@ const GeothermalAdmin = () => {
       </Card.Base>
 
       {/* Chart Section */}
-      <Card.Base className="mb-6 overflow-hidden">
+      <Card.Base className="mb-6 overflow-hidden" ref={chartRef}>
         <div className="p-4 border-b border-gray-200">
           <h2 className="text-lg font-medium">Generation Overview</h2>
-          {currentProjection && (
-            <div className="mt-2">
-              <span className="text-gray-500">Latest Projection:</span>
-              <span className="ml-2 text-xl font-semibold text-red-600">{currentProjection.toFixed(2)} GWh</span>
-            </div>
-          )}
         </div>
-        <div className="p-6 h-96" ref={chartRef}>
+        <div className="p-6 h-96">
           <ResponsiveContainer width="100%" height="100%">
             <LineChart data={chartData} margin={{ top: 15, right: 30, left: 20, bottom: 5 }}>
               <CartesianGrid strokeDasharray="3 3" />
@@ -317,30 +293,32 @@ const GeothermalAdmin = () => {
 
       {/* Data Table */}
       <DataTable
-        title={`Geothermal Generation Records (${yearRange.startYear} - ${yearRange.endYear})`}
+        title={`Geothermal Generation Records (${selectedStartYear} - ${selectedEndYear})`}
         columns={tableColumns}
-        data={tableData}
-        loading={tableLoading}
+        data={filteredData}
+        loading={loading}
         selectable={true}
         searchable={true}
         exportable={true}
         filterable={true}
         refreshable={true}
         pagination={true}
-        onExport={handleExport}
-        onRefresh={refreshTable}
+        onExport={handleExportData}
+        onRefresh={handleRefresh}
         tableClasses={{
-          paper: "shadow-md rounded-md",
-          headerCell: "bg-gray-50",
-          row: "hover:bg-red-50"
+          paper: 'shadow-md rounded-md',
+          headerCell: 'bg-gray-50',
+          row: 'hover:bg-red-50'
         }}
-        emptyMessage={`No geothermal generation data available for years ${yearRange.startYear} - ${yearRange.endYear}`}
+        emptyMessage={`No geothermal generation data available for years ${selectedStartYear} - ${selectedEndYear}`}
       />
 
       {/* Add/Edit Modal */}
       <Dialog open={isModalOpen} onClose={handleCloseModal} maxWidth="sm" fullWidth>
         <DialogTitle className="flex justify-between items-center">
-          <Typography variant="h6">{isEditing ? 'Edit Record' : 'Add New Record'}</Typography>
+          <Typography variant="h6">
+            {isEditing ? 'Edit Record' : 'Add New Record'}
+          </Typography>
           <IconButton onClick={handleCloseModal} size="small">
             <X size={18} />
           </IconButton>
@@ -374,11 +352,7 @@ const GeothermalAdmin = () => {
           </Box>
         </DialogContent>
         <DialogActions className="p-4">
-          <Button
-            variant="secondary"
-            onClick={handleCloseModal}
-            className="mr-2"
-          >
+          <Button variant="secondary" onClick={handleCloseModal} className="mr-2">
             Cancel
           </Button>
           <Button

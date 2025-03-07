@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useContext } from 'react';
-import ticketService from './ticketService';
+import ticketService from '../../../services/ticketService';
 import { useSnackbar } from '@components/toast-notif/ToastNotification';
 import  AuthContext from '@shared/context/AuthContext'; // Adjust path as needed
 

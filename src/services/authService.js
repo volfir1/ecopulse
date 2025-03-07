@@ -3,7 +3,7 @@ import {
   signInWithPopup,
   getIdToken
 } from 'firebase/auth';
-import { auth } from '../firebase/firebase';
+import { auth } from '../features/auth/firebase/firebase';
 
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
 let currentAuthRequest = null;

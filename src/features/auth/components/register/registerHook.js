@@ -2,7 +2,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useSnackbar, useLoader } from '@shared/index';
-import authService from '../../services/authService';
+import authService from '../../../../services/authService';
 import { calculatePasswordStrength } from './passwordUtils';
 import verificationStore from '../../utils/verificationStore';
 

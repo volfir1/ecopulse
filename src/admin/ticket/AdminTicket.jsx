@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useContext } from 'react';
 import { useNavigate } from 'react-router-dom';
 import AuthContext from '@shared/context/AuthContext';
-import ticketService from '../../features/help-support/components/ticketService';
+import ticketService from '../../services/ticketService';
 import { useSnackbar } from '@components/toast-notif/ToastNotification';
 import Card from '@components/cards/cards';
 import { AppIcon } from '@shared/index';

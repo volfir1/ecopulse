@@ -4,7 +4,7 @@
       "paths": {
         "@context/*": ["./shared/context/*"],
         "@features/*": ["./features/*"],
-        "@modules/*": ["./features/modules/components/*"],
+        "@modules/*": ["./features/modules/*"],
         "@shared/*": ["./shared/*"],
         "@assets/*": ["./assets/*"],
         "@images/*": ["./assets/images/*"],
@@ -12,7 +12,8 @@
         "@admin/*": ["./admin/*"],
         "@exceptions/*": ["./exceptions/*"],
         "@config/*": ["./config/*"],
-        "@services/*": ["./shared/*"]
+        "@services/*": ["./services/*"],
+        "@store/*": ["./store/*"]
       }
     }
   }

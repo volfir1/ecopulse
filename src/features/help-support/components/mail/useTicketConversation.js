@@ -2,7 +2,7 @@
 import { useState, useEffect, useCallback, useContext } from 'react';
 import { useSnackbar } from '@shared/index';
 import AuthContext from '@shared/context/AuthContext';
-import ticketService from '../ticketService'; // Adjust the path as needed
+import ticketService from '../../../../services/ticketService'; // Adjust the path as needed
 
 const useTicketConversation = (ticketId) => {
   const [ticket, setTicket] = useState(null);

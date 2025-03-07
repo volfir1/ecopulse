@@ -1,5 +1,4 @@
-// BiomassAdmin.jsx
-import React, { useMemo, useState, useCallback, useRef } from 'react';
+import React, { useMemo, useEffect, useCallback } from 'react';
 import {
   Dialog,
   DialogTitle,
@@ -10,193 +9,191 @@ import {
   Box
 } from '@mui/material';
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
-import { Leaf, X } from 'lucide-react';
+import { Leaf, X, Edit, Trash } from 'lucide-react';
 import {
-  DataTable,
   Button,
   Card,
   AppIcon,
   SingleYearPicker,
   YearPicker,
   NumberBox,
-  useDataTable
+  DataTable,
+  useSnackbar
 } from '@shared/index';
 
-import useBiomassAnalytics from './adminBioHook';
-import { getTableColumns, formatDataForChart, getChartConfig, generateSampleData, validateInputs } from './adminBioUtil';
+// Import the correct store and utilities
+import { stores } from '@store/admin/adminEnergyStrore';
+import adminEnergyUtils from '@store/admin/adminEnergyUtil';
+
+// Import the enhanced export utility
+import { exportEnhancedPDF } from '@store/admin/adminExportUtils';
 
 const BiomassAdmin = () => {
-  // Define all handlers at the top of component - BEFORE any useMemo calls
+  // Define energy type and get the store
+  const ENERGY_TYPE = 'biomass';
+  const biomassStore = stores[ENERGY_TYPE];
   
-  // Custom hooks
-  const {
-    generationData,
-    currentProjection,
-    loading,
-    selectedStartYear,
-    selectedEndYear,
-    handleStartYearChange,
-    handleEndYearChange,
-    handleRefresh,
-    handleDownload,
-    addRecord,
-    updateRecord,
-    deleteRecord,
-    feedstockData,
-    efficiencyData,
-    chartRef
-  } = useBiomassAnalytics();
-
-  // State for modal
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
-  const [generationValue, setGenerationValue] = useState('');
-  const [isEditing, setIsEditing] = useState(false);
-  const [editId, setEditId] = useState(null);
-
-  // Modal handlers
-  const handleOpenAddModal = useCallback(() => {
-    setIsEditing(false);
-    setSelectedYear(new Date().getFullYear());
-    setGenerationValue('');
-    setIsModalOpen(true);
-  }, []);
-
-  const handleOpenEditModal = useCallback((row) => {
-    setIsEditing(true);
-    setEditId(row.id);
-    setSelectedYear(row.year);
-    setGenerationValue(row.generation.toString());
-    setIsModalOpen(true);
-  }, []);
-
-  const handleCloseModal = useCallback(() => {
-    setIsModalOpen(false);
-  }, []);
-
-  const handleYearChange = useCallback((year) => {
-    setSelectedYear(year);
-  }, []);
-
-  const handleGenerationChange = useCallback((event) => {
-    setGenerationValue(event.target.value);
-  }, []);
-
-  const handleDelete = useCallback(async (id) => {
-    if (!window.confirm('Are you sure you want to delete this record?')) {
-      return;
-    }
-    
-    try {
-      await deleteRecord(id);
-    } catch (error) {
-      console.error('Error deleting data:', error);
-    }
-  }, [deleteRecord]);
-
-  // Form submit handler
-  const handleSubmit = useCallback(async () => {
-    if (!selectedYear || !generationValue) {
-      return;
-    }
-
-    try {
-      setIsModalOpen(false);
-      
-      if (isEditing) {
-        await updateRecord(editId, selectedYear, parseFloat(generationValue));
-      } else {
-        await addRecord(selectedYear, parseFloat(generationValue));
-      }
-    } catch (error) {
-      console.error('Error saving data:', error);
-    }
-  }, [selectedYear, generationValue, isEditing, editId, updateRecord, addRecord]);
-
-  // Export data handler - DEFINED BEFORE IT'S USED
-  const handleExportData = useCallback(() => {
-    // Delegate to the download handler from the hook
-    handleDownload();
-  }, [handleDownload]);
-
-  // For demo purposes, use the data from the hook or sample data if empty
+  // Get the toast object from your custom useSnackbar hook
+  const toast = useSnackbar();
+  
+  // State from the store using direct selectors
+  const data = biomassStore(state => state.data);
+  const generationData = biomassStore(state => state.generationData);
+  const currentProjection = biomassStore(state => state.currentProjection);
+  const loading = biomassStore(state => state.loading);
+  const isModalOpen = biomassStore(state => state.isModalOpen);
+  const selectedYear = biomassStore(state => state.selectedYear);
+  const generationValue = biomassStore(state => state.generationValue);
+  const isEditing = biomassStore(state => state.isEditing);
+  const selectedStartYear = biomassStore(state => state.selectedStartYear);
+  const selectedEndYear = biomassStore(state => state.selectedEndYear);
+  const config = biomassStore(state => state.config);
+  
+  // Actions from the store
+  const initialize = biomassStore(state => state.initialize);
+  const handleOpenAddModal = biomassStore(state => state.handleOpenAddModal);
+  const handleOpenEditModal = biomassStore(state => state.handleOpenEditModal);
+  const handleCloseModal = biomassStore(state => state.handleCloseModal);
+  const handleYearChange = biomassStore(state => state.handleYearChange);
+  const handleGenerationChange = biomassStore(state => state.handleGenerationChange);
+  const handleSubmit = biomassStore(state => state.handleSubmit);
+  const handleDelete = biomassStore(state => state.handleDelete);
+  const handleStartYearChange = biomassStore(state => state.handleStartYearChange);
+  const handleEndYearChange = biomassStore(state => state.handleEndYearChange);
+  const handleRefresh = biomassStore(state => state.handleRefresh);
+  
+  // Chart ref
+  const chartRef = React.useRef(null);
+  
+  // Initialize data on component mount
+  useEffect(() => {
+    initialize();
+    biomassStore.getState().setChartRef(chartRef);
+  }, [initialize]);
+  
+  // For demo purposes, use sample data if no data is available
   const effectiveData = useMemo(() => {
-    console.log('Processing generationData:', generationData);
-    if (generationData && generationData.length > 0) {
-      return generationData.map((item, index) => ({
-        id: index + 1,
-        year: item.date,
-        generation: item.value,
-        dateAdded: new Date().toISOString()
-      }));
+    if (data && Array.isArray(data) && data.length > 0) {
+      return data;
+    } else {
+      return adminEnergyUtils.generateSampleData(ENERGY_TYPE);
     }
-    console.log('Using sample data instead');
-    return generateSampleData();
-  }, [generationData]);
-
-  // Year range for filtering
-  const yearRange = useMemo(() => ({
-    startYear: selectedStartYear,
-    endYear: selectedEndYear
-  }), [selectedStartYear, selectedEndYear]);
-
-  // Filter data based on selected year range
+  }, [data, ENERGY_TYPE]);
+  
+  // Filter data based on selected year range - used for both chart and table
   const filteredData = useMemo(() => {
-    console.log('Filtering data with range:', yearRange);
-    console.log('Data to filter:', effectiveData);
+    if (!effectiveData || !Array.isArray(effectiveData)) {
+      return [];
+    }
     return effectiveData.filter(item => 
-      item.year >= yearRange.startYear && 
-      item.year <= yearRange.endYear
+      item.year >= selectedStartYear && 
+      item.year <= selectedEndYear
     );
-  }, [effectiveData, yearRange]);
-
+  }, [effectiveData, selectedStartYear, selectedEndYear]);
+  
   // Format data for chart
   const chartData = useMemo(() => {
-    const formattedData = formatDataForChart(filteredData);
-    console.log('Formatted chart data:', formattedData);
-    return formattedData;
+    return adminEnergyUtils.formatDataForChart(filteredData);
   }, [filteredData]);
-
-  // Configure data table columns
-  const tableColumns = useMemo(() => 
-    getTableColumns(handleOpenEditModal, handleDelete), 
-    [handleOpenEditModal, handleDelete]);
   
-  // Use useDataTable hook with filtered data
-  const {
-    data: tableData,
-    loading: tableLoading,
-    handleExport,
-    handleRefresh: refreshTable,
-  } = useDataTable({
-    data: filteredData,
-    columns: tableColumns,
-    onExport: handleExportData,
-    onRefresh: handleRefresh
-  });
+  // Define custom table columns with explicit id properties
+  const tableColumns = useMemo(() => [
+    {
+      id: 'year',
+      field: 'year',
+      label: 'Year',
+      headerName: 'Year',
+      align: 'left',
+      sortable: true
+    },
+    {
+      id: 'generation',
+      field: 'generation',
+      label: 'Generation (GWh)',
+      headerName: 'Generation (GWh)',
+      align: 'right',
+      sortable: true,
+      format: (value) =>
+        value !== undefined && value !== null 
+          ? typeof value === 'number' ? value.toFixed(2) : value.toString()
+          : 'N/A'
+    },
+    {
+      id: 'dateAdded',
+      field: 'dateAdded',
+      label: 'Date Added',
+      headerName: 'Date Added',
+      align: 'left',
+      sortable: true,
+      format: (value) => {
+        if (!value) return 'N/A';
+        try {
+          return new Date(value).toLocaleDateString();
+        } catch (error) {
+          console.error("Date formatting error:", error);
+          return 'Invalid Date';
+        }
+      }
+    },
+    {
+      id: 'actions',
+      field: 'actions',
+      label: 'Actions',
+      headerName: 'Actions',
+      align: 'center',
+      sortable: false,
+      format: (_, row) => (
+        <div className="flex justify-center gap-2">
+          <IconButton
+            size="small"
+            onClick={(e) => {
+              e.stopPropagation();
+              handleOpenEditModal(row);
+            }}
+            className="text-blue-600 hover:text-blue-800 hover:bg-blue-100"
+          >
+            <Edit size={16} />
+          </IconButton>
+          <IconButton
+            size="small"
+            onClick={(e) => {
+              e.stopPropagation();
+              handleDelete(row.id);
+            }}
+            className="text-red-600 hover:text-red-800 hover:bg-red-100"
+          >
+            <Trash size={16} />
+          </IconButton>
+        </div>
+      )
+    }
+  ], [handleOpenEditModal, handleDelete]);
+  
+  // Enhanced export to PDF with recommendations and professional formatting
+  const handleExportData = useCallback(() => {
+    return exportEnhancedPDF({
+      data: filteredData,
+      energyType: ENERGY_TYPE,
+      startYear: selectedStartYear,
+      endYear: selectedEndYear,
+      chartRef: chartRef,
+      currentProjection: currentProjection ||
+        (chartData.length > 0 ? chartData[chartData.length - 1].value : 0),
+      toast
+    });
+  }, [
+    filteredData, 
+    ENERGY_TYPE, 
+    selectedStartYear, 
+    selectedEndYear, 
+    chartData, 
+    currentProjection, 
+    toast
+  ]);
   
   // Memoize chart config to prevent recreation
   const chartConfig = useMemo(() => {
-    const config = getChartConfig();
-    // Add line chart specific configuration
-    config.line = {
-      stroke: '#16A34A', // Biomass green color
-      strokeWidth: 2,
-      dot: {
-        r: 5,
-        fill: '#16A34A',
-        stroke: '#fff',
-        strokeWidth: 2
-      },
-      activeDot: {
-        r: 7,
-        fill: '#16A34A',
-        stroke: '#fff',
-        strokeWidth: 2
-      }
-    };
-    
-    // Enhanced Y-axis configuration with proper label
+    const config = adminEnergyUtils.getChartConfig(ENERGY_TYPE);
     config.yAxis = {
       ...config.yAxis,
       label: {
@@ -207,44 +204,17 @@ const BiomassAdmin = () => {
         offset: -5
       }
     };
-    
     return config;
-  }, []);
-
+  }, [ENERGY_TYPE]);
+  
   // Form validation
   const formValidation = useMemo(() => {
     if (selectedYear && generationValue) {
-      return validateInputs(selectedYear, generationValue);
+      return adminEnergyUtils.validateInputs(ENERGY_TYPE, selectedYear, generationValue);
     }
     return { isValid: false, errors: {} };
-  }, [selectedYear, generationValue]);
-
-  // Skeleton loader for initial loading state
-  if (loading && generationData.length === 0) {
-    return (
-      <div className="p-6 max-w-7xl mx-auto">
-        <div className="flex justify-between items-center mb-6">
-          <div className="flex items-center gap-2">
-            <div className="p-2 rounded-lg bg-green-100">
-              <Leaf className="text-green-500" size={24} />
-            </div>
-            <div>
-              <h1 className="text-2xl font-semibold">Biomass Generation Data</h1>
-              <p className="text-gray-500">Loading biomass generation data...</p>
-            </div>
-          </div>
-        </div>
-        <Card.Base className="mb-6 p-4 flex justify-center items-center h-96">
-          <div className="animate-pulse flex flex-col items-center">
-            <div className="w-16 h-16 bg-green-200 rounded-full mb-4"></div>
-            <div className="h-4 w-36 bg-green-200 rounded mb-2"></div>
-            <div className="h-3 w-24 bg-green-200 rounded"></div>
-          </div>
-        </Card.Base>
-      </div>
-    );
-  }
-
+  }, [selectedYear, generationValue, ENERGY_TYPE]);
+  
   return (
     <div className="p-6 max-w-7xl mx-auto">
       {/* Header */}
@@ -267,7 +237,7 @@ const BiomassAdmin = () => {
           Add New Record
         </Button>
       </div>
-
+  
       {/* Year Range Filter Card */}
       <Card.Base className="mb-6 p-4">
         <div className="flex justify-between items-center">
@@ -276,27 +246,21 @@ const BiomassAdmin = () => {
           </Typography>
           <div className="min-w-64">
             <YearPicker
-              initialStartYear={yearRange.startYear}
-              initialEndYear={yearRange.endYear}
+              initialStartYear={selectedStartYear}
+              initialEndYear={selectedEndYear}
               onStartYearChange={handleStartYearChange}
               onEndYearChange={handleEndYearChange}
             />
           </div>
         </div>
       </Card.Base>
-
+  
       {/* Chart Section */}
-      <Card.Base className="mb-6 overflow-hidden">
+      <Card.Base className="mb-6 overflow-hidden" ref={chartRef}>
         <div className="p-4 border-b border-gray-200">
           <h2 className="text-lg font-medium">Generation Overview</h2>
-          {currentProjection && (
-            <div className="mt-2">
-              <span className="text-gray-500">Latest Projection:</span>
-              <span className="ml-2 text-xl font-semibold text-green-600">{currentProjection.toFixed(2)} GWh</span>
-            </div>
-          )}
         </div>
-        <div className="p-6 h-96" ref={chartRef}>
+        <div className="p-6 h-96">
           <ResponsiveContainer width="100%" height="100%">
             <LineChart data={chartData} margin={{ top: 15, right: 30, left: 20, bottom: 5 }}>
               <CartesianGrid strokeDasharray="3 3" />
@@ -319,33 +283,35 @@ const BiomassAdmin = () => {
           </ResponsiveContainer>
         </div>
       </Card.Base>
-
-      {/* Data Table */}
+  
+      {/* Data Table - Using our custom columns and filtered data */}
       <DataTable
-        title={`Biomass Generation Records (${yearRange.startYear} - ${yearRange.endYear})`}
+        title={`Biomass Generation Records (${selectedStartYear} - ${selectedEndYear})`}
         columns={tableColumns}
-        data={tableData}
-        loading={tableLoading}
+        data={filteredData} 
+        loading={loading}
         selectable={true}
         searchable={true}
         exportable={true}
         filterable={true}
         refreshable={true}
         pagination={true}
-        onExport={handleExport}
-        onRefresh={refreshTable}
+        onExport={handleExportData}
+        onRefresh={handleRefresh}
         tableClasses={{
-          paper: "shadow-md rounded-md",
-          headerCell: "bg-gray-50",
-          row: "hover:bg-green-50"
+          paper: 'shadow-md rounded-md',
+          headerCell: 'bg-gray-50',
+          row: 'hover:bg-green-50'
         }}
-        emptyMessage={`No biomass generation data available for years ${yearRange.startYear} - ${yearRange.endYear}`}
+        emptyMessage={`No biomass generation data available for years ${selectedStartYear} - ${selectedEndYear}`}
       />
-
+  
       {/* Add/Edit Modal */}
       <Dialog open={isModalOpen} onClose={handleCloseModal} maxWidth="sm" fullWidth>
         <DialogTitle className="flex justify-between items-center">
-          <Typography variant="h6">{isEditing ? 'Edit Record' : 'Add New Record'}</Typography>
+          <Typography variant="h6">
+            {isEditing ? 'Edit Record' : 'Add New Record'}
+          </Typography>
           <IconButton onClick={handleCloseModal} size="small">
             <X size={18} />
           </IconButton>
@@ -379,11 +345,7 @@ const BiomassAdmin = () => {
           </Box>
         </DialogContent>
         <DialogActions className="p-4">
-          <Button
-            variant="secondary"
-            onClick={handleCloseModal}
-            className="mr-2"
-          >
+          <Button variant="secondary" onClick={handleCloseModal} className="mr-2">
             Cancel
           </Button>
           <Button

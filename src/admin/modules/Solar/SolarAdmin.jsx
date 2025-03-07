@@ -1,5 +1,4 @@
-// SolarAdmin.jsx
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useEffect, useCallback } from 'react';
 import {
   Dialog,
   DialogTitle,
@@ -10,105 +9,192 @@ import {
   Box
 } from '@mui/material';
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
-import { Sun, X } from 'lucide-react';
+import { Sun, X, Edit, Trash } from 'lucide-react';
 import {
-  DataTable,
   Button,
   Card,
   AppIcon,
   SingleYearPicker,
   YearPicker,
   NumberBox,
-  useDataTable
+  DataTable,
+  useSnackbar // Import from your shared components
 } from '@shared/index';
 
-import useSolarAdmin from './solarAdminHook';
-import { getTableColumns, formatDataForChart, getChartConfig, generateSampleData, validateInputs } from './adminSolarUtil';
+// Import the correct store and utilities
+// Fix the typo in the import path
+import { stores } from '@store/admin/adminEnergyStrore';
+import adminEnergyUtils from '@store/admin/adminEnergyUtil';
 
+// Import the enhanced export utility
+import { exportEnhancedPDF } from '@store/admin/adminExportUtils';
 const SolarAdmin = () => {
-  // Custom hooks
-  const {
-    data,
-    loading,
-    isModalOpen,
-    selectedYear,
-    generationValue,
-    isEditing,
-    handleOpenAddModal,
-    handleOpenEditModal,
-    handleCloseModal,
-    handleYearChange,
-    handleGenerationChange,
-    handleSubmit,
-    handleDelete,
-    handleExportData,
-  } = useSolarAdmin();
-
-  // State for year range filtering (used for both chart and table)
-  const [yearRange, setYearRange] = useState({
-    startYear: new Date().getFullYear() - 4,
-    endYear: new Date().getFullYear() + 1
-  });
+  // Define energy type and get the store
+  const ENERGY_TYPE = 'solar';
+  const solarStore = stores[ENERGY_TYPE];
+  
+  // Get the toast object from your custom useSnackbar hook
+  const toast = useSnackbar();
+  
+  // State from the store using direct selectors
+  const data = solarStore(state => state.data);
+  const generationData = solarStore(state => state.generationData);
+  const currentProjection = solarStore(state => state.currentProjection);
+  const loading = solarStore(state => state.loading);
+  const isModalOpen = solarStore(state => state.isModalOpen);
+  const selectedYear = solarStore(state => state.selectedYear);
+  const generationValue = solarStore(state => state.generationValue);
+  const isEditing = solarStore(state => state.isEditing);
+  const selectedStartYear = solarStore(state => state.selectedStartYear);
+  const selectedEndYear = solarStore(state => state.selectedEndYear);
+  const config = solarStore(state => state.config);
+  
+  // Actions from the store
+  const initialize = solarStore(state => state.initialize);
+  const handleOpenAddModal = solarStore(state => state.handleOpenAddModal);
+  const handleOpenEditModal = solarStore(state => state.handleOpenEditModal);
+  const handleCloseModal = solarStore(state => state.handleCloseModal);
+  const handleYearChange = solarStore(state => state.handleYearChange);
+  const handleGenerationChange = solarStore(state => state.handleGenerationChange);
+  const handleSubmit = solarStore(state => state.handleSubmit);
+  const handleDelete = solarStore(state => state.handleDelete);
+  const handleStartYearChange = solarStore(state => state.handleStartYearChange);
+  const handleEndYearChange = solarStore(state => state.handleEndYearChange);
+  const handleRefresh = solarStore(state => state.handleRefresh);
+  
+  // Chart ref
+  const chartRef = React.useRef(null);
+  
+  // Initialize data on component mount
+  useEffect(() => {
+    initialize();
+    solarStore.getState().setChartRef(chartRef);
+  }, [initialize]);
 
   // For demo purposes, use sample data if no data is available
-  const effectiveData = useMemo(() => 
-    data.length > 0 ? data : generateSampleData(), 
-    [data]
-  );
+  const effectiveData = useMemo(() => {
+    if (data && Array.isArray(data) && data.length > 0) {
+      return data;
+    } else {
+      return adminEnergyUtils.generateSampleData(ENERGY_TYPE);
+    }
+  }, [data, ENERGY_TYPE]);
 
   // Filter data based on selected year range - used for both chart and table
   const filteredData = useMemo(() => {
+    if (!effectiveData || !Array.isArray(effectiveData)) {
+      return [];
+    }
+    
     return effectiveData.filter(item => 
-      item.year >= yearRange.startYear && 
-      item.year <= yearRange.endYear
+      item.year >= selectedStartYear && 
+      item.year <= selectedEndYear
     );
-  }, [effectiveData, yearRange]);
+  }, [effectiveData, selectedStartYear, selectedEndYear]);
 
   // Format data for chart
-  const chartData = useMemo(() => 
-    formatDataForChart(filteredData),
-    [filteredData]
-  );
+  const chartData = useMemo(() => {
+    return adminEnergyUtils.formatDataForChart(filteredData);
+  }, [filteredData]);
 
-  // Configure data table - using useMemo to prevent recreation on each render
-  const tableColumns = useMemo(() => 
-    getTableColumns(handleOpenEditModal, handleDelete), 
-    [handleOpenEditModal, handleDelete]
-  );
+  // Define custom table columns with explicit id properties instead of field
+  const tableColumns = useMemo(() => [
+    {
+      id: 'year',
+      field: 'year', // Added field for compatibility
+      label: 'Year',
+      headerName: 'Year', // Added headerName for compatibility
+      align: 'left',
+      sortable: true
+    },
+    {
+      id: 'generation',
+      field: 'generation', // Added field for compatibility
+      label: 'Generation (GWh)',
+      headerName: 'Generation (GWh)', // Added headerName for compatibility
+      align: 'right',
+      sortable: true,
+      format: (value) => value !== undefined && value !== null 
+        ? typeof value === 'number' ? value.toFixed(2) : value.toString()
+        : 'N/A'
+    },
+    {
+      id: 'dateAdded',
+      field: 'dateAdded', // Added field for compatibility
+      label: 'Date Added',
+      headerName: 'Date Added', // Added headerName for compatibility
+      align: 'left',
+      sortable: true,
+      format: (value) => {
+        if (!value) return 'N/A';
+        try {
+          return new Date(value).toLocaleDateString();
+        } catch (error) {
+          console.error("Date formatting error:", error);
+          return 'Invalid Date';
+        }
+      }
+    },
+    {
+      id: 'actions',
+      field: 'actions', // Added field for compatibility
+      label: 'Actions',
+      headerName: 'Actions', // Added headerName for compatibility
+      align: 'center',
+      sortable: false,
+      format: (_, row) => (
+        <div className="flex justify-center gap-2">
+          <IconButton
+            size="small"
+            onClick={(e) => {
+              e.stopPropagation();
+              handleOpenEditModal(row);
+            }}
+            className="text-blue-600 hover:text-blue-800 hover:bg-blue-100"
+          >
+            <Edit size={16} />
+          </IconButton>
+          <IconButton
+            size="small"
+            onClick={(e) => {
+              e.stopPropagation();
+              handleDelete(row.id);
+            }}
+            className="text-red-600 hover:text-red-800 hover:bg-red-100"
+          >
+            <Trash size={16} />
+          </IconButton>
+        </div>
+      )
+    }
+  ], [handleOpenEditModal, handleDelete]);
   
-  // Use useDataTable hook with memoized dependencies and filtered data
-  const {
-    data: tableData,
-    loading: tableLoading,
-    handleExport,
-    handleRefresh,
-  } = useDataTable({
-    data: filteredData, // Use the filtered data here instead of all data
-    columns: tableColumns,
-    onExport: handleExportData,
-    onRefresh: () => console.log('Refresh triggered')
-  });
-  
+  // Enhanced export to PDF with recommendations and professional formatting
+  const handleExportData = useCallback(() => {
+    // Call the enhanced export function with all required parameters
+    return exportEnhancedPDF({
+      data: filteredData,
+      energyType: ENERGY_TYPE,
+      startYear: selectedStartYear,
+      endYear: selectedEndYear,
+      chartRef: chartRef,
+      currentProjection: currentProjection || 
+        (chartData.length > 0 ? chartData[chartData.length - 1].value : 0),
+      toast // Pass your toast object directly
+    });
+  }, [
+    filteredData, 
+    ENERGY_TYPE, 
+    selectedStartYear, 
+    selectedEndYear, 
+    chartData, 
+    currentProjection, 
+    toast
+  ]);
+
   // Memoize chart config to prevent recreation
   const chartConfig = useMemo(() => {
-    const config = getChartConfig();
-    // Add line chart specific configuration
-    config.line = {
-      stroke: '#FFD700', // Gold color
-      strokeWidth: 2,
-      dot: {
-        r: 5,
-        fill: '#FFD700',
-        stroke: '#fff',
-        strokeWidth: 2
-      },
-      activeDot: {
-        r: 7,
-        fill: '#FFD700',
-        stroke: '#fff',
-        strokeWidth: 2
-      }
-    };
+    const config = adminEnergyUtils.getChartConfig(ENERGY_TYPE);
     
     // Enhanced Y-axis configuration with proper label
     config.yAxis = {
@@ -123,24 +209,15 @@ const SolarAdmin = () => {
     };
     
     return config;
-  }, []);
-
-  // Handle year range change for both chart and table filtering
-  const handleStartYearChange = (year) => {
-    setYearRange(prev => ({ ...prev, startYear: year }));
-  };
-
-  const handleEndYearChange = (year) => {
-    setYearRange(prev => ({ ...prev, endYear: year }));
-  };
+  }, [ENERGY_TYPE]);
 
   // Form validation
   const formValidation = useMemo(() => {
     if (selectedYear && generationValue) {
-      return validateInputs(selectedYear, generationValue);
+      return adminEnergyUtils.validateInputs(ENERGY_TYPE, selectedYear, generationValue);
     }
     return { isValid: false, errors: {} };
-  }, [selectedYear, generationValue]);
+  }, [selectedYear, generationValue, ENERGY_TYPE]);
 
   return (
     <div className="p-6 max-w-7xl mx-auto">
@@ -173,8 +250,8 @@ const SolarAdmin = () => {
           </Typography>
           <div className="min-w-64">
             <YearPicker
-              initialStartYear={yearRange.startYear}
-              initialEndYear={yearRange.endYear}
+              initialStartYear={selectedStartYear}
+              initialEndYear={selectedEndYear}
               onStartYearChange={handleStartYearChange}
               onEndYearChange={handleEndYearChange}
             />
@@ -183,7 +260,7 @@ const SolarAdmin = () => {
       </Card.Base>
 
       {/* Chart Section */}
-      <Card.Base className="mb-6 overflow-hidden">
+      <Card.Base className="mb-6 overflow-hidden" ref={chartRef}>
         <div className="p-4 border-b border-gray-200">
           <h2 className="text-lg font-medium">Generation Overview</h2>
         </div>
@@ -211,26 +288,26 @@ const SolarAdmin = () => {
         </div>
       </Card.Base>
 
-      {/* Data Table */}
+      {/* Data Table - Using our custom columns and direct filtered data */}
       <DataTable
-        title={`Solar Generation Records (${yearRange.startYear} - ${yearRange.endYear})`}
+        title={`Solar Generation Records (${selectedStartYear} - ${selectedEndYear})`}
         columns={tableColumns}
-        data={tableData}
-        loading={loading || tableLoading}
+        data={filteredData} 
+        loading={loading}
         selectable={true}
         searchable={true}
         exportable={true}
         filterable={true}
         refreshable={true}
         pagination={true}
-        onExport={handleExport}
+        onExport={handleExportData} // Using our enhanced export function
         onRefresh={handleRefresh}
         tableClasses={{
           paper: 'shadow-md rounded-md',
           headerCell: 'bg-gray-50',
           row: 'hover:bg-amber-50'
         }}
-        emptyMessage={`No solar generation data available for years ${yearRange.startYear} - ${yearRange.endYear}`}
+        emptyMessage={`No solar generation data available for years ${selectedStartYear} - ${selectedEndYear}`}
       />
 
       {/* Add/Edit Modal */}

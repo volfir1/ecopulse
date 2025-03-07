@@ -3,7 +3,7 @@
 import React, { createContext, useContext, useEffect, useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { CONFIG } from '@config/configIndex';
-import authService from '@features/auth/services/authService';
+import authService from '../../services/authService';
 
 // Create the Auth Context
 const AuthContext = createContext(null);

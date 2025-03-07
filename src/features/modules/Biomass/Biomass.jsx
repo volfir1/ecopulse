@@ -1,18 +1,19 @@
 import React from 'react';
 import {
   LineChart, Line, XAxis, YAxis, Tooltip,
-  AreaChart, Area, ResponsiveContainer, CartesianGrid
+  AreaChart, Area, ResponsiveContainer, CartesianGrid,
+  BarChart, Bar
 } from 'recharts';
-import { Wind } from 'lucide-react';
+import { Leaf } from 'lucide-react';
 import { Button, Card, YearPicker, Skeleton } from '@shared/index';
-import useEnergyAnalytics from '../store/useEnergyAnalytics';
-import * as energyUtils from '../store/energyUtils';
+import useEnergyAnalytics from '@store/analytics/useEnergyAnalytics';
+import * as energyUtils from '@store/user/energyUtils'
 
-const WindEnergy = () => {
-  const ENERGY_TYPE = 'wind';
+const Biomass = () => {
+  const ENERGY_TYPE = 'biomass';
   const colorScheme = energyUtils.getEnergyColorScheme(ENERGY_TYPE);
   
-  // Use unified hook with 'wind' as the energy type
+  // Use unified hook with 'biomass' as the energy type
   const {
     generationData,
     currentProjection,
@@ -22,8 +23,6 @@ const WindEnergy = () => {
     handleStartYearChange,
     handleEndYearChange,
     handleDownload,
-    windSpeedData,
-    turbinePerformance,
     chartRef
   } = useEnergyAnalytics(ENERGY_TYPE);
 
@@ -33,23 +32,25 @@ const WindEnergy = () => {
 
   if (loading) {
     // Use unified skeleton component with the appropriate energy type
-    return <Skeleton.EnergyPageSkeleton energyType={ENERGY_TYPE} CardComponent={Card.Wind} />;
+    return <Skeleton.EnergyPageSkeleton energyType={ENERGY_TYPE} CardComponent={Card.Biomass} />;
   }
 
   // Make sure generation data is properly defined
   const safeGenerationData = Array.isArray(generationData) ? generationData : [];
 
   return (
-    <div className="p-6">
+    <div className="p-3">
+      {/* Header Section */}
       <div className="mb-6">
         <div className="flex justify-between items-center mb-4">
           <h1 className="text-2xl font-semibold flex items-center gap-2" style={{ color: colorScheme.primaryColor }}>
-            <Wind size={24} />
-            Wind Energy Analytics
+            <Leaf size={24} />
+            Biomass Energy Analytics
           </h1>
           <div className="text-gray-500">
-            Selected Range: {selectedStartYear} - {selectedEndYear}
-            <span className="text-sm ml-1">({selectedEndYear - selectedStartYear} years)</span>
+            <div className="text-sm font-medium">
+              Selected Range: {selectedStartYear} - {selectedEndYear}  ({selectedEndYear - selectedStartYear} year/s)
+            </div>
           </div>
         </div>
 
@@ -77,7 +78,8 @@ const WindEnergy = () => {
         </div>
       </div>
 
-      <Card.Wind className="p-6 mb-6">
+      {/* Charts Section */}
+      <Card.Biomass className="p-6 mb-6 bg-white shadow-sm">
         <h2 className="text-xl font-semibold mb-4 text-gray-800">
           Power Generation Trend
         </h2>
@@ -85,12 +87,11 @@ const WindEnergy = () => {
           {currentProjection} GWh
         </div>
         <p className="text-gray-600 mb-4">Predictive Analysis Generation projection</p>
-        {/* Add ref to the chart container */}
         <div className="h-[250px]" ref={chartRef}>
           <ResponsiveContainer width="100%" height="100%">
             <AreaChart data={safeGenerationData}>
               <defs>
-                <linearGradient id="windGradient" x1="0" y1="0" x2="0" y2="1">
+                <linearGradient id="biomassGradient" x1="0" y1="0" x2="0" y2="1">
                   {areaChartConfig.gradient.stops.map((stop, index) => (
                     <stop
                       key={index}
@@ -109,9 +110,9 @@ const WindEnergy = () => {
             </AreaChart>
           </ResponsiveContainer>
         </div>
-      </Card.Wind>
+      </Card.Biomass>
     </div>
   );
 };
 
-export default WindEnergy;
+export default Biomass;

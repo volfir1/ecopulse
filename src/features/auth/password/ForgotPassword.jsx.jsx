@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import authService from '../services/authService';
+import authService from '../../../services/authService';
 import { p, t } from '@shared/index'; // Assumes these exports contain your color values
 import crosswalk from '@assets/images/vectors/crosswalk.jpg';
 

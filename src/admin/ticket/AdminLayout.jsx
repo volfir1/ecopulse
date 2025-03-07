@@ -3,7 +3,7 @@ import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { AppIcon } from '@shared/index';
 import { useSnackbar } from '@components/toast-notif/ToastNotification';
 import AuthContext from '@shared/context/AuthContext';
-import ticketService from '../../features/help-support/components/ticketService';
+import ticketService from '../../services/ticketService';
 import {
   Box,
   Drawer,
