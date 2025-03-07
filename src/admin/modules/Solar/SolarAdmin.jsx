@@ -254,17 +254,152 @@ const SolarAdmin = () => {
             </div>
             <div>
               <NumberBox
-                label="Generation (GWh)"
-                value={generationValue}
-                onChange={handleGenerationChange}
-                placeholder="Enter generation value in GWh"
+                label="Total Renewable Energy (GWh)"
+                value={generationValue.totalRenewable}
+                onChange={(e) => handleGenerationChange(e, 'totalRenewable')}
+                placeholder="Enter total renewable energy value in GWh"
                 variant="outlined"
                 size="medium"
                 min={0}
                 step={0.01}
                 fullWidth
-                error={formValidation.errors.generation ? true : false}
-                helperText={formValidation.errors.generation}
+                error={formValidation.errors.totalRenewable ? true : false}
+                helperText={formValidation.errors.totalRenewable}
+              />
+            </div>
+            <div>
+              <NumberBox
+                label="Geothermal (GWh)"
+                value={generationValue.geothermal}
+                onChange={(e) => handleGenerationChange(e, 'geothermal')}
+                placeholder="Enter geothermal energy value in GWh"
+                variant="outlined"
+                size="medium"
+                min={0}
+                step={0.01}
+                fullWidth
+                error={formValidation.errors.geothermal ? true : false}
+                helperText={formValidation.errors.geothermal}
+              />
+            </div>
+            <div>
+              <NumberBox
+                label="Hydro (GWh)"
+                value={generationValue.hydro}
+                onChange={(e) => handleGenerationChange(e, 'hydro')}
+                placeholder="Enter hydro energy value in GWh"
+                variant="outlined"
+                size="medium"
+                min={0}
+                step={0.01}
+                fullWidth
+                error={formValidation.errors.hydro ? true : false}
+                helperText={formValidation.errors.hydro}
+              />
+            </div>
+            <div>
+              <NumberBox
+                label="Biomass (GWh)"
+                value={generationValue.biomass}
+                onChange={(e) => handleGenerationChange(e, 'biomass')}
+                placeholder="Enter biomass energy value in GWh"
+                variant="outlined"
+                size="medium"
+                min={0}
+                step={0.01}
+                fullWidth
+                error={formValidation.errors.biomass ? true : false}
+                helperText={formValidation.errors.biomass}
+              />
+            </div>
+            <div>
+              <NumberBox
+                label="Solar (GWh)"
+                value={generationValue.solar}
+                onChange={(e) => handleGenerationChange(e, 'solar')}
+                placeholder="Enter solar energy value in GWh"
+                variant="outlined"
+                size="medium"
+                min={0}
+                step={0.01}
+                fullWidth
+                error={formValidation.errors.solar ? true : false}
+                helperText={formValidation.errors.solar}
+              />
+            </div>
+            <div>
+              <NumberBox
+                label="Wind (GWh)"
+                value={generationValue.wind}
+                onChange={(e) => handleGenerationChange(e, 'wind')}
+                placeholder="Enter wind energy value in GWh"
+                variant="outlined"
+                size="medium"
+                min={0}
+                step={0.01}
+                fullWidth
+                error={formValidation.errors.wind ? true : false}
+                helperText={formValidation.errors.wind}
+              />
+            </div>
+            <div>
+              <NumberBox
+                label="Non-Renewable Energy (GWh)"
+                value={generationValue.nonRenewable}
+                onChange={(e) => handleGenerationChange(e, 'nonRenewable')}
+                placeholder="Enter non-renewable energy value in GWh"
+                variant="outlined"
+                size="medium"
+                min={0}
+                step={0.01}
+                fullWidth
+                error={formValidation.errors.nonRenewable ? true : false}
+                helperText={formValidation.errors.nonRenewable}
+              />
+            </div>
+            <div>
+              <NumberBox
+                label="Total Power Generation (GWh)"
+                value={generationValue.totalPower}
+                onChange={(e) => handleGenerationChange(e, 'totalPower')}
+                placeholder="Enter total power generation value in GWh"
+                variant="outlined"
+                size="medium"
+                min={0}
+                step={0.01}
+                fullWidth
+                error={formValidation.errors.totalPower ? true : false}
+                helperText={formValidation.errors.totalPower}
+              />
+            </div>
+            <div>
+              <NumberBox
+                label="Population (in millions)"
+                value={generationValue.population}
+                onChange={(e) => handleGenerationChange(e, 'population')}
+                placeholder="Enter population in millions"
+                variant="outlined"
+                size="medium"
+                min={0}
+                step={0.01}
+                fullWidth
+                error={formValidation.errors.population ? true : false}
+                helperText={formValidation.errors.population}
+              />
+            </div>
+            <div>
+              <NumberBox
+                label="Gross Domestic Product (GDP)"
+                value={generationValue.gdp}
+                onChange={(e) => handleGenerationChange(e, 'gdp')}
+                placeholder="Enter GDP value"
+                variant="outlined"
+                size="medium"
+                min={0}
+                step={0.01}
+                fullWidth
+                error={formValidation.errors.gdp ? true : false}
+                helperText={formValidation.errors.gdp}
               />
             </div>
           </Box>
@@ -280,7 +415,7 @@ const SolarAdmin = () => {
           <Button
             variant="primary"
             onClick={handleSubmit}
-            disabled={!formValidation.isValid}
+            // disabled={!formValidation.isValid}
             className="bg-yellow-500 hover:bg-yellow-600"
           >
             {isEditing ? 'Update' : 'Save'}
