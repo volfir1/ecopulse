@@ -3,11 +3,11 @@ import { useSnackbar } from '@shared/index';
 import { stores } from '../admin/adminEnergyStrore';
 
 /**
- * Custom hook for energy admin functionality
+ * Custom hook for energy analytics functionality
  * @param {string} energyType - 'solar', 'hydro', 'wind', 'biomass', or 'geothermal'
- * @returns {object} Admin functionality for the specified energy type
+ * @returns {object} Energy analytics functionality for the specified energy type
  */
-const useAdminEnergyAnalytics = (energyType) => {
+const useEnergyAnalytics = (energyType) => {
   // Validate energy type
   if (!['solar', 'hydro', 'wind', 'biomass', 'geothermal'].includes(energyType)) {
     throw new Error(`Invalid energy type: ${energyType}. Must be one of: solar, hydro, wind, biomass, geothermal`);
@@ -37,6 +37,7 @@ const useAdminEnergyAnalytics = (energyType) => {
   
   // Select actions from the store
   const initialize = store(state => state.initialize);
+  const fetchData = store(state => state.fetchData); // Ensure fetchData is exposed
   const handleOpenAddModal = store(state => state.handleOpenAddModal);
   const handleOpenEditModal = store(state => state.handleOpenEditModal);
   const handleCloseModal = store(state => state.handleCloseModal);
@@ -57,28 +58,20 @@ const useAdminEnergyAnalytics = (energyType) => {
     setChartRef(chartRef);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-  
-  // Enhanced submit handler with snackbar notifications
-  const handleSubmit = useCallback(async () => {
-    const result = await storeHandleSubmit();
-    
-    if (result.success) {
-      enqueueSnackbar(result.message, { variant: 'success' });
-    } else {
-      enqueueSnackbar(result.message, { variant: 'error' });
-    }
-  }, [storeHandleSubmit, enqueueSnackbar]);
-  
-  // Enhanced delete handler with snackbar notifications
-  const handleDelete = useCallback(async (id) => {
-    const result = await storeHandleDelete(id);
-    
-    if (result && result.success) {
-      enqueueSnackbar(result.message, { variant: 'success' });
-    } else if (result && !result.success && result.message) {
-      enqueueSnackbar(result.message, { variant: 'error' });
-    }
-  }, [storeHandleDelete, enqueueSnackbar]);
+
+  // Custom wrapper for start year change to improve API call reliability
+  const customHandleStartYearChange = useCallback((year) => {
+    handleStartYearChange(year);
+    // We call fetchData directly to ensure the API is called with the correct parameters
+    fetchData(year, selectedEndYear);
+  }, [handleStartYearChange, fetchData, selectedEndYear]);
+
+  // Custom wrapper for end year change
+  const customHandleEndYearChange = useCallback((year) => {
+    handleEndYearChange(year);
+    // We call fetchData directly to ensure the API is called with the correct parameters
+    fetchData(selectedStartYear, year);
+  }, [handleEndYearChange, fetchData, selectedStartYear]);
   
   // Enhanced download handler with snackbar notifications
   const handleDownloadWithNotification = useCallback(async () => {
@@ -103,8 +96,22 @@ const useAdminEnergyAnalytics = (energyType) => {
       enqueueSnackbar(result.message, { variant: 'info' });
     }
   }, [handleExportData, data, enqueueSnackbar]);
+
+  // Mock data for wind-specific metrics
+  const windSpeedData = [
+    { month: 'Jan', speed: 18.2 },
+    { month: 'Feb', speed: 17.8 },
+    { month: 'Mar', speed: 19.1 },
+    // Add more mock data as needed
+  ];
+
+  const turbinePerformance = {
+    efficiency: 87.5,
+    availability: 92.3,
+    maintenanceScheduled: '2025-05-15'
+  };
   
-  // Return unified admin functions and state
+  // Return unified energy analytics functions and state
   return {
     // Data
     data,
@@ -135,21 +142,28 @@ const useAdminEnergyAnalytics = (energyType) => {
     handleCloseModal,
     handleYearChange,
     handleGenerationChange,
-    handleSubmit,
     
     // Table actions
-    handleDelete,
+    handleDelete: storeHandleDelete,
     handleExportData: handleExportWithNotification,
     
     // Chart actions
-    handleStartYearChange,
-    handleEndYearChange,
+    handleStartYearChange: customHandleStartYearChange,
+    handleEndYearChange: customHandleEndYearChange,
     handleDownload: handleDownloadWithNotification,
+    
+    // Core functions that should be exposed
+    initialize,
+    fetchData,
     
     // Refresh data
     handleRefresh,
-    refresh: handleRefresh
+    refresh: handleRefresh,
+    
+    // Wind-specific data (mock data for now)
+    windSpeedData,
+    turbinePerformance
   };
 };
 
-export default useAdminEnergyAnalytics;
+export default useEnergyAnalytics;
