@@ -13,12 +13,13 @@ export const initializeLeafletIcons = () => {
 
 // Custom Marker creation for different energy types
 export const createCustomIcon = (energyType) => {
+  const energyTypeInfo = ENERGY_TYPES[energyType] || { markerColor: 'gray' }; // Default color if energyType is not found
   return L.divIcon({
     className: 'custom-icon',
     html: `<div style="
       width: 24px;
       height: 24px;
-      background-color: ${ENERGY_TYPES[energyType].markerColor};
+      background-color: ${energyTypeInfo.markerColor};
       border: 2px solid white;
       border-radius: 50%;
       box-shadow: 0 2px 5px rgba(0,0,0,0.2);

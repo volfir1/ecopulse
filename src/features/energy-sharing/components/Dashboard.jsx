@@ -14,6 +14,16 @@ import { SingleYearPicker } from '@shared/index'; // Ensure this import is corre
 // Import constants and data
 import { initializeLeafletIcons } from './scripts/mapHelper';
 
+// Manually defined coordinates for each location
+const locationCoordinates = {
+  "Bohol": { lat: 9.8500, lng: 124.1435 },
+  "Cebu": { lat: 10.3157, lng: 123.8854 },
+  "Negros": { lat: 9.9820, lng: 122.8358 },
+  "Panay": { lat: 11.1790, lng: 122.5662 },
+  "Leyte-Samar": { lat: 10.7500, lng: 124.8333 }
+  // Add more locations and their coordinates here
+};
+
 // Main Component
 const EnergySharing = () => {
   // Initialize Leaflet icons
@@ -43,7 +53,12 @@ const EnergySharing = () => {
           }
         });
         console.log('API Response:', response.data);
-        setLocations(response.data.predictions || []);
+        // Add coordinates to each location
+        const locationsWithCoordinates = response.data.predictions.map(location => ({
+          ...location,
+          coordinates: locationCoordinates[location.Place] || { lat: 0, lng: 0 } // Default to (0, 0) if not found
+        }));
+        setLocations(locationsWithCoordinates);
       } catch (error) {
         if (error.response) {
           console.error('Error fetching data:', error.response.data);
@@ -78,7 +93,8 @@ const EnergySharing = () => {
           wind: 0,
           hydropower: 0,
           geothermal: 0,
-          biomass: 0
+          biomass: 0,
+          coordinates: location.coordinates // Ensure coordinates are included
         };
       }
 
@@ -127,7 +143,8 @@ const EnergySharing = () => {
       wind: totals[place].wind,
       hydropower: totals[place].hydropower,
       geothermal: totals[place].geothermal,
-      biomass: totals[place].biomass
+      biomass: totals[place].biomass,
+      coordinates: totals[place].coordinates // Ensure coordinates are included
     }));
   }, [locations]);
 
