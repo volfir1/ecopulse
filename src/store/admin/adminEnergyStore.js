@@ -34,8 +34,8 @@ const createEnergyStore = (energyType) => {
         isEditing: false,
         editId: null,
         yearRange: {
-          startYear: new Date().getFullYear() - 4,
-          endYear: new Date().getFullYear() + 1
+          startYear: new Date().getFullYear(),
+          endYear: new Date().getFullYear() + 5
         },
         
         // Actions
