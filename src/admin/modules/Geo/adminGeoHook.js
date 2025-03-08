@@ -26,45 +26,26 @@ export const useGeothermalAnalytics = () => {
   const fetchData = useCallback(async (startYear, endYear) => {
     setLoading(true);
     try {
-      // Try to get data from API
-      try {
-        const response = await api.get(`/api/predictions/geothermal/?start_year=${startYear}&end_year=${endYear}`);
-        const data = response.data.predictions;
-        const formattedData = data.map(item => ({
-          date: item.Year,
-          value: parseFloat(item['Predicted Production'])
-        }));
+      const response = await api.get(`/api/predictions/geothermal/?start_year=${startYear}&end_year=${endYear}`);
+      const data = response.data.predictions;
+      const formattedData = data.map(item => ({
+        date: item.Year,
+        value: parseFloat(item['Predicted Production']),
+        isPredicted: item.isPredicted !== undefined ? item.isPredicted : false // Ensure isPredicted is included
+      }));
 
-        setGenerationData(formattedData);
-        if (formattedData.length > 0) {
-          setCurrentProjection(formattedData[formattedData.length - 1].value);
-        }
-      } catch (apiError) {
-        console.error('API Error:', apiError);
-        // For development, generate sample data when API fails
-        const currentYear = new Date().getFullYear();
-        const sampleData = Array.from({ length: endYear - startYear + 1 }, (_, i) => ({
-          date: startYear + i,
-          value: 900 + Math.random() * 300 + i * 60 // Different formula for geothermal
-        }));
-        
-        setGenerationData(sampleData);
-        if (sampleData.length > 0) {
-          setCurrentProjection(sampleData[sampleData.length - 1].value);
-        }
-      }
+      // Log the raw fetched data and the formatted data to verify the isPredicted column
+      console.log("Raw fetched data:", data);
+      console.log("Formatted data:", formattedData);
+
+      setGenerationData(formattedData);
     } catch (error) {
       console.error('Error fetching data:', error);
-      
-      try {
-        enqueueSnackbar('Failed to fetch geothermal data', { variant: 'error' });
-      } catch (snackbarError) {
-        console.error('Snackbar error:', snackbarError);
-      }
     } finally {
       setLoading(false);
     }
-  }, [enqueueSnackbar]);
+  }, []);
+  
 
   // Fetch data on component mount and when year range or refresh trigger changes
   useEffect(() => {

@@ -3,7 +3,7 @@ import React from 'react';
 import { AppIcon, theme } from '@shared/index';
 
 // Get table columns with memoized action buttons
-export const getTableColumns = (handleEdit, handleDelete) => [
+export const getTableColumns = (handleEdit, handleDelete, data) => [
   { 
     id: 'year', 
     label: 'Year', 
@@ -29,8 +29,13 @@ export const getTableColumns = (handleEdit, handleDelete) => [
     label: 'Actions', 
     align: 'center',
     sortable: false,
-    // Use a static format function that doesn't create new functions on each render
-    format: (_, row) => <ActionButtons row={row} onEdit={handleEdit} onDelete={handleDelete} />
+    format: (_, row) => {
+      // Only show actions if isPredicted is explicitly false
+      if (row.isPredicted === false) {
+        return <ActionButtons row={row} onEdit={handleEdit} onDelete={handleDelete} />;
+      }
+      return null; // No actions for predicted data
+    }
   }
 ];
 

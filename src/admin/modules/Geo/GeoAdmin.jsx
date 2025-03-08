@@ -122,14 +122,18 @@ const GeothermalAdmin = () => {
   // For demo purposes, use the data from the hook or sample data if empty
   const effectiveData = useMemo(() => {
     if (generationData.length > 0) {
-      return generationData.map((item, index) => ({
+      const data = generationData.map((item, index) => ({
         id: index + 1,
         year: item.date,
         generation: item.value,
-        dateAdded: new Date().toISOString()
+        dateAdded: new Date().toISOString(),
+        isPredicted: item.isPredicted !== undefined ? item.isPredicted : false // Ensure isPredicted is included
       }));
+      // Log the effective data to verify the isPredicted column
+      console.log("Effective data:", data);
+      return data;
     }
-    return generateSampleData();
+    return generateSampleData().map(item => ({ ...item, isPredicted: true })); // Mark sample data as predicted
   }, [generationData]);
 
   // Year range for filtering
@@ -154,8 +158,8 @@ const GeothermalAdmin = () => {
 
   // Configure data table columns
   const tableColumns = useMemo(() => 
-    getTableColumns(handleOpenEditModal, handleDelete), 
-    [handleOpenEditModal, handleDelete]);
+    getTableColumns(handleOpenEditModal, handleDelete, effectiveData), 
+    [handleOpenEditModal, handleDelete, effectiveData]);
   
   // Use useDataTable hook with filtered data
   const {
