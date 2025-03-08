@@ -1,16 +1,15 @@
-// HydropowerAdmin.jsx
-import React, { useMemo, useState, useCallback, useRef } from 'react';
+// HydroAdmin.jsx
+import React, { useMemo, useEffect, useRef } from 'react';
 import {
   Dialog,
   DialogTitle,
   DialogContent,
   DialogActions,
   IconButton,
-  Typography,
   Box
 } from '@mui/material';
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
-import { Droplets, X } from 'lucide-react';
+import { Droplet, X } from 'lucide-react';
 import {
   DataTable,
   Button,
@@ -21,122 +20,177 @@ import {
   NumberBox,
   useDataTable
 } from '@shared/index';
+import { useSnackbar } from 'notistack';
 
-import useHydropowerAnalytics from './adminHydroHook';
-import { getTableColumns, formatDataForChart, getChartConfig, generateSampleData, validateInputs } from './adminHydroUtil';
+// Import the Zustand store and utils
+import { useHydroStore } from '@store/admin/adminEnergyStore';
+import { exportHydroToPdf } from '@store/admin/adminEnergyExport';
+import energyUtils from '@store/admin/adminEnergyUtil';
 
-const HydropowerAdmin = () => {
-  // Define all handlers at the top of component - BEFORE any useMemo calls
+/**
+ * Hydro Administration Component
+ * @returns {React.ReactElement} The hydro admin component
+ */
+const HydroAdmin = () => {
+  // Use the snackbar for notifications
+  const { enqueueSnackbar } = useSnackbar();
   
-  // Custom hooks
+  // Reference for chart export
+  const chartRef = useRef(null);
+  
+  // Access the hydro store
   const {
-    generationData,
-    currentProjection,
+    data,
     loading,
-    selectedStartYear,
-    selectedEndYear,
-    handleStartYearChange,
-    handleEndYearChange,
-    handleRefresh,
-    handleDownload,
-    addRecord,
-    updateRecord,
+    error,
+    isModalOpen,
+    selectedYear,
+    generationValue,
+    isEditing,
+    yearRange,
+    fetchData,
+    openAddModal,
+    openEditModal,
+    closeModal,
+    setSelectedYear,
+    handleGenerationChange,
+    setYearRange,
+    submitData,
     deleteRecord,
-    waterFlowData,
-    turbineEfficiency,
-    chartRef
-  } = useHydropowerAnalytics();
-
-  // State for modal
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
-  const [generationValue, setGenerationValue] = useState('');
-  const [isEditing, setIsEditing] = useState(false);
-  const [editId, setEditId] = useState(null);
-
-  // Modal handlers
-  const handleOpenAddModal = useCallback(() => {
-    setIsEditing(false);
-    setSelectedYear(new Date().getFullYear());
-    setGenerationValue('');
-    setIsModalOpen(true);
-  }, []);
-
-  const handleOpenEditModal = useCallback((row) => {
-    setIsEditing(true);
-    setEditId(row.id);
-    setSelectedYear(row.year);
-    setGenerationValue(row.generation.toString());
-    setIsModalOpen(true);
-  }, []);
-
-  const handleCloseModal = useCallback(() => {
-    setIsModalOpen(false);
-  }, []);
-
-  const handleYearChange = useCallback((year) => {
-    setSelectedYear(year);
-  }, []);
-
-  const handleGenerationChange = useCallback((event) => {
-    setGenerationValue(event.target.value);
-  }, []);
-
-  const handleDelete = useCallback(async (id) => {
-    if (!window.confirm('Are you sure you want to delete this record?')) {
+    calculateTotals
+  } = useHydroStore();
+  
+  // Load data on component mount
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
+  
+  // Show notifications when errors occur
+  useEffect(() => {
+    if (error) {
+      enqueueSnackbar(`Error: ${error}`, { variant: 'error' });
+    }
+  }, [error, enqueueSnackbar]);
+  
+  // Handle year changes for filtering
+  const handleStartYearChange = (year) => {
+    setYearRange(year, undefined);
+  };
+  
+  const handleEndYearChange = (year) => {
+    setYearRange(undefined, year);
+  };
+  
+  // Enhanced handlers with notifications
+  const handleSubmit = async () => {
+    try {
+      const success = await submitData();
+      
+      if (success) {
+        enqueueSnackbar(
+          `Hydro generation data ${isEditing ? 'updated' : 'added'} successfully`, 
+          { variant: 'success' }
+        );
+      }
+    } catch (err) {
+      enqueueSnackbar(
+        `Failed to ${isEditing ? 'update' : 'add'} hydro generation data`, 
+        { variant: 'error' }
+      );
+    }
+  };
+  
+  const handleDelete = async (id) => {
+    try {
+      const success = await deleteRecord(id);
+      
+      if (success) {
+        enqueueSnackbar(`Hydro generation data deleted successfully`, { 
+          variant: 'success' 
+        });
+      }
+    } catch (err) {
+      enqueueSnackbar(`Failed to delete hydro generation data`, { 
+        variant: 'error' 
+      });
+    }
+  };
+  
+  // Handler for downloading chart as image
+  const handleDownload = () => {
+    if (!chartRef.current) {
+      enqueueSnackbar('Chart reference not available', { variant: 'warning' });
       return;
     }
     
     try {
-      await deleteRecord(id);
-    } catch (error) {
-      console.error('Error deleting data:', error);
-    }
-  }, [deleteRecord]);
-
-  // Form submit handler
-  const handleSubmit = useCallback(async () => {
-    if (!selectedYear || !generationValue) {
-      return;
-    }
-
-    try {
-      setIsModalOpen(false);
+      // Find the SVG element
+      const svgElement = chartRef.current.querySelector('svg');
       
-      if (isEditing) {
-        await updateRecord(editId, selectedYear, parseFloat(generationValue));
-      } else {
-        await addRecord(selectedYear, parseFloat(generationValue));
+      if (!svgElement) {
+        enqueueSnackbar('SVG element not found', { variant: 'warning' });
+        return;
       }
-    } catch (error) {
-      console.error('Error saving data:', error);
+      
+      // Clone the SVG for manipulation
+      const svgClone = svgElement.cloneNode(true);
+      svgClone.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
+      
+      // Convert SVG to a data URL
+      const svgData = new XMLSerializer().serializeToString(svgClone);
+      const svgBlob = new Blob([svgData], { type: 'image/svg+xml;charset=utf-8' });
+      const url = URL.createObjectURL(svgBlob);
+      
+      // Create download link
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = 'hydro_generation_chart.svg';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      
+      enqueueSnackbar('Chart downloaded successfully', { variant: 'success' });
+    } catch (err) {
+      console.error('Error downloading chart:', err);
+      enqueueSnackbar('Failed to download chart', { variant: 'error' });
     }
-  }, [selectedYear, generationValue, isEditing, editId, updateRecord, addRecord]);
-
-  // Export data handler - DEFINED BEFORE IT'S USED
-  const handleExportData = useCallback(() => {
-    // Delegate to the download handler from the hook
-    handleDownload();
-  }, [handleDownload]);
-
-  // For demo purposes, use the data from the hook or sample data if empty
-  const effectiveData = useMemo(() => {
-    if (generationData.length > 0) {
-      return generationData.map((item, index) => ({
-        id: index + 1,
-        year: item.date,
-        generation: item.value,
-        dateAdded: new Date().toISOString()
-      }));
+  };
+  
+  // Handle export to PDF
+  const handleExportData = () => {
+    try {
+      const toast = (message, { type }) => {
+        const variantMap = {
+          success: 'success',
+          error: 'error',
+          info: 'info',
+          warning: 'warning'
+        };
+        enqueueSnackbar(message, { variant: variantMap[type] || 'default' });
+      };
+      
+      // Make sure we're passing the actual table columns array to the export function
+      exportHydroToPdf({
+        data: tableData,
+        energyType: 'hydro',
+        title: `Hydro Generation Data (${yearRange.startYear} - ${yearRange.endYear})`,
+        filename: 'Hydro_Generation_Data.pdf',
+        columns: tableColumns,
+        chartData: chartData,
+        yearRange: yearRange,
+        chartRef: chartRef
+      }, toast);
+    } catch (err) {
+      console.error('Error exporting data to PDF:', err);
+      enqueueSnackbar('Failed to export data to PDF', { variant: 'error' });
     }
-    return generateSampleData();
-  }, [generationData]);
-
-  // Year range for filtering
-  const yearRange = useMemo(() => ({
-    startYear: selectedStartYear,
-    endYear: selectedEndYear
-  }), [selectedStartYear, selectedEndYear]);
+  };
+  
+  // For demo purposes, use sample data if no data is available
+  const effectiveData = useMemo(() => 
+    data.length > 0 ? data : energyUtils.generateSampleData('hydro'), 
+    [data]
+  );
 
   // Filter data based on selected year range
   const filteredData = useMemo(() => {
@@ -148,48 +202,31 @@ const HydropowerAdmin = () => {
 
   // Format data for chart
   const chartData = useMemo(() => 
-    formatDataForChart(filteredData),
+    energyUtils.formatDataForChart(filteredData),
     [filteredData]
   );
 
   // Configure data table columns
   const tableColumns = useMemo(() => 
-    getTableColumns(handleOpenEditModal, handleDelete), 
-    [handleOpenEditModal, handleDelete]);
+    energyUtils.getTableColumns(openEditModal, handleDelete), 
+    [openEditModal, handleDelete]
+  );
   
-  // Use useDataTable hook with filtered data
+  // Use useDataTable hook with memoized dependencies and filtered data
   const {
     data: tableData,
     loading: tableLoading,
-    handleExport,
-    handleRefresh: refreshTable,
+    handleRefresh,
   } = useDataTable({
     data: filteredData,
     columns: tableColumns,
     onExport: handleExportData,
-    onRefresh: handleRefresh
+    onRefresh: fetchData
   });
   
   // Memoize chart config to prevent recreation
   const chartConfig = useMemo(() => {
-    const config = getChartConfig();
-    // Add line chart specific configuration
-    config.line = {
-      stroke: '#2E90E5', // Hydropower blue color
-      strokeWidth: 2,
-      dot: {
-        r: 5,
-        fill: '#2E90E5',
-        stroke: '#fff',
-        strokeWidth: 2
-      },
-      activeDot: {
-        r: 7,
-        fill: '#2E90E5',
-        stroke: '#fff',
-        strokeWidth: 2
-      }
-    };
+    const config = energyUtils.getChartConfig('hydro');
     
     // Enhanced Y-axis configuration with proper label
     config.yAxis = {
@@ -208,37 +245,39 @@ const HydropowerAdmin = () => {
 
   // Form validation
   const formValidation = useMemo(() => {
-    if (selectedYear && generationValue) {
-      return validateInputs(selectedYear, generationValue);
-    }
-    return { isValid: false, errors: {} };
+    return energyUtils.validateInputs(selectedYear, generationValue);
   }, [selectedYear, generationValue]);
 
-  // Skeleton loader for initial loading state
-  if (loading && generationData.length === 0) {
-    return (
-      <div className="p-6 max-w-7xl mx-auto">
-        <div className="flex justify-between items-center mb-6">
-          <div className="flex items-center gap-2">
-            <div className="p-2 rounded-lg bg-blue-100">
-              <Droplets className="text-blue-500" size={24} />
-            </div>
-            <div>
-              <h1 className="text-2xl font-semibold">Hydropower Generation Data</h1>
-              <p className="text-gray-500">Loading hydropower generation data...</p>
-            </div>
-          </div>
-        </div>
-        <Card.Base className="mb-6 p-4 flex justify-center items-center h-96">
-          <div className="animate-pulse flex flex-col items-center">
-            <div className="w-16 h-16 bg-blue-200 rounded-full mb-4"></div>
-            <div className="h-4 w-36 bg-blue-200 rounded mb-2"></div>
-            <div className="h-3 w-24 bg-blue-200 rounded"></div>
-          </div>
-        </Card.Base>
-      </div>
-    );
-  }
+  // Calculate totals on form changes
+  useEffect(() => {
+    const hasRelevantFields = generationValue.solar || 
+                             generationValue.wind || 
+                             generationValue.hydro || 
+                             generationValue.biomass || 
+                             generationValue.geothermal || 
+                             generationValue.nonRenewable;
+    
+    if (hasRelevantFields) {
+      calculateTotals();
+    }
+  }, [
+    generationValue.solar,
+    generationValue.wind,
+    generationValue.hydro,
+    generationValue.biomass,
+    generationValue.geothermal,
+    generationValue.nonRenewable,
+    calculateTotals
+  ]);
+
+  // Get the latest projection based on Wind admin pattern
+  const currentProjection = useMemo(() => {
+    if (filteredData.length > 0) {
+      const sortedData = [...filteredData].sort((a, b) => b.year - a.year);
+      return sortedData[0].generation;
+    }
+    return null;
+  }, [filteredData]);
 
   return (
     <div className="p-6 max-w-7xl mx-auto">
@@ -246,17 +285,17 @@ const HydropowerAdmin = () => {
       <div className="flex justify-between items-center mb-6">
         <div className="flex items-center gap-2">
           <div className="p-2 rounded-lg bg-blue-100">
-            <Droplets className="text-blue-500" size={24} />
+            <Droplet className="text-blue-500" size={24} />
           </div>
           <div>
-            <h1 className="text-2xl font-semibold">Hydropower Generation Data</h1>
-            <p className="text-gray-500">Manage historical and projected hydropower generation data</p>
+            <h1 className="text-2xl font-semibold">Hydro Generation Data</h1>
+            <p className="text-gray-500">Manage historical and projected hydro generation data</p>
           </div>
         </div>
         <Button
           variant="primary"
           className="bg-blue-500 hover:bg-blue-600 flex items-center gap-2"
-          onClick={handleOpenAddModal}
+          onClick={openAddModal}
         >
           <AppIcon name="plus" size={18} />
           Add New Record
@@ -266,9 +305,9 @@ const HydropowerAdmin = () => {
       {/* Year Range Filter Card */}
       <Card.Base className="mb-6 p-4">
         <div className="flex justify-between items-center">
-          <Typography variant="h6" className="text-gray-700">
+          <div className="text-gray-700 font-medium">
             Filter Data By Year Range
-          </Typography>
+          </div>
           <div className="min-w-64">
             <YearPicker
               initialStartYear={yearRange.startYear}
@@ -287,7 +326,7 @@ const HydropowerAdmin = () => {
           {currentProjection && (
             <div className="mt-2">
               <span className="text-gray-500">Latest Projection:</span>
-              <span className="ml-2 text-xl font-semibold text-blue-600">{currentProjection.toFixed(2)} GWh</span>
+              <span className="ml-2 text-xl font-semibold text-blue-700">{currentProjection.toFixed(2)} GWh</span>
             </div>
           )}
         </div>
@@ -313,35 +352,53 @@ const HydropowerAdmin = () => {
             </LineChart>
           </ResponsiveContainer>
         </div>
+        <div className="flex justify-end p-4 border-t border-gray-200">
+          <Button
+            variant="secondary"
+            className="flex items-center gap-2 mr-2"
+            onClick={handleDownload}
+          >
+            <AppIcon name="download" size={18} />
+            Download Chart
+          </Button>
+          <Button
+            variant="primary"
+            className="flex items-center gap-2 bg-blue-500 hover:bg-blue-600"
+            onClick={handleExportData}
+          >
+            <AppIcon name="file-pdf" size={18} />
+            Export to PDF
+          </Button>
+        </div>
       </Card.Base>
 
       {/* Data Table */}
       <DataTable
-        title={`Hydropower Generation Records (${yearRange.startYear} - ${yearRange.endYear})`}
+        title={`Hydro Generation Records (${yearRange.startYear} - ${yearRange.endYear})`}
         columns={tableColumns}
         data={tableData}
-        loading={tableLoading}
+        loading={loading || tableLoading}
         selectable={true}
         searchable={true}
         exportable={true}
         filterable={true}
         refreshable={true}
         pagination={true}
-        onExport={handleExport}
-        onRefresh={refreshTable}
+        onExport={handleExportData}
+        onRefresh={handleRefresh}
         tableClasses={{
           paper: "shadow-md rounded-md",
           headerCell: "bg-gray-50",
           row: "hover:bg-blue-50"
         }}
-        emptyMessage={`No hydropower generation data available for years ${yearRange.startYear} - ${yearRange.endYear}`}
+        emptyMessage={`No hydro generation data available for years ${yearRange.startYear} - ${yearRange.endYear}`}
       />
 
       {/* Add/Edit Modal */}
-      <Dialog open={isModalOpen} onClose={handleCloseModal} maxWidth="sm" fullWidth>
+      <Dialog open={isModalOpen} onClose={closeModal} maxWidth="sm" fullWidth>
         <DialogTitle className="flex justify-between items-center">
-          <Typography variant="h6">{isEditing ? 'Edit Record' : 'Add New Record'}</Typography>
-          <IconButton onClick={handleCloseModal} size="small">
+          <span className="text-lg font-medium">{isEditing ? 'Edit Record' : 'Add New Record'}</span>
+          <IconButton onClick={closeModal} size="small">
             <X size={18} />
           </IconButton>
         </DialogTitle>
@@ -353,22 +410,161 @@ const HydropowerAdmin = () => {
               </label>
               <SingleYearPicker
                 initialYear={selectedYear}
-                onYearChange={handleYearChange}
+                onYearChange={setSelectedYear}
               />
             </div>
             <div>
               <NumberBox
-                label="Generation (GWh)"
-                value={generationValue}
-                onChange={handleGenerationChange}
-                placeholder="Enter generation value in GWh"
+                label="Total Renewable Energy (GWh)"
+                value={generationValue.totalRenewable}
+                onChange={(e) => handleGenerationChange(e, 'totalRenewable')}
+                placeholder="Total renewable energy in GWh"
                 variant="outlined"
                 size="medium"
                 min={0}
                 step={0.01}
                 fullWidth
-                error={formValidation.errors.generation ? true : false}
-                helperText={formValidation.errors.generation}
+                readOnly
+                disabled
+                error={formValidation.errors?.totalRenewable ? true : false}
+                helperText={formValidation.errors?.totalRenewable}
+              />
+            </div>
+            <div>
+              <NumberBox
+                label="Geothermal (GWh)"
+                value={generationValue.geothermal}
+                onChange={(e) => handleGenerationChange(e, 'geothermal')}
+                placeholder="Enter geothermal energy value in GWh"
+                variant="outlined"
+                size="medium"
+                min={0}
+                step={0.01}
+                fullWidth
+                error={formValidation.errors?.geothermal ? true : false}
+                helperText={formValidation.errors?.geothermal}
+              />
+            </div>
+            <div>
+              <NumberBox
+                label="Hydro (GWh)"
+                value={generationValue.hydro}
+                onChange={(e) => handleGenerationChange(e, 'hydro')}
+                placeholder="Enter hydro energy value in GWh"
+                variant="outlined"
+                size="medium"
+                min={0}
+                step={0.01}
+                fullWidth
+                error={formValidation.errors?.hydro ? true : false}
+                helperText={formValidation.errors?.hydro}
+              />
+            </div>
+            <div>
+              <NumberBox
+                label="Biomass (GWh)"
+                value={generationValue.biomass}
+                onChange={(e) => handleGenerationChange(e, 'biomass')}
+                placeholder="Enter biomass energy value in GWh"
+                variant="outlined"
+                size="medium"
+                min={0}
+                step={0.01}
+                fullWidth
+                error={formValidation.errors?.biomass ? true : false}
+                helperText={formValidation.errors?.biomass}
+              />
+            </div>
+            <div>
+              <NumberBox
+                label="Solar (GWh)"
+                value={generationValue.solar}
+                onChange={(e) => handleGenerationChange(e, 'solar')}
+                placeholder="Enter solar energy value in GWh"
+                variant="outlined"
+                size="medium"
+                min={0}
+                step={0.01}
+                fullWidth
+                error={formValidation.errors?.solar ? true : false}
+                helperText={formValidation.errors?.solar}
+              />
+            </div>
+            <div>
+              <NumberBox
+                label="Wind (GWh)"
+                value={generationValue.wind}
+                onChange={(e) => handleGenerationChange(e, 'wind')}
+                placeholder="Enter wind energy value in GWh"
+                variant="outlined"
+                size="medium"
+                min={0}
+                step={0.01}
+                fullWidth
+                error={formValidation.errors?.wind ? true : false}
+                helperText={formValidation.errors?.wind}
+              />
+            </div>
+            <div>
+              <NumberBox
+                label="Non-Renewable Energy (GWh)"
+                value={generationValue.nonRenewable}
+                onChange={(e) => handleGenerationChange(e, 'nonRenewable')}
+                placeholder="Enter non-renewable energy value in GWh"
+                variant="outlined"
+                size="medium"
+                min={0}
+                step={0.01}
+                fullWidth
+                error={formValidation.errors?.nonRenewable ? true : false}
+                helperText={formValidation.errors?.nonRenewable}
+              />
+            </div>
+            <div>
+              <NumberBox
+                label="Total Power Generation (GWh)"
+                value={generationValue.totalPower}
+                onChange={(e) => handleGenerationChange(e, 'totalPower')}
+                placeholder="Total power generation in GWh"
+                variant="outlined"
+                size="medium"
+                min={0}
+                step={0.01}
+                fullWidth
+                readOnly
+                disabled
+                error={formValidation.errors?.totalPower ? true : false}
+                helperText={formValidation.errors?.totalPower}
+              />
+            </div>
+            <div>
+              <NumberBox
+                label="Population (in millions)"
+                value={generationValue.population}
+                onChange={(e) => handleGenerationChange(e, 'population')}
+                placeholder="Enter population in millions"
+                variant="outlined"
+                size="medium"
+                min={0}
+                step={0.01}
+                fullWidth
+                error={formValidation.errors?.population ? true : false}
+                helperText={formValidation.errors?.population}
+              />
+            </div>
+            <div>
+              <NumberBox
+                label="Gross Domestic Product (GDP)"
+                value={generationValue.gdp}
+                onChange={(e) => handleGenerationChange(e, 'gdp')}
+                placeholder="Enter GDP value"
+                variant="outlined"
+                size="medium"
+                min={0}
+                step={0.01}
+                fullWidth
+                error={formValidation.errors?.gdp ? true : false}
+                helperText={formValidation.errors?.gdp}
               />
             </div>
           </Box>
@@ -376,7 +572,7 @@ const HydropowerAdmin = () => {
         <DialogActions className="p-4">
           <Button
             variant="secondary"
-            onClick={handleCloseModal}
+            onClick={closeModal}
             className="mr-2"
           >
             Cancel
@@ -384,7 +580,6 @@ const HydropowerAdmin = () => {
           <Button
             variant="primary"
             onClick={handleSubmit}
-            disabled={!formValidation.isValid}
             className="bg-blue-500 hover:bg-blue-600"
           >
             {isEditing ? 'Update' : 'Save'}
@@ -395,4 +590,4 @@ const HydropowerAdmin = () => {
   );
 };
 
-export default HydropowerAdmin;
+export default HydroAdmin;

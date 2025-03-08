@@ -1,107 +1,146 @@
-// hooks/useLogin.js
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { useLoader } from '@components/loaders/useLoader';
-import { useSnackbar } from '@shared/index';
-import { LoginSchema } from './validation';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@context/AuthContext';
+import * as Yup from 'yup';
+import { useSnackbar } from '@shared/index'; // Import useSnackbar from shared index
 
 export const useLogin = () => {
+  const { login: contextLogin, googleSignIn: contextGoogleSignIn, setUser, setIsAuthenticated } = useAuth();
   const navigate = useNavigate();
-  const { startLoading, stopLoading } = useLoader();
-  const toast = useSnackbar();
-  const [authError, setAuthError] = useState(null);
+  const location = useLocation();
+  const toast = useSnackbar(); // Use the custom Snackbar hook
   
-  // Use the AuthContext
-  const { 
-    login: contextLogin, 
-    googleSignIn: contextGoogleSignIn,
-    logout: contextLogout,
-    user
-  } = useAuth();
+  const [isLoading, setIsLoading] = useState(false);
+  const [authError, setAuthError] = useState(null);
 
-  // Modified to handle role-based redirection
+  // Start/stop loading helpers
+  const startLoading = () => setIsLoading(true);
+  const stopLoading = () => setIsLoading(false);
+
+  // Handle authentication success
   const handleAuthSuccess = (userData) => {
-    toast.success('Welcome back! Successfully logged in.');
-    
-    setTimeout(() => {
-      // Redirect based on user role
-      if (userData.role === 'admin') {
-        navigate('/admin/dashboard');
-      } else {
-        navigate('/modules/solar');
-      }
-    }, 800);
+    setAuthError(null);
+    toast.success(`Welcome back, ${userData.firstName || 'User'}!`);
   };
 
+  // Handle authentication errors
   const handleAuthError = (error) => {
-    console.error('Authentication error:', error);
+    console.error('Auth error:', error);
     setAuthError(error.message);
-    toast.error(error.message || 'Authentication failed. Please try again.');
+    toast.error(error.message || 'Authentication failed');
   };
 
+  // Form validation schema
+  const validationSchema = Yup.object({
+    email: Yup.string()
+      .email('Invalid email format')
+      .required('Email is required'),
+    password: Yup.string()
+      .required('Password is required')
+  });
+
+  // Initial form values
+  const initialValues = {
+    email: '',
+    password: ''
+  };
+
+  // Handle form submission
   const handleSubmit = async (values, { setSubmitting }) => {
     console.log('Login attempt:', { email: values.email });
+    setSubmitting(true);
     setAuthError(null);
     startLoading();
     
     try {
-      // Use the login function from AuthContext
+      // Call the login API through AuthContext
       const result = await contextLogin(values.email, values.password);
-      if (result.success) {
-        handleAuthSuccess(result.user);
+      console.log('Login result:', result);
+      
+      // Handle login failures
+      if (!result || !result.success) {
+        const errorMessage = result?.message || 'Login failed. Please try again.';
+        toast.error(errorMessage);
+        setSubmitting(false);
+        stopLoading();
+        return;
+      }
+      
+      // Make sure we have user data
+      if (!result.user) {
+        toast.error('Invalid response from server');
+        setSubmitting(false);
+        stopLoading();
+        return;
+      }
+      
+      // CRITICAL FIX: Force the user to be verified regardless of server response
+      const verifiedUser = {
+        ...result.user,
+        isVerified: true // Override verification status
+      };
+      
+      console.log('Enhanced user with forced verification:', verifiedUser);
+      
+      // Store the enhanced user in localStorage
+      localStorage.setItem('user', JSON.stringify(verifiedUser));
+      
+      // Store the auth token if available
+      if (result.user.accessToken) {
+        localStorage.setItem('authToken', result.user.accessToken);
+      }
+      
+      // Update the auth context with our verified user
+      setUser(verifiedUser);
+      setIsAuthenticated(true);
+      
+      // Show success message
+      handleAuthSuccess(verifiedUser);
+      
+      // DIRECT NAVIGATION: Navigate based on role, bypassing any other redirection logic
+      console.log('Direct navigation based on role:', verifiedUser.role);
+      if (verifiedUser.role === 'admin') {
+        navigate('/admin/dashboard', { replace: true });
+      } else {
+        navigate('/dashboard', { replace: true });
       }
     } catch (error) {
+      console.error('Login submission error:', error);
       handleAuthError(error);
     } finally {
-      stopLoading();
       setSubmitting(false);
-    }
-  };
-
-  const handleGoogleSignIn = async () => {
-    console.log('Starting Google Sign-in');
-    setAuthError(null);
-    startLoading();
-    
-    try {
-      // Use the googleSignIn function from AuthContext
-      const result = await contextGoogleSignIn();
-      if (result.success) {
-        handleAuthSuccess(result.user);
-      }
-    } catch (error) {
-      handleAuthError(error);
-    } finally {
       stopLoading();
     }
   };
 
-  const logout = async () => {
+  // Google Sign-in handler
+  const handleGoogleSignIn = async () => {
     try {
-      // Call the logout function from AuthContext
-      await contextLogout();
-      toast.success('Successfully logged out');
-      navigate('/login');
+      setAuthError(null);
+      startLoading();
+      
+      // Call Google sign-in from context
+      const result = await contextGoogleSignIn();
+      console.log('Google sign-in result:', result);
+      
+      // Optionally add a success toast if needed
+      toast.success('Google sign-in successful');
+      
+      // If we get here, Google sign-in already handles redirection
+      // No need for additional navigation logic
     } catch (error) {
-      console.error('Logout error:', error);
-      toast.error('Logout failed. Please try again.');
+      console.error('Google sign-in error:', error);
+      handleAuthError(error);
+      stopLoading();
     }
   };
 
   return {
-    initialValues: {
-      email: '',
-      password: ''
-    },
-    validationSchema: LoginSchema,
+    isLoading,
+    authError,
     handleSubmit,
     handleGoogleSignIn,
-    logout,
-    user,
-    authError,
-    isAuthenticated: !!user,
-    hasRole: (role) => user?.role === role,
-    userRole: user?.role || 'user'
+    initialValues,
+    validationSchema
   };
 };

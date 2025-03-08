@@ -24,3 +24,4 @@ export {default as useSingleYearPicker} from '@components/datepicker/useSingleYe
 export {default as SnackbarProvider, useSnackbar} from '@components/toast-notif/ToastNotification'
 export {default as DataTable} from '@components/table/DataTable'
 export {default as useDataTable} from '@components/table/useDataTable'
+export {default as Skeleton} from '@components/skeleton/skeleton'

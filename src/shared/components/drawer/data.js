@@ -93,33 +93,34 @@ export const USER_NAVIGATION = [
   {
     kind: 'item',
     segment: 'settings',
-    title: 'Settings',
-    icon: <AppIcon name="settings" />,
-    path: '/settings',
+    title: 'Mails',
+    icon: <AppIcon name="mail" />,
+    path: '/mails',
   }
+  
 ];
 
 export const ADMIN_NAVIGATION = [
   {
     kind: 'header',
-    segment: 'header-main',
-    title: 'Main Menu',
+    segment: 'main-apps',
+    title: 'Main App',
   },
   {
     kind: 'item',
-    segment: 'dashboard',
-    title: 'Dashboard',
-    icon: <AppIcon name="dashboard" />,
+    segment: 'Admin',
+    title: 'Admin Dashboard',
+    icon: <AppIcon name="shield" />,
     path: '/admin/dashboard',
   },
   {
-    kind: 'divider',
-    segment: 'divider-admin',
+    kind: 'divider', // Added divider here
+    segment: 'admin-divider',
   },
   {
     kind: 'header',
-    segment: 'header-admin',
-    title: 'Admin Panel',
+    segment: 'main-menu',
+    title: 'Main Menu',
   },
   {
     kind: 'item',
@@ -161,15 +162,35 @@ export const ADMIN_NAVIGATION = [
         title: 'Biomass',
         icon: <AppIcon name="biomass" />,
         path: '/admin/modules/biomass',
-      },
-      
+      },     
     ],
   },
   {
     kind: 'item',
-    segment: 'energy-share',
+    segment: 'peer-to-peer',
+    title: 'Peer to Peer',
+    icon: <AppIcon name="net" />,
+    path: '/admin/peer',
+  },
+  {
+    kind: 'item',
+    segment: 'recommendations',
+    title: 'Recommendations',
+    icon: <AppIcon name="check" />,
+    path: '/admin/recommendation',
+  },
+  {
+    kind: 'item',
+    segment: 'manage-users',
     title: 'Manage Users',
     icon: <AppIcon name="profile" />,
     path: '/admin/users',
+  },
+  {
+    kind: 'item',
+    segment: 'client-tickets',
+    title: 'Tickets',
+    icon: <AppIcon name="ticket" />,
+    path: '/admin/tickets',
   },
 ];

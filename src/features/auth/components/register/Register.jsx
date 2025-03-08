@@ -7,6 +7,7 @@ import { useRegister } from './registerHook';
 import { RegisterSchema, initialValues } from './validation';
 import { p, t } from '@shared/index';
 import crosswalk from '../../../../assets/images/vectors/crosswalk.jpg';
+import VerifyEmail from '@features/auth/verification/VerifiEmail';
 
 const Register = () => {
   const {

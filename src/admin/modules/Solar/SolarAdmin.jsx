@@ -1,12 +1,11 @@
 // SolarAdmin.jsx
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useEffect, useRef } from 'react';
 import {
   Dialog,
   DialogTitle,
   DialogContent,
   DialogActions,
   IconButton,
-  Typography,
   Box
 } from '@mui/material';
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
@@ -21,42 +20,179 @@ import {
   NumberBox,
   useDataTable
 } from '@shared/index';
+import { useSnackbar } from 'notistack';
 
-import useSolarAdmin from './solarAdminHook';
-import { getTableColumns, formatDataForChart, getChartConfig, generateSampleData, validateInputs } from './adminSolarUtil';
+// Import the Zustand store and utils - fix duplicate imports
+import { useSolarStore } from '@store/admin/adminEnergyStore';
+import { exportSolarToPdf } from '@store/admin/adminEnergyExport';
+import energyUtils from '@store/admin/adminEnergyUtil';
 
+/**
+ * Solar Administration Component
+ * @returns {React.ReactElement} The solar admin component
+ */
 const SolarAdmin = () => {
-  // Custom hooks
+  // Use the snackbar for notifications
+  const { enqueueSnackbar } = useSnackbar();
+  
+  // Reference for chart export
+  const chartRef = useRef(null);
+  
+  // Access the solar store
   const {
     data,
     loading,
+    error,
     isModalOpen,
     selectedYear,
     generationValue,
     isEditing,
-    handleOpenAddModal,
-    handleOpenEditModal,
-    handleCloseModal,
-    handleYearChange,
+    yearRange,
+    fetchData,
+    openAddModal,
+    openEditModal,
+    closeModal,
+    setSelectedYear,
     handleGenerationChange,
-    handleSubmit,
-    handleDelete,
-    handleExportData,
-  } = useSolarAdmin();
-
-  // State for year range filtering (used for both chart and table)
-  const [yearRange, setYearRange] = useState({
-    startYear: new Date().getFullYear() - 4,
-    endYear: new Date().getFullYear() + 1
-  });
-
+    setYearRange,
+    submitData,
+    deleteRecord,
+    calculateTotals
+  } = useSolarStore();
+  
+  // Load data on component mount
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
+  
+  // Show notifications when errors occur
+  useEffect(() => {
+    if (error) {
+      enqueueSnackbar(`Error: ${error}`, { variant: 'error' });
+    }
+  }, [error, enqueueSnackbar]);
+  
+  // Handle year changes for filtering
+  const handleStartYearChange = (year) => {
+    setYearRange(year, undefined);
+  };
+  
+  const handleEndYearChange = (year) => {
+    setYearRange(undefined, year);
+  };
+  
+  // Enhanced handlers with notifications
+  const handleSubmit = async () => {
+    try {
+      const success = await submitData();
+      
+      if (success) {
+        enqueueSnackbar(
+          `Solar generation data ${isEditing ? 'updated' : 'added'} successfully`, 
+          { variant: 'success' }
+        );
+      }
+    } catch (err) {
+      enqueueSnackbar(
+        `Failed to ${isEditing ? 'update' : 'add'} solar generation data`, 
+        { variant: 'error' }
+      );
+    }
+  };
+  
+  const handleDelete = async (id) => {
+    try {
+      const success = await deleteRecord(id);
+      
+      if (success) {
+        enqueueSnackbar(`Solar generation data deleted successfully`, { 
+          variant: 'success' 
+        });
+      }
+    } catch (err) {
+      enqueueSnackbar(`Failed to delete solar generation data`, { 
+        variant: 'error' 
+      });
+    }
+  };
+  
+  // Handler for downloading chart as image
+  const handleDownload = () => {
+    if (!chartRef.current) {
+      enqueueSnackbar('Chart reference not available', { variant: 'warning' });
+      return;
+    }
+    
+    try {
+      // Find the SVG element
+      const svgElement = chartRef.current.querySelector('svg');
+      
+      if (!svgElement) {
+        enqueueSnackbar('SVG element not found', { variant: 'warning' });
+        return;
+      }
+      
+      // Clone the SVG for manipulation
+      const svgClone = svgElement.cloneNode(true);
+      svgClone.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
+      
+      // Convert SVG to a data URL
+      const svgData = new XMLSerializer().serializeToString(svgClone);
+      const svgBlob = new Blob([svgData], { type: 'image/svg+xml;charset=utf-8' });
+      const url = URL.createObjectURL(svgBlob);
+      
+      // Create download link
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = 'solar_generation_chart.svg';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      
+      enqueueSnackbar('Chart downloaded successfully', { variant: 'success' });
+    } catch (err) {
+      console.error('Error downloading chart:', err);
+      enqueueSnackbar('Failed to download chart', { variant: 'error' });
+    }
+  };
+  
+  // Handle export to PDF
+  const handleExportData = () => {
+    try {
+      const toast = (message, { type }) => {
+        const variantMap = {
+          success: 'success',
+          error: 'error',
+          info: 'info',
+          warning: 'warning'
+        };
+        enqueueSnackbar(message, { variant: variantMap[type] || 'default' });
+      };
+      
+      // Make sure we're passing the actual table columns array to the export function
+      exportSolarToPdf({
+        data: tableData,
+        energyType: 'solar',
+        title: `Solar Generation Data (${yearRange.startYear} - ${yearRange.endYear})`,
+        filename: 'Solar_Generation_Data.pdf',
+        columns: tableColumns,
+        chartData: chartData,
+        yearRange: yearRange,
+        chartRef: chartRef
+      }, toast);
+    } catch (err) {
+      console.error('Error exporting data to PDF:', err);
+      enqueueSnackbar('Failed to export data to PDF', { variant: 'error' });
+    }
+  };
+  
   // For demo purposes, use sample data if no data is available
   const effectiveData = useMemo(() => 
-    data.length > 0 ? data : generateSampleData(), 
+    data.length > 0 ? data : energyUtils.generateSampleData('solar'), 
     [data]
   );
 
-  // Filter data based on selected year range - used for both chart and table
+  // Filter data based on selected year range
   const filteredData = useMemo(() => {
     return effectiveData.filter(item => 
       item.year >= yearRange.startYear && 
@@ -66,49 +202,31 @@ const SolarAdmin = () => {
 
   // Format data for chart
   const chartData = useMemo(() => 
-    formatDataForChart(filteredData),
+    energyUtils.formatDataForChart(filteredData),
     [filteredData]
   );
 
-  // Configure data table - using useMemo to prevent recreation on each render
+  // Configure data table columns
   const tableColumns = useMemo(() => 
-    getTableColumns(handleOpenEditModal, handleDelete), 
-    [handleOpenEditModal, handleDelete]
+    energyUtils.getTableColumns(openEditModal, handleDelete), 
+    [openEditModal, handleDelete]
   );
   
   // Use useDataTable hook with memoized dependencies and filtered data
   const {
     data: tableData,
     loading: tableLoading,
-    handleExport,
     handleRefresh,
   } = useDataTable({
-    data: filteredData, // Use the filtered data here instead of all data
+    data: filteredData,
     columns: tableColumns,
     onExport: handleExportData,
-    onRefresh: () => console.log('Refresh triggered')
+    onRefresh: fetchData
   });
   
   // Memoize chart config to prevent recreation
   const chartConfig = useMemo(() => {
-    const config = getChartConfig();
-    // Add line chart specific configuration
-    config.line = {
-      stroke: '#FFD700', // Gold color
-      strokeWidth: 2,
-      dot: {
-        r: 5,
-        fill: '#FFD700',
-        stroke: '#fff',
-        strokeWidth: 2
-      },
-      activeDot: {
-        r: 7,
-        fill: '#FFD700',
-        stroke: '#fff',
-        strokeWidth: 2
-      }
-    };
+    const config = energyUtils.getChartConfig('solar');
     
     // Enhanced Y-axis configuration with proper label
     config.yAxis = {
@@ -125,22 +243,32 @@ const SolarAdmin = () => {
     return config;
   }, []);
 
-  // Handle year range change for both chart and table filtering
-  const handleStartYearChange = (year) => {
-    setYearRange(prev => ({ ...prev, startYear: year }));
-  };
-
-  const handleEndYearChange = (year) => {
-    setYearRange(prev => ({ ...prev, endYear: year }));
-  };
-
   // Form validation
   const formValidation = useMemo(() => {
-    if (selectedYear && generationValue) {
-      return validateInputs(selectedYear, generationValue);
-    }
-    return { isValid: false, errors: {} };
+    return energyUtils.validateInputs(selectedYear, generationValue);
   }, [selectedYear, generationValue]);
+
+  // Calculate totals on form changes
+  useEffect(() => {
+    const hasRelevantFields = generationValue.solar || 
+                             generationValue.wind || 
+                             generationValue.hydro || 
+                             generationValue.biomass || 
+                             generationValue.geothermal || 
+                             generationValue.nonRenewable;
+    
+    if (hasRelevantFields) {
+      calculateTotals();
+    }
+  }, [
+    generationValue.solar,
+    generationValue.wind,
+    generationValue.hydro,
+    generationValue.biomass,
+    generationValue.geothermal,
+    generationValue.nonRenewable,
+    calculateTotals
+  ]);
 
   return (
     <div className="p-6 max-w-7xl mx-auto">
@@ -158,7 +286,7 @@ const SolarAdmin = () => {
         <Button
           variant="primary"
           className="bg-yellow-500 hover:bg-yellow-600 flex items-center gap-2"
-          onClick={handleOpenAddModal}
+          onClick={openAddModal}
         >
           <AppIcon name="plus" size={18} />
           Add New Record
@@ -168,9 +296,9 @@ const SolarAdmin = () => {
       {/* Year Range Filter Card */}
       <Card.Base className="mb-6 p-4">
         <div className="flex justify-between items-center">
-          <Typography variant="h6" className="text-gray-700">
+          <div className="text-gray-700 font-medium">
             Filter Data By Year Range
-          </Typography>
+          </div>
           <div className="min-w-64">
             <YearPicker
               initialStartYear={yearRange.startYear}
@@ -187,7 +315,7 @@ const SolarAdmin = () => {
         <div className="p-4 border-b border-gray-200">
           <h2 className="text-lg font-medium">Generation Overview</h2>
         </div>
-        <div className="p-6 h-96">
+        <div className="p-6 h-96" ref={chartRef}>
           <ResponsiveContainer width="100%" height="100%">
             <LineChart data={chartData} margin={{ top: 15, right: 30, left: 20, bottom: 5 }}>
               <CartesianGrid strokeDasharray="3 3" />
@@ -209,6 +337,24 @@ const SolarAdmin = () => {
             </LineChart>
           </ResponsiveContainer>
         </div>
+        <div className="flex justify-end p-4 border-t border-gray-200">
+          <Button
+            variant="secondary"
+            className="flex items-center gap-2 mr-2"
+            onClick={handleDownload}
+          >
+            <AppIcon name="download" size={18} />
+            Download Chart
+          </Button>
+          <Button
+            variant="primary"
+            className="flex items-center gap-2 bg-yellow-500 hover:bg-yellow-600"
+            onClick={handleExportData}
+          >
+            <AppIcon name="file-pdf" size={18} />
+            Export to PDF
+          </Button>
+        </div>
       </Card.Base>
 
       {/* Data Table */}
@@ -223,21 +369,21 @@ const SolarAdmin = () => {
         filterable={true}
         refreshable={true}
         pagination={true}
-        onExport={handleExport}
+        onExport={handleExportData}
         onRefresh={handleRefresh}
         tableClasses={{
-          paper: 'shadow-md rounded-md',
-          headerCell: 'bg-gray-50',
-          row: 'hover:bg-amber-50'
+          paper: "shadow-md rounded-md",
+          headerCell: "bg-gray-50",
+          row: "hover:bg-amber-50"
         }}
         emptyMessage={`No solar generation data available for years ${yearRange.startYear} - ${yearRange.endYear}`}
       />
 
       {/* Add/Edit Modal */}
-      <Dialog open={isModalOpen} onClose={handleCloseModal} maxWidth="sm" fullWidth>
+      <Dialog open={isModalOpen} onClose={closeModal} maxWidth="sm" fullWidth>
         <DialogTitle className="flex justify-between items-center">
-          <Typography variant="h6">{isEditing ? 'Edit Record' : 'Add New Record'}</Typography>
-          <IconButton onClick={handleCloseModal} size="small">
+          <span className="text-lg font-medium">{isEditing ? 'Edit Record' : 'Add New Record'}</span>
+          <IconButton onClick={closeModal} size="small">
             <X size={18} />
           </IconButton>
         </DialogTitle>
@@ -249,7 +395,7 @@ const SolarAdmin = () => {
               </label>
               <SingleYearPicker
                 initialYear={selectedYear}
-                onYearChange={handleYearChange}
+                onYearChange={setSelectedYear}
               />
             </div>
             <div>
@@ -257,14 +403,16 @@ const SolarAdmin = () => {
                 label="Total Renewable Energy (GWh)"
                 value={generationValue.totalRenewable}
                 onChange={(e) => handleGenerationChange(e, 'totalRenewable')}
-                placeholder="Enter total renewable energy value in GWh"
+                placeholder="Total renewable energy in GWh"
                 variant="outlined"
                 size="medium"
                 min={0}
                 step={0.01}
                 fullWidth
-                error={formValidation.errors.totalRenewable ? true : false}
-                helperText={formValidation.errors.totalRenewable}
+                readOnly
+                disabled
+                error={formValidation.errors?.totalRenewable ? true : false}
+                helperText={formValidation.errors?.totalRenewable}
               />
             </div>
             <div>
@@ -278,8 +426,8 @@ const SolarAdmin = () => {
                 min={0}
                 step={0.01}
                 fullWidth
-                error={formValidation.errors.geothermal ? true : false}
-                helperText={formValidation.errors.geothermal}
+                error={formValidation.errors?.geothermal ? true : false}
+                helperText={formValidation.errors?.geothermal}
               />
             </div>
             <div>
@@ -293,8 +441,8 @@ const SolarAdmin = () => {
                 min={0}
                 step={0.01}
                 fullWidth
-                error={formValidation.errors.hydro ? true : false}
-                helperText={formValidation.errors.hydro}
+                error={formValidation.errors?.hydro ? true : false}
+                helperText={formValidation.errors?.hydro}
               />
             </div>
             <div>
@@ -308,8 +456,8 @@ const SolarAdmin = () => {
                 min={0}
                 step={0.01}
                 fullWidth
-                error={formValidation.errors.biomass ? true : false}
-                helperText={formValidation.errors.biomass}
+                error={formValidation.errors?.biomass ? true : false}
+                helperText={formValidation.errors?.biomass}
               />
             </div>
             <div>
@@ -323,8 +471,8 @@ const SolarAdmin = () => {
                 min={0}
                 step={0.01}
                 fullWidth
-                error={formValidation.errors.solar ? true : false}
-                helperText={formValidation.errors.solar}
+                error={formValidation.errors?.solar ? true : false}
+                helperText={formValidation.errors?.solar}
               />
             </div>
             <div>
@@ -338,8 +486,8 @@ const SolarAdmin = () => {
                 min={0}
                 step={0.01}
                 fullWidth
-                error={formValidation.errors.wind ? true : false}
-                helperText={formValidation.errors.wind}
+                error={formValidation.errors?.wind ? true : false}
+                helperText={formValidation.errors?.wind}
               />
             </div>
             <div>
@@ -353,8 +501,8 @@ const SolarAdmin = () => {
                 min={0}
                 step={0.01}
                 fullWidth
-                error={formValidation.errors.nonRenewable ? true : false}
-                helperText={formValidation.errors.nonRenewable}
+                error={formValidation.errors?.nonRenewable ? true : false}
+                helperText={formValidation.errors?.nonRenewable}
               />
             </div>
             <div>
@@ -362,14 +510,16 @@ const SolarAdmin = () => {
                 label="Total Power Generation (GWh)"
                 value={generationValue.totalPower}
                 onChange={(e) => handleGenerationChange(e, 'totalPower')}
-                placeholder="Enter total power generation value in GWh"
+                placeholder="Total power generation in GWh"
                 variant="outlined"
                 size="medium"
                 min={0}
                 step={0.01}
                 fullWidth
-                error={formValidation.errors.totalPower ? true : false}
-                helperText={formValidation.errors.totalPower}
+                readOnly
+                disabled
+                error={formValidation.errors?.totalPower ? true : false}
+                helperText={formValidation.errors?.totalPower}
               />
             </div>
             <div>
@@ -383,8 +533,8 @@ const SolarAdmin = () => {
                 min={0}
                 step={0.01}
                 fullWidth
-                error={formValidation.errors.population ? true : false}
-                helperText={formValidation.errors.population}
+                error={formValidation.errors?.population ? true : false}
+                helperText={formValidation.errors?.population}
               />
             </div>
             <div>
@@ -398,8 +548,8 @@ const SolarAdmin = () => {
                 min={0}
                 step={0.01}
                 fullWidth
-                error={formValidation.errors.gdp ? true : false}
-                helperText={formValidation.errors.gdp}
+                error={formValidation.errors?.gdp ? true : false}
+                helperText={formValidation.errors?.gdp}
               />
             </div>
           </Box>
@@ -407,7 +557,7 @@ const SolarAdmin = () => {
         <DialogActions className="p-4">
           <Button
             variant="secondary"
-            onClick={handleCloseModal}
+            onClick={closeModal}
             className="mr-2"
           >
             Cancel
@@ -415,7 +565,6 @@ const SolarAdmin = () => {
           <Button
             variant="primary"
             onClick={handleSubmit}
-            // disabled={!formValidation.isValid}
             className="bg-yellow-500 hover:bg-yellow-600"
           >
             {isEditing ? 'Update' : 'Save'}

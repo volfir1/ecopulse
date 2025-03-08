@@ -1,5 +1,16 @@
 // src/routes/routes.js
+import PeerToPeerAdmin from '@admin/peer/Peer';
 import { lazy } from 'react';
+
+// Public Routes
+export const publicRoutes = {
+  LandingPage: lazy(() => import('@features/LandingPage')),
+  Login: lazy(() => import('@features/auth/components/login/Login')),
+  Register: lazy(() => import('@features/auth/components/register/Register')),
+  VerifyEmail: lazy(() => import('@features/auth/verification/VerifiEmail')),
+  ForgotPassword: lazy(() => import('@features/auth/password/ForgotPassword.jsx')),
+  ResetPassword: lazy(() => import('@features/auth/password/resetPassword'))
+};
 
 // User Dashboard & Features
 export const userRoutes = {
@@ -7,7 +18,9 @@ export const userRoutes = {
   EnergySharing: lazy(() => import('@features/energy-sharing/components/Dashboard.jsx')),
   HelpSupport: lazy(() => import('@features/help-support/components/help-support')),
   Recommendations: lazy(() => import('@features/recommendations/components/Recommnedation')),
-  UserProfile: lazy(() => import('@features/profile/UserProfile'))  // Uses common profile component
+  UserProfile: lazy(() => import('@features/profile/UserProfile')), 
+  UserMails: lazy(() => import('@features/help-support/components/mail/UserMails')),
+  TicketConversation: lazy(() => import('@features/help-support/components/mail/TicketConversation'))
 };
 
 // Energy Modules
@@ -29,7 +42,13 @@ export const adminRoutes = {
   WindAdmin: lazy(() => import('@admin/modules/Wind/WindAdmin')),
   GeoAdmin: lazy(() => import('@admin/modules/Geo/GeoAdmin')),
   HydroAdmin: lazy(() => import('@admin/modules/Hydro/HydroAdmin')),
-  BioAdmin: lazy(() => import('@admin/modules/Bio/BioAdmin'))
+  BioAdmin: lazy(() => import('@admin/modules/Bio/BioAdmin')),
+  Peer: lazy(() => import('@admin/peer/Peer')),
+  // Ticket management routes
+  AdminDetailView: lazy(() => import('@admin/ticket/TicketDetail/AdminDetailView')),
+  AdminTicket: lazy(() => import('@admin/ticket/AdminTicket')),
+  TicketDashboard: lazy(() => import('@admin/ticket/TicketDashboard')),
+  Recommendations: lazy(() => import('@admin/recommendation/Recommendation'))
 };
 
 // Error Pages

@@ -1,17 +1,20 @@
 import React from "react";
-import { Menu, MenuItem, Avatar, ListItemIcon, Divider } from "@mui/material";
+import { Menu, MenuItem, Avatar, ListItemIcon, Divider, Typography, Box } from "@mui/material";
 import { AppIcon } from "../ui/icons";
 import { useNavigate } from "react-router-dom";
-import { Logout } from "@mui/icons-material";
+import { Logout, Dashboard, Settings, HelpOutline } from "@mui/icons-material";
 import { useAuth } from "@context/AuthContext";
 
 export default function NavMenu({ anchorEl, open, onClose }) {
   const navigate = useNavigate();
-  const { logout } = useAuth();
+  const { logout, user, hasRole } = useAuth();
   
-  const handleNavigate = () => {
+  // Check if user is admin
+  const isAdmin = hasRole('admin');
+
+  const handleNavigate = (path) => {
     onClose();
-    navigate('/profile');
+    navigate(path);
   };
 
   const handleLogout = async () => {
@@ -29,7 +32,6 @@ export default function NavMenu({ anchorEl, open, onClose }) {
       id="account-menu"
       open={open}
       onClose={onClose}
-      onClick={onClose}
       slotProps={{
         paper: {
           elevation: 0,
@@ -63,40 +65,82 @@ export default function NavMenu({ anchorEl, open, onClose }) {
       transformOrigin={{ horizontal: "right", vertical: "top" }}
       anchorOrigin={{ horizontal: "right", vertical: "bottom" }}
     >
+      {/* User info section */}
+      <Box sx={{ px: 2, py: 1.5 }}>
+        <Typography variant="subtitle1" sx={{ fontWeight: 500 }}>
+          {user?.firstName} {user?.lastName}
+        </Typography>
+        <Typography variant="body2" color="text.secondary">
+          {user?.email || 'user@example.com'}
+        </Typography>
+      </Box>
+      
+      <Divider sx={{ my: 0.5 }} />
+      
+      {/* Profile option */}
       <MenuItem 
-        onClick={handleNavigate}
+        onClick={() => handleNavigate(isAdmin ? '/admin/profile' : '/profile')}
         sx={{ 
           py: 1,
           px: 2,
           gap: 1.5
         }}
       >
-        <Avatar /> Profile
+        <Avatar /> My Profile
       </MenuItem>
+      
+      {/* Admin Dashboard option - only visible for admins */}
+      {isAdmin && (
+        <MenuItem 
+          onClick={() => handleNavigate('/admin/dashboard')}
+          sx={{ 
+            py: 1,
+            px: 2,
+            gap: 1.5
+          }}
+        >
+          <ListItemIcon>
+            <Dashboard fontSize="small" />
+          </ListItemIcon>
+          Admin Dashboard
+        </MenuItem>
+      )}
+      
+      {/* Account Settings */}
       <MenuItem 
-        onClick={onClose} 
+        onClick={() => handleNavigate(isAdmin ? '/admin/settings' : '/settings')}
         sx={{ 
           py: 1,
           px: 2,
           gap: 1.5
         }}
       >
-        <AppIcon name="myaccount" />
-        My Account
-      </MenuItem>
-      <Divider sx={{ my: 1 }} />
-      <MenuItem 
-        onClick={onClose}
-        sx={{ 
-          py: 1,
-          px: 2
-        }}
-      >
-        <ListItemIcon sx={{ gap: 1.5 }}>
-          <AppIcon name="addaccount" type="tool" fontSize="small" />
+        <ListItemIcon>
+          <Settings fontSize="small" />
         </ListItemIcon>
-        Add Account
+        Account Settings
       </MenuItem>
+      
+      {/* Help & Support - ONLY shown for non-admin users */}
+      {!isAdmin && (
+        <MenuItem 
+          onClick={() => handleNavigate('/help-support')}
+          sx={{ 
+            py: 1,
+            px: 2,
+            gap: 1.5
+          }}
+        >
+          <ListItemIcon>
+            <HelpOutline fontSize="small" />
+          </ListItemIcon>
+          Help & Support
+        </MenuItem>
+      )}
+      
+      <Divider sx={{ my: 1 }} />
+      
+      {/* Logout option */}
       <MenuItem 
         onClick={handleLogout}
         sx={{ 

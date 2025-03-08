@@ -1,10 +1,13 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
-import { resolve } from 'path'
 import path from 'node:path'
 
 export default defineConfig({
-  plugins: [react()],
+  plugins: [
+    react({
+      include: '**/*.{js,jsx,ts,tsx}', // Process .js files as well
+    })
+  ],
   build: {
     sourcemap: false
   },
@@ -13,13 +16,15 @@ export default defineConfig({
       '@context': path.resolve(__dirname, './src/shared/context'),
       '@features': path.resolve(__dirname, './src/features'),
       '@shared': path.resolve(__dirname, './src/shared'),
-      '@assets': path.resolve(__dirname, './src/assets'), 
-      '@modules': path.resolve(__dirname, './src/features/modules/components/'),
+      '@assets': path.resolve(__dirname, './src/assets'),
+      '@modules': path.resolve(__dirname, './src/features/modules/'),
       '@images' : path.resolve(__dirname, './src/assets/images'),
       '@components': path.resolve(__dirname, './src/shared/components/'),
       '@admin' : path.resolve(__dirname, './src/admin/'),
       '@exceptions': path.resolve(__dirname, './src/exceptions/'),
-      '@config': path.resolve(__dirname, './src/config/')
+      '@config': path.resolve(__dirname, './src/config/'),
+      '@services': path.resolve(__dirname, './src/services/'),
+      '@store': path.resolve(__dirname, './src/store/'),
     }
   },
   esbuild: {

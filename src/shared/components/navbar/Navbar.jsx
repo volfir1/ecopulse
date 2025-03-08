@@ -1,4 +1,4 @@
-import React, { useState, useContext } from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
   AppBar, 
@@ -16,15 +16,15 @@ import {
   Divider
 } from '@mui/material';
 import { useApp } from '@context/AppContext';
-import AuthContext from '@context/AuthContext';
+import { useAuth } from '@context/AuthContext';
 import { AppIcon } from '@shared/index';
 import SearchBar from '@components/searchbar/searchbar';
-import authService from '@features/auth/services/authService';
+
 export default function Navbar() {
   const theme = useTheme();
   const navigate = useNavigate();
   const { sidebarOpen, setSidebarOpen } = useApp();
-  const { currentUser, setCurrentUser } = useContext(AuthContext) || { currentUser: { firstName: 'User' } };
+  const { user: currentUser, logout } = useAuth(); // Use the auth context properly
   const [anchorEl, setAnchorEl] = useState(null);
   const open = Boolean(anchorEl);
 
@@ -43,17 +43,15 @@ export default function Navbar() {
     navigate(isAdmin ? '/admin/profile' : '/profile');
   };
 
+  // Fixed logout function that uses the context's logout
   const handleLogout = async () => {
     try {
       handleMenuClose();
-      await authService.logout();
-      // Clear user context
-    
-      // Redirect to login page
-      navigate('/login', { replace: true });
+      // Use the context's logout function which properly clears cookies and state
+      await logout();
+      // No need to navigate - the context's logout will handle it
     } catch (error) {
       console.error('Logout failed:', error);
-      // You might want to show an error notification here
     }
   };
 
@@ -99,44 +97,7 @@ export default function Navbar() {
               Hello, {currentUser?.firstName || 'User'}
             </Typography>
 
-            <Box
-              sx={{
-                display: 'flex',
-                alignItems: 'center',
-                backgroundColor: alpha(theme.palette.primary.main, 0.06),
-                borderRadius: '20px',
-                px: 1.5,
-                py: 0.5,
-                height: 28,
-                transition: 'all 0.2s ease',
-                '&:hover': {
-                  backgroundColor: alpha(theme.palette.primary.main, 0.1),
-                  transform: 'translateY(-1px)'
-                }
-              }}
-            >
-              <AppIcon 
-                name="location" 
-                type="tool"
-                sx={{ 
-                  width: 16,
-                  height: 16,
-                  color: theme.palette.primary.main,
-                  mr: 0.5
-                }}
-              />
-              <Typography 
-                variant="body2" 
-                noWrap 
-                sx={{
-                  fontWeight: 500,
-                  color: theme.palette.text.primary,
-                  fontSize: '0.875rem'
-                }}
-              >
-                {currentUser?.location || 'Taguig'}
-              </Typography>
-            </Box>
+        
           </Box>
 
           {/* Right Section */}
@@ -150,7 +111,7 @@ export default function Navbar() {
               width: { xs: 180, sm: 240 },
               height: '100%' 
             }}>
-              <SearchBar />
+             
             </Box>
 
             <IconButton 
