@@ -21,8 +21,9 @@ const getPickerStyles = (error) => ({
 });
 
 export const YearRangePicker = ({
+  // Set default start year to current year and end year to current year + 5
   initialStartYear = dayjs().year(),
-  initialEndYear = dayjs().add(1, 'year').year(),
+  initialEndYear = dayjs().year() + 5,
   onStartYearChange,
   onEndYearChange,
 }) => {
@@ -59,11 +60,11 @@ export const YearRangePicker = ({
     onEndYearChange?.(newValue.year());
   }, [onEndYearChange, startYear]);
 
-  // Reset handler
+  // Reset handler - now resets to current year and current year + 5
   const handleReset = useCallback(() => {
     const currentYear = dayjs().year();
     const defaultStartYear = dayjs(currentYear.toString());
-    const defaultEndYear = dayjs((currentYear + 1).toString());
+    const defaultEndYear = dayjs((currentYear + 5).toString());
     
     setStartYear(defaultStartYear);
     setEndYear(defaultEndYear);
@@ -71,6 +72,7 @@ export const YearRangePicker = ({
     onEndYearChange?.(defaultEndYear.year());
     setError(false);
   }, [onStartYearChange, onEndYearChange]);
+
 
   return (
     <LocalizationProvider dateAdapter={AdapterDayjs}>

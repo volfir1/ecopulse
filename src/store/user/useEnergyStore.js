@@ -116,7 +116,7 @@ const createEnergyStore = (energyType) => {
     currentProjection: null,
     loading: true,
     selectedStartYear: new Date().getFullYear(),
-    selectedEndYear: new Date().getFullYear() + 1,
+    selectedEndYear: new Date().getFullYear() + 5,
     chartRef: null,
     additionalData: {}, // For energy-type specific data
     
