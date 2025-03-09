@@ -48,7 +48,7 @@ const ActionButtons = React.memo(({ row, onEdit, onDelete }) => {
   
   const handleDelete = (e) => {
     e.stopPropagation();
-    onDelete(row.id);
+    onDelete(row.year);  // Pass the year instead of the ID
   };
   
   return (
