@@ -21,30 +21,51 @@ export const useGeothermalAnalytics = () => {
   
   // Ref for chart element
   const chartRef = useRef(null);
+  const cleanResponse = (response) => {
+    // Replace "NaN" with "null" in the response string
+    return response.replace(/NaN/g, 'null');
+  };
+
 
   // Fetch data based on selected year range
-  const fetchData = useCallback(async (startYear, endYear) => {
-    setLoading(true);
-    try {
-      const response = await api.get(`/api/predictions/geothermal/?start_year=${startYear}&end_year=${endYear}`);
-      const data = response.data.predictions;
-      const formattedData = data.map(item => ({
+const fetchData = useCallback(async (startYear, endYear) => {
+  setLoading(true);
+  try {
+    const response = await api.get(`/api/predictions/geothermal/?start_year=${startYear}&end_year=${endYear}`);
+    
+    // Clean the response by replacing "NaN" with "null"
+    const cleanedResponse = cleanResponse(response.data);
+
+    // Parse the cleaned JSON string
+    const responseData = JSON.parse(cleanedResponse);
+
+    // Check if the response contains the expected data
+    if (responseData.status === "success" && Array.isArray(responseData.predictions)) {
+      const formattedData = responseData.predictions.map(item => ({
         date: item.Year,
         value: parseFloat(item['Predicted Production']),
+        nonRenewableEnergy: item.isPredicted ? null : (item['Non-Renewable Energy (GWh)'] ? parseFloat(item['Non-Renewable Energy (GWh)']) : null),
+        population: item.isPredicted ? null : (item['Population (in millions)'] ? parseFloat(item['Population (in millions)']) : null),
+        gdp: item.isPredicted ? null : (item['Gross Domestic Product'] === null ? null : parseFloat(item['Gross Domestic Product'])),
         isPredicted: item.isPredicted !== undefined ? item.isPredicted : false // Ensure isPredicted is included
       }));
 
       // Log the raw fetched data and the formatted data to verify the isPredicted column
-      console.log("Raw fetched data:", data);
+      console.log("Raw fetched data:", responseData.predictions);
       console.log("Formatted data:", formattedData);
 
       setGenerationData(formattedData);
-    } catch (error) {
-      console.error('Error fetching data:', error);
-    } finally {
-      setLoading(false);
+    } else {
+      throw new Error("Invalid data format in API response");
     }
-  }, []);
+  } catch (error) {
+    console.error('Error fetching data:', error);
+    enqueueSnackbar('Failed to fetch data. Please try again.', { variant: 'error' });
+  } finally {
+    setLoading(false);
+  }
+}, [enqueueSnackbar]);
+
   
 
   // Fetch data on component mount and when year range or refresh trigger changes
@@ -181,7 +202,7 @@ export const useGeothermalAnalytics = () => {
     try {
       const payload = {
         Year: year,
-        'Predicted Production': value
+        'Geothermal (GWh)': value
       };
       
       await api.post('/api/predictions/geothermal/', payload);
@@ -206,15 +227,10 @@ export const useGeothermalAnalytics = () => {
     }
   }, [enqueueSnackbar]);
 
-  const updateRecord = useCallback(async (id, year, value) => {
+  const updateRecord = useCallback(async (year, payload) => {
     setLoading(true);
     try {
-      const payload = {
-        Year: year,
-        'Predicted Production': value
-      };
-      
-      await api.put(`/api/predictions/geothermal/${id}`, payload);
+      await api.put(`/api/update/${year}/`, payload);
       
       try {
         enqueueSnackbar('Geothermal generation data updated successfully', { variant: 'success' });
@@ -236,10 +252,10 @@ export const useGeothermalAnalytics = () => {
     }
   }, [enqueueSnackbar]);
 
-  const deleteRecord = useCallback(async (id) => {
+  const deleteRecord = useCallback(async (year) => {
     setLoading(true);
     try {
-      await api.delete(`/api/predictions/geothermal/${id}`);
+      await api.delete(`/api/delete/${year}/`);
       
       try {
         enqueueSnackbar('Geothermal generation data deleted successfully', { variant: 'success' });

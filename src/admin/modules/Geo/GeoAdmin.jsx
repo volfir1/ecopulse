@@ -51,6 +51,9 @@ const GeothermalAdmin = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const [generationValue, setGenerationValue] = useState('');
+  const [nonRenewableEnergy, setNonRenewableEnergy] = useState('');
+  const [population, setPopulation] = useState('');
+  const [gdp, setGdp] = useState('');
   const [isEditing, setIsEditing] = useState(false);
   const [editId, setEditId] = useState(null);
 
@@ -59,15 +62,24 @@ const GeothermalAdmin = () => {
     setIsEditing(false);
     setSelectedYear(new Date().getFullYear());
     setGenerationValue('');
+    setNonRenewableEnergy('');
+    setPopulation('');
+    setGdp('');
     setIsModalOpen(true);
   }, []);
 
   const handleOpenEditModal = useCallback((row) => {
     setIsEditing(true);
     setEditId(row.id);
-    setSelectedYear(row.year);
-    setGenerationValue(row.generation.toString());
+    setSelectedYear(row.year || new Date().getFullYear());
+    setGenerationValue(row.generation?.toString() || '');
+    setNonRenewableEnergy(row.nonRenewableEnergy?.toString() || ''); // Set non-renewable energy
+    setPopulation(row.population?.toString() || ''); // Set population
+    setGdp(row.gdp?.toString() || ''); // Set GDP
     setIsModalOpen(true);
+  
+    // Log the values to verify they are being set correctly
+    console.log("Editing row:", row);
   }, []);
 
   const handleCloseModal = useCallback(() => {
@@ -82,13 +94,25 @@ const GeothermalAdmin = () => {
     setGenerationValue(event.target.value);
   }, []);
 
-  const handleDelete = useCallback(async (id) => {
+  const handleNonRenewableEnergyChange = useCallback((event) => {
+    setNonRenewableEnergy(event.target.value);
+  }, []);
+
+  const handlePopulationChange = useCallback((event) => {
+    setPopulation(event.target.value);
+  }, []);
+
+  const handleGdpChange = useCallback((event) => {
+    setGdp(event.target.value);
+  }, []);
+
+  const handleDelete = useCallback(async (year) => {
     if (!window.confirm('Are you sure you want to delete this record?')) {
       return;
     }
     
     try {
-      await deleteRecord(id);
+      await deleteRecord(year);
     } catch (error) {
       console.error('Error deleting data:', error);
     }
@@ -96,22 +120,30 @@ const GeothermalAdmin = () => {
 
   // Form submit handler
   const handleSubmit = useCallback(async () => {
-    if (!selectedYear || !generationValue) {
+    if (!selectedYear || !generationValue || !nonRenewableEnergy || !population || !gdp) {
       return;
     }
-
+  
     try {
       setIsModalOpen(false);
       
+      const payload = {
+        Year: selectedYear,
+        'Geothermal (GWh)': parseFloat(generationValue),
+        'Non-Renewable Energy (GWh)': parseFloat(nonRenewableEnergy),
+        'Population (in millions)': parseFloat(population),
+        'Gross Domestic Product': parseFloat(gdp)
+      };
+  
       if (isEditing) {
-        await updateRecord(editId, selectedYear, parseFloat(generationValue));
+        await updateRecord(selectedYear, payload);
       } else {
-        await addRecord(selectedYear, parseFloat(generationValue));
+        await addRecord(selectedYear, payload['Geothermal (GWh)']);
       }
     } catch (error) {
       console.error('Error saving data:', error);
     }
-  }, [selectedYear, generationValue, isEditing, editId, updateRecord, addRecord]);
+  }, [selectedYear, generationValue, nonRenewableEnergy, population, gdp, isEditing, updateRecord, addRecord]);
 
   // Export data handler - DEFINED BEFORE IT'S USED
   const handleExportData = useCallback(() => {
@@ -126,6 +158,9 @@ const GeothermalAdmin = () => {
         id: index + 1,
         year: item.date,
         generation: item.value,
+        nonRenewableEnergy: item.nonRenewableEnergy, // Include non-renewable energy
+        population: item.population, // Include population
+        gdp: item.gdp, // Include GDP
         dateAdded: new Date().toISOString(),
         isPredicted: item.isPredicted !== undefined ? item.isPredicted : false // Ensure isPredicted is included
       }));
@@ -373,6 +408,51 @@ const GeothermalAdmin = () => {
                 fullWidth
                 error={formValidation.errors.generation ? true : false}
                 helperText={formValidation.errors.generation}
+              />
+            </div>
+            <div>
+              <NumberBox
+                label="Non-Renewable Energy (GWh)"
+                value={nonRenewableEnergy}
+                onChange={handleNonRenewableEnergyChange}
+                placeholder="Enter non-renewable energy value in GWh"
+                variant="outlined"
+                size="medium"
+                min={0}
+                step={0.01}
+                fullWidth
+                error={formValidation.errors.nonRenewableEnergy ? true : false}
+                helperText={formValidation.errors.nonRenewableEnergy}
+              />
+            </div>
+            <div>
+              <NumberBox
+                label="Population (in millions)"
+                value={population}
+                onChange={handlePopulationChange}
+                placeholder="Enter population value in millions"
+                variant="outlined"
+                size="medium"
+                min={0}
+                step={0.01}
+                fullWidth
+                error={formValidation.errors.population ? true : false}
+                helperText={formValidation.errors.population}
+              />
+            </div>
+            <div>
+              <NumberBox
+                label="Gross Domestic Product"
+                value={gdp}
+                onChange={handleGdpChange}
+                placeholder="Enter GDP value"
+                variant="outlined"
+                size="medium"
+                min={0}
+                step={0.01}
+                fullWidth
+                error={formValidation.errors.gdp ? true : false}
+                helperText={formValidation.errors.gdp}
               />
             </div>
           </Box>
