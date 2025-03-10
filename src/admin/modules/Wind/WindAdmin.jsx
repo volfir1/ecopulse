@@ -1,5 +1,5 @@
-// WindAdmin.jsx
-import React, { useMemo, useState, useCallback } from 'react';
+// GeothermalAdmin.jsx
+import React, { useMemo, useState, useCallback, useRef } from 'react';
 import {
   Dialog,
   DialogTitle,
@@ -10,7 +10,7 @@ import {
   Box
 } from '@mui/material';
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
-import { Wind, X } from 'lucide-react';
+import { Thermometer, Wind, X } from 'lucide-react';
 import {
   DataTable,
   Button,
@@ -22,10 +22,12 @@ import {
   useDataTable
 } from '@shared/index';
 
-import useWindAnalytics from './adminWindHook';
-import { getTableColumns, formatDataForChart, getChartConfig, generateSampleData, validateInputs } from './adminWindUtil';
+import useGeothermalAnalytics from '../Geo/adminGeoHook';
+import { getTableColumns, formatDataForChart, getChartConfig, generateSampleData, validateInputs } from '../Geo/adminGeoUtil';
 
-const WindAdmin = () => {
+const GeothermalAdmin = () => {
+  // Define all handlers at the top of component - BEFORE any useMemo calls
+  
   // Custom hooks
   const {
     generationData,
@@ -40,34 +42,44 @@ const WindAdmin = () => {
     addRecord,
     updateRecord,
     deleteRecord,
-    windSpeedData,
-    turbinePerformance,
+    temperatureData,
+    wellPerformance,
     chartRef
-  } = useWindAnalytics();
+  } = useGeothermalAnalytics();
 
   // State for modal
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const [generationValue, setGenerationValue] = useState('');
+  const [nonRenewableEnergy, setNonRenewableEnergy] = useState('');
+  const [population, setPopulation] = useState('');
+  const [gdp, setGdp] = useState('');
   const [isEditing, setIsEditing] = useState(false);
   const [editId, setEditId] = useState(null);
 
-  // Define all handlers at the top of component - BEFORE any useMemo calls
-  
   // Modal handlers
   const handleOpenAddModal = useCallback(() => {
     setIsEditing(false);
     setSelectedYear(new Date().getFullYear());
     setGenerationValue('');
+    setNonRenewableEnergy('');
+    setPopulation('');
+    setGdp('');
     setIsModalOpen(true);
   }, []);
 
   const handleOpenEditModal = useCallback((row) => {
     setIsEditing(true);
     setEditId(row.id);
-    setSelectedYear(row.year);
-    setGenerationValue(row.generation.toString());
+    setSelectedYear(row.year || new Date().getFullYear());
+    setGenerationValue(row.generation?.toString() || '');
+    setNonRenewableEnergy(row.nonRenewableEnergy?.toString() || ''); // Set non-renewable energy
+    setPopulation(row.population?.toString() || ''); // Set population
+    setGdp(row.gdp?.toString() || ''); // Set GDP
     setIsModalOpen(true);
+  
+    // Log the values to verify they are being set correctly
+    console.log("Editing row:", row);
   }, []);
 
   const handleCloseModal = useCallback(() => {
@@ -82,13 +94,25 @@ const WindAdmin = () => {
     setGenerationValue(event.target.value);
   }, []);
 
-  const handleDelete = useCallback(async (id) => {
+  const handleNonRenewableEnergyChange = useCallback((event) => {
+    setNonRenewableEnergy(event.target.value);
+  }, []);
+
+  const handlePopulationChange = useCallback((event) => {
+    setPopulation(event.target.value);
+  }, []);
+
+  const handleGdpChange = useCallback((event) => {
+    setGdp(event.target.value);
+  }, []);
+
+  const handleDelete = useCallback(async (year) => {
     if (!window.confirm('Are you sure you want to delete this record?')) {
       return;
     }
     
     try {
-      await deleteRecord(id);
+      await deleteRecord(year);
     } catch (error) {
       console.error('Error deleting data:', error);
     }
@@ -96,22 +120,30 @@ const WindAdmin = () => {
 
   // Form submit handler
   const handleSubmit = useCallback(async () => {
-    if (!selectedYear || !generationValue) {
+    if (!selectedYear || !generationValue || !nonRenewableEnergy || !population || !gdp) {
       return;
     }
-
+  
     try {
       setIsModalOpen(false);
       
+      const payload = {
+        Year: selectedYear,
+        'Geothermal (GWh)': parseFloat(generationValue),
+        'Non-Renewable Energy (GWh)': parseFloat(nonRenewableEnergy),
+        'Population (in millions)': parseFloat(population),
+        'Gross Domestic Product': parseFloat(gdp)
+      };
+  
       if (isEditing) {
-        await updateRecord(editId, selectedYear, parseFloat(generationValue));
+        await updateRecord(selectedYear, payload);
       } else {
-        await addRecord(selectedYear, parseFloat(generationValue));
+        await addRecord(selectedYear, payload['Geothermal (GWh)']);
       }
     } catch (error) {
       console.error('Error saving data:', error);
     }
-  }, [selectedYear, generationValue, isEditing, editId, updateRecord, addRecord]);
+  }, [selectedYear, generationValue, nonRenewableEnergy, population, gdp, isEditing, updateRecord, addRecord]);
 
   // Export data handler - DEFINED BEFORE IT'S USED
   const handleExportData = useCallback(() => {
@@ -122,14 +154,21 @@ const WindAdmin = () => {
   // For demo purposes, use the data from the hook or sample data if empty
   const effectiveData = useMemo(() => {
     if (generationData.length > 0) {
-      return generationData.map((item, index) => ({
+      const data = generationData.map((item, index) => ({
         id: index + 1,
         year: item.date,
         generation: item.value,
-        dateAdded: new Date().toISOString()
+        nonRenewableEnergy: item.nonRenewableEnergy, // Include non-renewable energy
+        population: item.population, // Include population
+        gdp: item.gdp, // Include GDP
+        dateAdded: new Date().toISOString(),
+        isPredicted: item.isPredicted !== undefined ? item.isPredicted : false // Ensure isPredicted is included
       }));
+      // Log the effective data to verify the isPredicted column
+      console.log("Effective data:", data);
+      return data;
     }
-    return generateSampleData();
+    return generateSampleData().map(item => ({ ...item, isPredicted: true })); // Mark sample data as predicted
   }, [generationData]);
 
   // Year range for filtering
@@ -154,10 +193,10 @@ const WindAdmin = () => {
 
   // Configure data table columns
   const tableColumns = useMemo(() => 
-    getTableColumns(handleOpenEditModal, handleDelete), 
-    [handleOpenEditModal, handleDelete]);
+    getTableColumns(handleOpenEditModal, handleDelete, effectiveData), 
+    [handleOpenEditModal, handleDelete, effectiveData]);
   
-  // Use useDataTable hook with filtered data - NOW handleExportData is defined BEFORE it's used here
+  // Use useDataTable hook with filtered data
   const {
     data: tableData,
     loading: tableLoading,
@@ -166,7 +205,7 @@ const WindAdmin = () => {
   } = useDataTable({
     data: filteredData,
     columns: tableColumns,
-    onExport: handleExportData, // Now this is safe
+    onExport: handleExportData,
     onRefresh: handleRefresh
   });
   
@@ -175,7 +214,7 @@ const WindAdmin = () => {
     const config = getChartConfig();
     // Add line chart specific configuration
     config.line = {
-      stroke: '#64748B', // Slate color for wind
+      stroke: '#64748B', // Geothermal color
       strokeWidth: 2,
       dot: {
         r: 5,
@@ -214,6 +253,7 @@ const WindAdmin = () => {
     return { isValid: false, errors: {} };
   }, [selectedYear, generationValue]);
 
+  // Skeleton loader for initial loading state
   if (loading && generationData.length === 0) {
     return (
       <div className="p-6 max-w-7xl mx-auto">
@@ -252,14 +292,14 @@ const WindAdmin = () => {
             <p className="text-gray-500">Manage historical and projected wind generation data</p>
           </div>
         </div>
-        <Button
+        {/* <Button
           variant="primary"
-          className="bg-slate-500 hover:bg-slate-600 flex items-center gap-2"
+          className="bg-red-500 hover:bg-red-600 flex items-center gap-2"
           onClick={handleOpenAddModal}
         >
           <AppIcon name="plus" size={18} />
           Add New Record
-        </Button>
+        </Button> */}
       </div>
 
       {/* Year Range Filter Card */}
@@ -286,7 +326,7 @@ const WindAdmin = () => {
           {currentProjection && (
             <div className="mt-2">
               <span className="text-gray-500">Latest Projection:</span>
-              <span className="ml-2 text-xl font-semibold text-slate-700">{currentProjection.toFixed(2)} GWh</span>
+              <span className="ml-2 text-xl font-semibold text-red-600">{currentProjection.toFixed(2)} GWh</span>
             </div>
           )}
         </div>
@@ -329,9 +369,9 @@ const WindAdmin = () => {
         onExport={handleExport}
         onRefresh={refreshTable}
         tableClasses={{
-          paper: 'shadow-md rounded-md',
-          headerCell: 'bg-gray-50',
-          row: 'hover:bg-slate-50'
+          paper: "shadow-md rounded-md",
+          headerCell: "bg-gray-50",
+          row: "hover:bg-red-50"
         }}
         emptyMessage={`No wind generation data available for years ${yearRange.startYear} - ${yearRange.endYear}`}
       />
@@ -340,6 +380,106 @@ const WindAdmin = () => {
       <Dialog open={isModalOpen} onClose={handleCloseModal} maxWidth="sm" fullWidth>
         <DialogTitle className="flex justify-between items-center">
           <Typography variant="h6">{isEditing ? 'Edit Record' : 'Add New Record'}</Typography>
+          <IconButton onClick={handleCloseModal} size="small">
+            <X size={18} />
+          </IconButton>
+        </DialogTitle>
+        <DialogContent>
+          <Box className="p-4 space-y-6">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Year
+              </label>
+              <SingleYearPicker
+                initialYear={selectedYear}
+                onYearChange={handleYearChange}
+              />
+            </div>
+            <div>
+              <NumberBox
+                label="Generation (GWh)"
+                value={generationValue}
+                onChange={handleGenerationChange}
+                placeholder="Enter generation value in GWh"
+                variant="outlined"
+                size="medium"
+                min={0}
+                step={0.01}
+                fullWidth
+                error={formValidation.errors.generation ? true : false}
+                helperText={formValidation.errors.generation}
+              />
+            </div>
+            <div>
+              <NumberBox
+                label="Non-Renewable Energy (GWh)"
+                value={nonRenewableEnergy}
+                onChange={handleNonRenewableEnergyChange}
+                placeholder="Enter non-renewable energy value in GWh"
+                variant="outlined"
+                size="medium"
+                min={0}
+                step={0.01}
+                fullWidth
+                error={formValidation.errors.nonRenewableEnergy ? true : false}
+                helperText={formValidation.errors.nonRenewableEnergy}
+              />
+            </div>
+            <div>
+              <NumberBox
+                label="Population (in millions)"
+                value={population}
+                onChange={handlePopulationChange}
+                placeholder="Enter population value in millions"
+                variant="outlined"
+                size="medium"
+                min={0}
+                step={0.01}
+                fullWidth
+                error={formValidation.errors.population ? true : false}
+                helperText={formValidation.errors.population}
+              />
+            </div>
+            <div>
+              <NumberBox
+                label="Gross Domestic Product"
+                value={gdp}
+                onChange={handleGdpChange}
+                placeholder="Enter GDP value"
+                variant="outlined"
+                size="medium"
+                min={0}
+                step={0.01}
+                fullWidth
+                error={formValidation.errors.gdp ? true : false}
+                helperText={formValidation.errors.gdp}
+              />
+            </div>
+          </Box>
+        </DialogContent>
+        <DialogActions className="p-4">
+          <Button
+            variant="secondary"
+            onClick={handleCloseModal}
+            className="mr-2"
+          >
+            Cancel
+          </Button>
+          <Button
+            variant="primary"
+            onClick={handleSubmit}
+            disabled={!formValidation.isValid}
+            className="bg-red-500 hover:bg-red-600"
+          >
+            {isEditing ? 'Update' : 'Save'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Add New Record Modal */}
+      <Dialog open={isModalOpen && !isEditing} onClose={handleCloseModal} maxWidth="sm" fullWidth>
+        <DialogTitle className="flex justify-between items-center">
+          <Typography variant="h6">Add New Record</Typography>
           <IconButton onClick={handleCloseModal} size="small">
             <X size={18} />
           </IconButton>
@@ -384,9 +524,9 @@ const WindAdmin = () => {
             variant="primary"
             onClick={handleSubmit}
             disabled={!formValidation.isValid}
-            className="bg-slate-500 hover:bg-slate-600"
+            className="bg-yellow-500 hover:bg-yellow-600"
           >
-            {isEditing ? 'Update' : 'Save'}
+            Save
           </Button>
         </DialogActions>
       </Dialog>
@@ -394,4 +534,4 @@ const WindAdmin = () => {
   );
 };
 
-export default WindAdmin;
+export default GeothermalAdmin;

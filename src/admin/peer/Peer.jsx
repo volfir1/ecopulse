@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import { 
   Dialog, 
   DialogTitle, 
@@ -29,6 +29,10 @@ import {
   chartData, 
   chartColors 
 } from './dummyData';
+
+import {
+  SingleYearPicker,
+} from '@shared/index';
 
 // Prototype only - this would normally be imported
 const Button = ({ children, className, variant, onClick }) => (
@@ -75,18 +79,244 @@ const PeerToPeerAdminPrototype = () => {
   const [selectedRecord, setSelectedRecord] = useState(peerToPeerDummyData[0]);
   const [startYear, setStartYear] = useState(2020);
   const [endYear, setEndYear] = useState(2023);
+  const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
+
+  //Cebu 
+  const [cebuTotalPowerGeneration, setCebuTotalPowerGeneration] = useState('');
+  const [cebuNonRenewableGeneration, setCebuNonRenewableGeneration] = useState('');
+  const [cebuRenewableGeneration, setCebuRenewableGeneration] = useState('');
+  const [cebuGeothermal, setCebuGeothermal] = useState('');
+  const [cebuHydro, setCebuHydro] = useState('');
+  const [cebuBiomass, setCebuBiomass] = useState('');
+  const [cebuSolar, setCebuSolar] = useState('');
+  const [cebuWind, setCebuWind] = useState('');
+
+  //Negros
+  const [negrosTotalPowerGeneration, setNegrosTotalPowerGeneration] = useState('');
+  const [negrosNonRenewableGeneration, setNegrosNonRenewableGeneration] = useState('');
+  const [negrosRenewableGeneration, setNegrosRenewableGeneration] = useState('');
+  const [negrosGeothermal, setNegrosGeothermal] = useState('');
+  const [negrosHydro, setNegrosHydro] = useState('');
+  const [negrosBiomass, setNegrosBiomass] = useState('');
+  const [negrosSolar, setNegrosSolar] = useState('');
+  const [negrosWind, setNegrosWind] = useState('');
+
+  //Panay
+  const [panayTotalPowerGeneration, setPanayTotalPowerGeneration] = useState('');
+  const [panayNonRenewableGeneration, setPanayNonRenewableGeneration] = useState('');
+  const [panayRenewableGeneration, setPanayRenewableGeneration] = useState('');
+  const [panayGeothermal, setPanayGeothermal] = useState('');
+  const [panayHydro, setPanayHydro] = useState('');
+  const [panayBiomass, setPanayBiomass] = useState('');
+  const [panaySolar, setPanaySolar] = useState('');
+  const [panayWind, setPanayWind] = useState('');
+
+  //Leyte-Samar
+  const [leyteSamarTotalPowerGeneration, setLeyteSamarTotalPowerGeneration] = useState('');
+  const [leyteSamarNonRenewableGeneration, setLeyteSamarNonRenewableGeneration] = useState('');
+  const [leyteSamarRenewableGeneration, setLeyteSamarRenewableGeneration] = useState('');
+  const [leyteSamarGeothermal, setLeyteSamarGeothermal] = useState('');
+  const [leyteSamarHydro, setLeyteSamarHydro] = useState('');
+  const [leyteSamarBiomass, setLeyteSamarBiomass] = useState('');
+  const [leyteSamarSolar, setLeyteSamarSolar] = useState('');
+  const [leyteSamarWind, setLeyteSamarWind] = useState('');
+
+  //Bohol
+  const [boholTotalPowerGeneration, setBoholTotalPowerGeneration] = useState('');
+  const [boholNonRenewableGeneration, setBoholNonRenewableGeneration] = useState('');
+  const [boholRenewableGeneration, setBoholRenewableGeneration] = useState('');
+  const [boholGeothermal, setBoholGeothermal] = useState('');
+  const [boholHydro, setBoholHydro] = useState('');
+  const [boholBiomass, setBoholBiomass] = useState('');
+  const [boholSolar, setBoholSolar] = useState('');
+  const [boholWind, setBoholWind] = useState('');
+
+  //Visayas
+  const [visayasTotalPowerGeneration, setVisayasTotalPowerGeneration] = useState('');
+  const [visayasTotalPowerConsumption, setVisayasTotalPowerConsumption] = useState('');
+
+  const [isEditing, setIsEditing] = useState(false);
   
   // Mock functions
   const openModal = (record = peerToPeerDummyData[0]) => {
     setSelectedRecord(record);
     setIsModalOpen(true);
   };
-  
+
+  const handleOpenAddModal = useCallback(() => {
+    setIsEditing(false);
+    setCebuTotalPowerGeneration('');
+    setCebuNonRenewableGeneration('');
+    setCebuRenewableGeneration('');
+    setCebuGeothermal('');
+    setCebuHydro('');
+    setCebuBiomass('');
+    setCebuSolar('');
+    setCebuWind('');
+    //Negros
+    setNegrosTotalPowerGeneration('');
+    setNegrosNonRenewableGeneration('');
+    setNegrosRenewableGeneration('');
+    setNegrosGeothermal('');
+    setNegrosHydro('');
+    setNegrosBiomass('');
+    setNegrosSolar('');
+    setNegrosWind('');
+    setSelectedYear(new Date().getFullYear());
+    // setSelectedYear(new Date().getFullYear());
+    // setGenerationValue('');
+    // setNonRenewableEnergy('');
+    // setPopulation('');
+    // setGdp('');
+    setIsModalOpen(true);
+  }, []);  
+
+  //Visayas
+  const handleVisayasTotalPowerGenerationChange = useCallback((event) => {
+    setVisayasTotalPowerGeneration(event.target.value);
+  }, []);
+  const handleVisayasTotalPowerConsumptionChange = useCallback((event) => {
+    setVisayasTotalPowerConsumption(event.target.value);
+  }, []);
+  //Cebu
+  const handleCebuTotalPowerGenerationChange = useCallback((event) => {
+    setCebuTotalPowerGeneration(event.target.value);
+  }, []);
+  const handleCebuNonRenewableGenerationChange = useCallback((event) => {
+    setCebuNonRenewableGeneration(event.target.value);
+  }, []);
+  const handleCebuRenewableGenerationChange = useCallback((event) => {
+    setCebuRenewableGeneration(event.target.value);
+  }, []);
+  const handleCebuGeothermalChange = useCallback((event) => {
+    setCebuWind(event.target.value);
+  }, []);
+  const handleCebuHydroChange = useCallback((event) => {
+    setCebuHydro(event.target.value);
+  }, []);
+  const handleCebuBiomassChange = useCallback((event) => {
+    setCebuBiomass(event.target.value);
+  }, []);
+  const handleCebuSolarChange = useCallback((event) => {
+    setCebuSolar(event.target.value);
+  }, []);
+  const handleCebuWindChange = useCallback((event) => {
+    setCebuWind(event.target.value);
+  }, []);
+
+  //Negros
+  const handleNegrosTotalPowerGenerationChange = useCallback((event) => {
+    setNegrosTotalPowerGeneration(event.target.value);
+  }, []);
+  const handleNegrosNonRenewableGenerationChange = useCallback((event) => {
+    setNegrosNonRenewableGeneration(event.target.value);
+  }, []);
+  const handleNegrosRenewableGenerationChange = useCallback((event) => {
+    setNegrosRenewableGeneration(event.target.value);
+  }, []);
+  const handleNegrosGeothermalChange = useCallback((event) => {
+    setNegrosGeothermal(event.target.value);
+  }, []);
+  const handleNegrosHydroChange = useCallback((event) => {
+    setNegrosHydro(event.target.value);
+  }, []);
+  const handleNegrosBiomassChange = useCallback((event) => {
+    setNegrosBiomass(event.target.value);
+  }, []);
+  const handleNegrosSolarChange = useCallback((event) => {
+    setNegrosSolar(event.target.value);
+  }, []);
+  const handleNegrosWindChange = useCallback((event) => {
+    setNegrosWind(event.target.value);
+  }, []);
+
+  //Panay
+  const handlePanayTotalPowerGenerationChange = useCallback((event) => {
+    setPanayTotalPowerGeneration(event.target.value);
+  }, []);
+  const handlePanayNonRenewableGenerationChange = useCallback((event) => {
+    setPanayNonRenewableGeneration(event.target.value);
+  }, []);
+  const handlePanayRenewableGenerationChange = useCallback((event) => {
+    setPanayRenewableGeneration(event.target.value);
+  }, []);
+  const handlePanayGeothermalChange = useCallback((event) => {
+    setPanayGeothermal(event.target.value);
+  }, []);
+  const handlePanayHydroChange = useCallback((event) => {
+    setPanayHydro(event.target.value);
+  }, []);
+  const handlePanayBiomassChange = useCallback((event) => {
+    setPanayBiomass(event.target.value);
+  }, []);
+  const handlePanaySolarChange = useCallback((event) => {
+    setPanaySolar(event.target.value);
+  }, []);
+  const handlePanayWindChange = useCallback((event) => {
+    setPanayWind(event.target.value);
+  }, []);
+
+  //Leyte-Samar
+  const handleLeyteSamarTotalPowerGenerationChange = useCallback((event) => {
+    setLeyteSamarTotalPowerGeneration(event.target.value);
+  }, []);
+  const handleLeyteSamarNonRenewableGenerationChange = useCallback((event) => {
+    setLeyteSamarNonRenewableGeneration(event.target.value);
+  }, []);
+  const handleLeyteSamarRenewableGenerationChange = useCallback((event) => {
+    setLeyteSamarRenewableGeneration(event.target.value);
+  }, []);
+  const handleLeyteSamarGeothermalChange = useCallback((event) => {
+    setLeyteSamarGeothermal(event.target.value);
+  }, []);
+  const handleLeyteSamarHydroChange = useCallback((event) => {
+    setLeyteSamarHydro(event.target.value);
+  }, []);
+  const handleLeyteSamarBiomassChange = useCallback((event) => {
+    setLeyteSamarBiomass(event.target.value);
+  }, []);
+  const handleLeyteSamarSolarChange = useCallback((event) => {
+    setLeyteSamarSolar(event.target.value);
+  }, []);
+  const handleLeyteSamarWindChange = useCallback((event) => {
+    setLeyteSamarWind(event.target.value);
+  }, []);
+
+  //Bohol
+  const handleBoholTotalPowerGenerationChange = useCallback((event) => {
+    setBoholTotalPowerGeneration(event.target.value);
+  }, []);
+  const handleBoholNonRenewableGenerationChange = useCallback((event) => {
+    setBoholNonRenewableGeneration(event.target.value);
+  }, []);
+  const handleBoholRenewableGenerationChange = useCallback((event) => {
+    setBoholRenewableGeneration(event.target.value);
+  }, []);
+  const handleBoholGeothermalChange = useCallback((event) => {
+    setBoholGeothermal(event.target.value);
+  }, []);
+  const handleBoholHydroChange = useCallback((event) => {
+    setBoholHydro(event.target.value);
+  }, []);
+  const handleBoholBiomassChange = useCallback((event) => {
+    setBoholBiomass(event.target.value);
+  }, []);
+  const handleBoholSolarChange = useCallback((event) => {
+    setBoholSolar(event.target.value);
+  }, []);
+  const handleBoholWindChange = useCallback((event) => {
+    setBoholWind(event.target.value);
+  }, []);
+
   const closeModal = () => setIsModalOpen(false);
   
   const handleTabChange = (event, newValue) => {
     setActiveTab(newValue);
   };
+
+  const handleYearChange = useCallback((year) => {
+    setSelectedYear(year);
+  }, []);  
 
   // Function to render the appropriate chart based on active tab
   const renderChart = () => {
@@ -166,7 +396,7 @@ const PeerToPeerAdminPrototype = () => {
         <Button
           variant="primary"
           className="flex items-center gap-2"
-          onClick={() => openModal()}
+          onClick={handleOpenAddModal}
         >
           <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <line x1="12" y1="5" x2="12" y2="19"></line>
@@ -347,13 +577,10 @@ const PeerToPeerAdminPrototype = () => {
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Year
               </label>
-              <select className="border rounded-md p-2 w-full" value={selectedRecord.Year}>
-                <option value={2020}>2020</option>
-                <option value={2021}>2021</option>
-                <option value={2022}>2022</option>
-                <option value={2023}>2023</option>
-                <option value={2024}>2024</option>
-              </select>
+              <SingleYearPicker
+                             initialYear={selectedYear}
+                             onYearChange={handleYearChange}
+                           />
             </div>
             
             {/* Cebu Section */}
@@ -362,42 +589,50 @@ const PeerToPeerAdminPrototype = () => {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <NumberBox
                   label="Total Power Generation (GWh)"
-                  value={selectedRecord["Cebu Total Power Generation (GWh)"]}
+                  value={cebuTotalPowerGeneration}
+                  onChange={handleCebuTotalPowerGenerationChange}
                   placeholder="Enter value"
                 />
                 <NumberBox
                   label="Total Non-Renewable Energy (GWh)"
-                  value={selectedRecord["Cebu Total Non-Renewable Energy (GWh)"]}
+                  value={cebuNonRenewableGeneration}
+                  onChange={handleCebuNonRenewableGenerationChange}
                   placeholder="Enter value"
                 />
                 <NumberBox
                   label="Total Renewable Energy (GWh)"
-                  value={selectedRecord["Cebu Total Renewable Energy (GWh)"]}
+                  value={cebuRenewableGeneration}
+                  onChange={handleCebuRenewableGenerationChange}
                   placeholder="Enter value"
                 />
                 <NumberBox
                   label="Geothermal (GWh)"
-                  value={selectedRecord["Cebu Geothermal (GWh)"]}
+                  value={cebuGeothermal}
+                  onChange={handleCebuGeothermalChange}
                   placeholder="Enter value"
                 />
                 <NumberBox
                   label="Hydro (GWh)"
-                  value={selectedRecord["Cebu Hydro (GWh)"]}
+                  value={cebuHydro}
+                  onChange={handleCebuHydroChange}
                   placeholder="Enter value"
                 />
                 <NumberBox
                   label="Biomass (GWh)"
-                  value={selectedRecord["Cebu Biomass (GWh)"]}
+                  value={cebuBiomass}
+                  onChange={handleCebuBiomassChange}
                   placeholder="Enter value"
                 />
                 <NumberBox
                   label="Solar (GWh)"
-                  value={selectedRecord["Cebu Solar (GWh)"]}
+                  value={cebuSolar}
+                  onChange={handleCebuSolarChange}
                   placeholder="Enter value"
                 />
                 <NumberBox
                   label="Wind (GWh)"
-                  value={selectedRecord["Cebu Wind (GWh)"]}
+                  value={cebuWind}
+                  onChange={handleCebuWindChange}
                   placeholder="Enter value"
                 />
               </div>
@@ -407,46 +642,54 @@ const PeerToPeerAdminPrototype = () => {
             <div className="border p-4 rounded-md">
               <h3 className="text-lg font-medium mb-4">Negros</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <NumberBox
-                  label="Total Power Generation (GWh)"
-                  value={selectedRecord["Negros Total Power Generation (GWh)"]}
-                  placeholder="Enter value"
-                />
-                <NumberBox
-                  label="Total Non-Renewable Energy (GWh)"
-                  value={selectedRecord["Negros Total Non-Renewable Energy (GWh)"]}
-                  placeholder="Enter value"
-                />
-                <NumberBox
-                  label="Total Renewable Energy (GWh)"
-                  value={selectedRecord["Negros Total Renewable Energy (GWh)"]}
-                  placeholder="Enter value"
-                />
-                <NumberBox
-                  label="Geothermal (GWh)"
-                  value={selectedRecord["Negros Geothermal (GWh)"]}
-                  placeholder="Enter value"
-                />
-                <NumberBox
-                  label="Hydro (GWh)"
-                  value={selectedRecord["Negros Hydro (GWh)"]}
-                  placeholder="Enter value"
-                />
-                <NumberBox
-                  label="Biomass (GWh)"
-                  value={selectedRecord["Negros Biomass (GWh)"]}
-                  placeholder="Enter value"
-                />
-                <NumberBox
-                  label="Solar (GWh)"
-                  value={selectedRecord["Negros Solar (GWh)"]}
-                  placeholder="Enter value"
-                />
-                <NumberBox
-                  label="Wind (GWh)"
-                  value={selectedRecord["Negros Wind (GWh)"]}
-                  placeholder="Enter value"
-                />
+              <NumberBox
+                label="Total Power Generation (GWh)"
+                value={negrosTotalPowerGeneration}
+                onChange={handleNegrosTotalPowerGenerationChange}
+                placeholder="Enter value"
+              />
+              <NumberBox
+                label="Total Non-Renewable Energy (GWh)"
+                value={negrosNonRenewableGeneration}
+                onChange={handleNegrosNonRenewableGenerationChange}
+                placeholder="Enter value"
+              />
+              <NumberBox
+                label="Total Renewable Energy (GWh)"
+                value={negrosRenewableGeneration}
+                onChange={handleNegrosRenewableGenerationChange}
+                placeholder="Enter value"
+              />
+              <NumberBox
+                label="Geothermal (GWh)"
+                value={negrosGeothermal}
+                onChange={handleNegrosGeothermalChange}
+                placeholder="Enter value"
+              />
+              <NumberBox
+                label="Hydro (GWh)"
+                value={negrosHydro}
+                onChange={handleNegrosHydroChange}
+                placeholder="Enter value"
+              />
+              <NumberBox
+                label="Biomass (GWh)"
+                value={negrosBiomass}
+                onChange={handleNegrosBiomassChange}
+                placeholder="Enter value"
+              />
+              <NumberBox
+                label="Solar (GWh)"
+                value={negrosSolar}
+                onChange={handleNegrosSolarChange}
+                placeholder="Enter value"
+              />
+              <NumberBox
+                label="Wind (GWh)"
+                value={negrosWind}
+                onChange={handleNegrosWindChange}
+                placeholder="Enter value"
+              />
               </div>
             </div>
             
@@ -454,46 +697,54 @@ const PeerToPeerAdminPrototype = () => {
             <div className="border p-4 rounded-md">
               <h3 className="text-lg font-medium mb-4">Panay</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <NumberBox
-                  label="Total Power Generation (GWh)"
-                  value={selectedRecord["Panay Total Power Generation (GWh)"]}
-                  placeholder="Enter value"
-                />
-                <NumberBox
-                  label="Total Non-Renewable Energy (GWh)"
-                  value={selectedRecord["Panay Total Non-Renewable Energy (GWh)"]}
-                  placeholder="Enter value"
-                />
-                <NumberBox
-                  label="Total Renewable Energy (GWh)"
-                  value={selectedRecord["Panay Total Renewable Energy (GWh)"]}
-                  placeholder="Enter value"
-                />
-                <NumberBox
-                  label="Geothermal (GWh)"
-                  value={selectedRecord["Panay Geothermal (GWh)"]}
-                  placeholder="Enter value"
-                />
-                <NumberBox
-                  label="Hydro (GWh)"
-                  value={selectedRecord["Panay Hydro (GWh)"]}
-                  placeholder="Enter value"
-                />
-                <NumberBox
-                  label="Biomass (GWh)"
-                  value={selectedRecord["Panay Biomass (GWh)"]}
-                  placeholder="Enter value"
-                />
-                <NumberBox
-                  label="Solar (GWh)"
-                  value={selectedRecord["Panay Solar (GWh)"]}
-                  placeholder="Enter value"
-                />
-                <NumberBox
-                  label="Wind (GWh)"
-                  value={selectedRecord["Panay Wind (GWh)"]}
-                  placeholder="Enter value"
-                />
+              <NumberBox
+                label="Total Power Generation (GWh)"
+                value={panayTotalPowerGeneration}
+                onChange={handlePanayTotalPowerGenerationChange}
+                placeholder="Enter value"
+              />
+              <NumberBox
+                label="Total Non-Renewable Energy (GWh)"
+                value={panayNonRenewableGeneration}
+                onChange={handlePanayNonRenewableGenerationChange}
+                placeholder="Enter value"
+              />
+              <NumberBox
+                label="Total Renewable Energy (GWh)"
+                value={panayRenewableGeneration}
+                onChange={handlePanayRenewableGenerationChange}
+                placeholder="Enter value"
+              />
+              <NumberBox
+                label="Geothermal (GWh)"
+                value={panayGeothermal}
+                onChange={handlePanayGeothermalChange}
+                placeholder="Enter value"
+              />
+              <NumberBox
+                label="Hydro (GWh)"
+                value={panayHydro}
+                onChange={handlePanayHydroChange}
+                placeholder="Enter value"
+              />
+              <NumberBox
+                label="Biomass (GWh)"
+                value={panayBiomass}
+                onChange={handlePanayBiomassChange}
+                placeholder="Enter value"
+              />
+              <NumberBox
+                label="Solar (GWh)"
+                value={panaySolar}
+                onChange={handlePanaySolarChange}
+                placeholder="Enter value"
+              />
+              <NumberBox
+                label="Wind (GWh)"
+                value={panayWind}
+                onChange={handlePanayWindChange}
+                placeholder="Enter value"
+              />
               </div>
             </div>
             
@@ -501,46 +752,54 @@ const PeerToPeerAdminPrototype = () => {
             <div className="border p-4 rounded-md">
               <h3 className="text-lg font-medium mb-4">Leyte-Samar</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <NumberBox
-                  label="Total Power Generation (GWh)"
-                  value={selectedRecord["Leyte-Samar Total Power Generation (GWh)"]}
-                  placeholder="Enter value"
-                />
-                <NumberBox
-                  label="Total Non-Renewable Energy (GWh)"
-                  value={selectedRecord["Leyte-Samar Total Non-Renewable (GWh)"]}
-                  placeholder="Enter value"
-                />
-                <NumberBox
-                  label="Total Renewable Energy (GWh)"
-                  value={selectedRecord["Leyte-Samar Total Renewable (GWh)"]}
-                  placeholder="Enter value"
-                />
-                <NumberBox
-                  label="Geothermal (GWh)"
-                  value={selectedRecord["Leyte-Samar Geothermal (GWh)"]}
-                  placeholder="Enter value"
-                />
-                <NumberBox
-                  label="Hydro (GWh)"
-                  value={selectedRecord["Leyte-Samar Hydro (GWh)"]}
-                  placeholder="Enter value"
-                />
-                <NumberBox
-                  label="Biomass (GWh)"
-                  value={selectedRecord["Leyte-Samar Biomass (GWh)"]}
-                  placeholder="Enter value"
-                />
-                <NumberBox
-                  label="Solar (GWh)"
-                  value={selectedRecord["Leyte-Samar Solar (GWh)"]}
-                  placeholder="Enter value"
-                />
-                <NumberBox
-                  label="Wind (GWh)"
-                  value={selectedRecord["Leyte-Samar Wind (GWh)"]}
-                  placeholder="Enter value"
-                />
+              <NumberBox
+                label="Total Power Generation (GWh)"
+                value={leyteSamarTotalPowerGeneration}
+                onChange={handleLeyteSamarTotalPowerGenerationChange}
+                placeholder="Enter value"
+              />
+              <NumberBox
+                label="Total Non-Renewable Energy (GWh)"
+                value={leyteSamarNonRenewableGeneration}
+                onChange={handleLeyteSamarNonRenewableGenerationChange}
+                placeholder="Enter value"
+              />
+              <NumberBox
+                label="Total Renewable Energy (GWh)"
+                value={leyteSamarRenewableGeneration}
+                onChange={handleLeyteSamarRenewableGenerationChange}
+                placeholder="Enter value"
+              />
+              <NumberBox
+                label="Geothermal (GWh)"
+                value={leyteSamarGeothermal}
+                onChange={handleLeyteSamarGeothermalChange}
+                placeholder="Enter value"
+              />
+              <NumberBox
+                label="Hydro (GWh)"
+                value={leyteSamarHydro}
+                onChange={handleLeyteSamarHydroChange}
+                placeholder="Enter value"
+              />
+              <NumberBox
+                label="Biomass (GWh)"
+                value={leyteSamarBiomass}
+                onChange={handleLeyteSamarBiomassChange}
+                placeholder="Enter value"
+              />
+              <NumberBox
+                label="Solar (GWh)"
+                value={leyteSamarSolar}
+                onChange={handleLeyteSamarSolarChange}
+                placeholder="Enter value"
+              />
+              <NumberBox
+                label="Wind (GWh)"
+                value={leyteSamarWind}
+                onChange={handleLeyteSamarWindChange}
+                placeholder="Enter value"
+              />
               </div>
             </div>
             
@@ -548,46 +807,54 @@ const PeerToPeerAdminPrototype = () => {
             <div className="border p-4 rounded-md">
               <h3 className="text-lg font-medium mb-4">Bohol</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <NumberBox
-                  label="Total Power Generation (GWh)"
-                  value={selectedRecord["Bohol Total Power Generation (GWh)"]}
-                  placeholder="Enter value"
-                />
-                <NumberBox
-                  label="Total Non-Renewable Energy (GWh)"
-                  value={selectedRecord["Bohol Total Non-Renewable (GWh)"]}
-                  placeholder="Enter value"
-                />
-                <NumberBox
-                  label="Total Renewable Energy (GWh)"
-                  value={selectedRecord["Bohol Total Renewable (GWh)"]}
-                  placeholder="Enter value"
-                />
-                <NumberBox
-                  label="Geothermal (GWh)"
-                  value={selectedRecord["Bohol Geothermal (GWh)"]}
-                  placeholder="Enter value"
-                />
-                <NumberBox
-                  label="Hydro (GWh)"
-                  value={selectedRecord["Bohol Hydro (GWh)"]}
-                  placeholder="Enter value"
-                />
-                <NumberBox
-                  label="Biomass (GWh)"
-                  value={selectedRecord["Bohol Biomass (GWh)"]}
-                  placeholder="Enter value"
-                />
-                <NumberBox
-                  label="Solar (GWh)"
-                  value={selectedRecord["Bohol Solar (GWh)"]}
-                  placeholder="Enter value"
-                />
-                <NumberBox
-                  label="Wind (GWh)"
-                  value={selectedRecord["Bohol Wind (GWh)"]}
-                  placeholder="Enter value"
-                />
+              <NumberBox
+                label="Total Power Generation (GWh)"
+                value={boholTotalPowerGeneration}
+                onChange={handleBoholTotalPowerGenerationChange}
+                placeholder="Enter value"
+              />
+              <NumberBox
+                label="Total Non-Renewable Energy (GWh)"
+                value={boholNonRenewableGeneration}
+                onChange={handleBoholNonRenewableGenerationChange}
+                placeholder="Enter value"
+              />
+              <NumberBox
+                label="Total Renewable Energy (GWh)"
+                value={boholRenewableGeneration}
+                onChange={handleBoholRenewableGenerationChange}
+                placeholder="Enter value"
+              />
+              <NumberBox
+                label="Geothermal (GWh)"
+                value={boholGeothermal}
+                onChange={handleBoholGeothermalChange}
+                placeholder="Enter value"
+              />
+              <NumberBox
+                label="Hydro (GWh)"
+                value={boholHydro}
+                onChange={handleBoholHydroChange}
+                placeholder="Enter value"
+              />
+              <NumberBox
+                label="Biomass (GWh)"
+                value={boholBiomass}
+                onChange={handleBoholBiomassChange}
+                placeholder="Enter value"
+              />
+              <NumberBox
+                label="Solar (GWh)"
+                value={boholSolar}
+                onChange={handleBoholSolarChange}
+                placeholder="Enter value"
+              />
+              <NumberBox
+                label="Wind (GWh)"
+                value={boholWind}
+                onChange={handleBoholWindChange}
+                placeholder="Enter value"
+              />
               </div>
             </div>
             
@@ -597,13 +864,15 @@ const PeerToPeerAdminPrototype = () => {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <NumberBox
                   label="Total Power Generation (GWh)"
-                  value={selectedRecord["Visayas Total Power Generation (GWh)"]}
+                  value={visayasTotalPowerGeneration}
+                  onChange={handleVisayasTotalPowerGenerationChange}
                   placeholder="Enter value"
                   disabled={true}
                 />
                 <NumberBox
                   label="Total Power Consumption (GWh)"
-                  value={selectedRecord["Visayas Total Power Consumption (GWh)"]}
+                  value={visayasTotalPowerConsumption}
+                  onChange={handleVisayasTotalPowerConsumptionChange}
                   placeholder="Enter value"
                 />
               </div>

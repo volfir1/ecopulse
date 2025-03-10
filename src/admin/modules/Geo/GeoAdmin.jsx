@@ -292,14 +292,14 @@ const GeothermalAdmin = () => {
             <p className="text-gray-500">Manage historical and projected geothermal generation data</p>
           </div>
         </div>
-        <Button
+        {/* <Button
           variant="primary"
           className="bg-red-500 hover:bg-red-600 flex items-center gap-2"
           onClick={handleOpenAddModal}
         >
           <AppIcon name="plus" size={18} />
           Add New Record
-        </Button>
+        </Button> */}
       </div>
 
       {/* Year Range Filter Card */}
@@ -472,6 +472,61 @@ const GeothermalAdmin = () => {
             className="bg-red-500 hover:bg-red-600"
           >
             {isEditing ? 'Update' : 'Save'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Add New Record Modal */}
+      <Dialog open={isModalOpen && !isEditing} onClose={handleCloseModal} maxWidth="sm" fullWidth>
+        <DialogTitle className="flex justify-between items-center">
+          <Typography variant="h6">Add New Record</Typography>
+          <IconButton onClick={handleCloseModal} size="small">
+            <X size={18} />
+          </IconButton>
+        </DialogTitle>
+        <DialogContent>
+          <Box className="p-4 space-y-6">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Year
+              </label>
+              <SingleYearPicker
+                initialYear={selectedYear}
+                onYearChange={handleYearChange}
+              />
+            </div>
+            <div>
+              <NumberBox
+                label="Generation (GWh)"
+                value={generationValue}
+                onChange={handleGenerationChange}
+                placeholder="Enter generation value in GWh"
+                variant="outlined"
+                size="medium"
+                min={0}
+                step={0.01}
+                fullWidth
+                error={formValidation.errors.generation ? true : false}
+                helperText={formValidation.errors.generation}
+              />
+            </div>
+          </Box>
+        </DialogContent>
+        <DialogActions className="p-4">
+          <Button
+            variant="secondary"
+            onClick={handleCloseModal}
+            className="mr-2"
+          >
+            Cancel
+          </Button>
+          <Button
+            variant="primary"
+            onClick={handleSubmit}
+            disabled={!formValidation.isValid}
+            className="bg-yellow-500 hover:bg-yellow-600"
+          >
+            Save
           </Button>
         </DialogActions>
       </Dialog>
