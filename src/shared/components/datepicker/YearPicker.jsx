@@ -1,9 +1,9 @@
-// YearRangePicker.jsx
+// YearRangePicker.jsx - Updated with 2025-2030 defaults and mock data indicator
 import React, { useState, useCallback } from 'react';
 import { LocalizationProvider, DatePicker } from '@mui/x-date-pickers';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
-import { Box, Typography, IconButton } from '@mui/material';
-import { RefreshCcw } from 'lucide-react';
+import { Box, Typography, IconButton, Tooltip, Chip } from '@mui/material';
+import { RefreshCcw, InfoIcon } from 'lucide-react';
 import dayjs from 'dayjs';
 
 // Styles for the date pickers
@@ -21,15 +21,16 @@ const getPickerStyles = (error) => ({
 });
 
 export const YearRangePicker = ({
-  // Set default start year to current year and end year to current year + 5
-  initialStartYear = dayjs().year(),
-  initialEndYear = dayjs().year() + 5,
+  // Set default start year to 2025 and end year to 2030
+  initialStartYear = 2025,
+  initialEndYear = 2030,
   onStartYearChange,
   onEndYearChange,
+  usingMockData = false, // New prop to indicate if we're using mock data
 }) => {
-  // State management
-  const [startYear, setStartYear] = useState(dayjs(initialStartYear.toString()));
-  const [endYear, setEndYear] = useState(dayjs(initialEndYear.toString()));
+  // State management - create proper dayjs objects from the year values
+  const [startYear, setStartYear] = useState(dayjs().year(initialStartYear));
+  const [endYear, setEndYear] = useState(dayjs().year(initialEndYear));
   const [error, setError] = useState(false);
 
   // Handlers for year changes
@@ -60,11 +61,10 @@ export const YearRangePicker = ({
     onEndYearChange?.(newValue.year());
   }, [onEndYearChange, startYear]);
 
-  // Reset handler - now resets to current year and current year + 5
+  // Reset handler - resets to 2025 and 2030
   const handleReset = useCallback(() => {
-    const currentYear = dayjs().year();
-    const defaultStartYear = dayjs(currentYear.toString());
-    const defaultEndYear = dayjs((currentYear + 5).toString());
+    const defaultStartYear = dayjs().year(2025);
+    const defaultEndYear = dayjs().year(2030);
     
     setStartYear(defaultStartYear);
     setEndYear(defaultEndYear);
@@ -72,7 +72,6 @@ export const YearRangePicker = ({
     onEndYearChange?.(defaultEndYear.year());
     setError(false);
   }, [onStartYearChange, onEndYearChange]);
-
 
   return (
     <LocalizationProvider dateAdapter={AdapterDayjs}>
@@ -127,6 +126,19 @@ export const YearRangePicker = ({
           >
             <RefreshCcw size={16} />
           </IconButton>
+          
+          {usingMockData && (
+            <Tooltip title="Using simulated data. Some server data may not be available for this date range.">
+              <Chip 
+                label="Simulation" 
+                size="small"
+                color="warning"
+                variant="outlined"
+                icon={<InfoIcon size={14} />}
+                sx={{ height: 24 }}
+              />
+            </Tooltip>
+          )}
         </Box>
         
         {error && (

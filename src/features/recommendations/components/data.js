@@ -1,8 +1,8 @@
 // recommendationsData.js
 export const initialData = {
   cityData: {
-    city: "Taguig City",
-    period: "2024-2026 Analysis",
+   
+  
     budget: "₱300000",
     year: "2025",
     location: {

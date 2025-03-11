@@ -1,12 +1,12 @@
-// useSingleYearPicker.js
+// useSingleYearPicker.js - FIXED
 import { useState, useCallback } from 'react';
 import dayjs from 'dayjs';
 
 export const useSingleYearPicker = ({
-  initialYear = dayjs().year(),
+  initialYear = 2025,
   onYearChange
 }) => {
-  const [year, setYear] = useState(dayjs(initialYear?.toString()));
+  const [year, setYear] = useState(dayjs().year(initialYear));
   const [error, setError] = useState(false);
 
   const handleYearChange = useCallback((newValue) => {
@@ -20,8 +20,7 @@ export const useSingleYearPicker = ({
   }, [onYearChange]);
 
   const handleReset = useCallback(() => {
-    const currentYear = dayjs().year();
-    const defaultYear = dayjs(currentYear.toString());
+    const defaultYear = dayjs().year(2025);
     
     setYear(defaultYear);
     onYearChange?.(defaultYear.year());

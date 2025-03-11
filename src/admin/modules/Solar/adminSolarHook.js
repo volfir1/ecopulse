@@ -15,17 +15,22 @@ export const useSolarAnalytics = () => {
   const [generationData, setGenerationData] = useState([]);
   const [currentProjection, setCurrentProjection] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [selectedStartYear, setSelectedStartYear] = useState(new Date().getFullYear() - 4);
-  const [selectedEndYear, setSelectedEndYear] = useState(new Date().getFullYear() + 1);
+  const [selectedStartYear, setSelectedStartYear] = useState(new Date().getFullYear());
+  const [selectedEndYear, setSelectedEndYear] = useState(new Date().getFullYear() + 5);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
   
-  // Ref for chart element
   const chartRef = useRef(null);
-  const cleanResponse = (response) => {
-    // Replace "NaN" with "null" in the response string
-    return response.replace(/NaN/g, 'null');
-  };
 
+
+  // Ref for chart element
+  const cleanResponse = (response) => {
+    // Only apply replace if it's a string
+    if (typeof response === 'string') {
+      return response.replace(/NaN/g, 'null');
+    }
+    // If it's not a string, return it as is
+    return response;
+  };
 
   // Fetch data based on selected year range
 const fetchData = useCallback(async (startYear, endYear) => {
@@ -34,10 +39,14 @@ const fetchData = useCallback(async (startYear, endYear) => {
     const response = await api.get(`/api/predictions/solar/?start_year=${startYear}&end_year=${endYear}`);
     
     // Clean the response by replacing "NaN" with "null"
-    const cleanedResponse = cleanResponse(response.data);
+    const cleanedResponse = typeof response.data === 'string' 
+    ? cleanResponse(response.data)
+    : response.data;
 
     // Parse the cleaned JSON string
-    const responseData = JSON.parse(cleanedResponse);
+    const responseData = typeof cleanedResponse === 'string' 
+    ? JSON.parse(cleanedResponse) 
+    : cleanedResponse;
 
     // Check if the response contains the expected data
     if (responseData.status === "success" && Array.isArray(responseData.predictions)) {
@@ -181,7 +190,7 @@ const fetchData = useCallback(async (startYear, endYear) => {
         alert('Failed to download summary. Please try again.');
       }
     }
-  }, [generationData, selectedStartYear, selectedEndYear, currentProjection, enqueueSnackbar, chartRef]);
+  }, [generationData, selectedStartYear, selectedEndYear, currentProjection, enqueueSnackbar]);
 
   // Additional data for potential future use
   const temperatureData = Array.from({ length: 7 }, (_, i) => ({

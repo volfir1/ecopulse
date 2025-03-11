@@ -7,7 +7,7 @@ const solarStore = createEnergyStore('solar');
 const hydroStore = createEnergyStore('hydro');
 const windStore = createEnergyStore('wind');
 const biomassStore = createEnergyStore('biomass');
-const geothermalStore = createEnergyStore('geothermal'); // Add geothermal store
+const geothermalStore = createEnergyStore('geothermal'); 
 
 // Map of energy types to their stores
 const stores = {
@@ -15,7 +15,7 @@ const stores = {
   hydro: hydroStore,
   wind: windStore,
   biomass: biomassStore,
-  geothermal: geothermalStore // Add geothermal to the map
+  geothermal: geothermalStore
 };
 
 /**
@@ -32,8 +32,20 @@ const useEnergyAnalytics = (energyType) => {
   // Get the appropriate store
   const store = stores[energyType];
   
-  // Get toast notifications
-  const toast = useSnackbar();
+  // Get toast notifications - will be null if not available
+  let toast;
+  try {
+    toast = useSnackbar();
+  } catch (error) {
+    // If toast provider is not available, create a dummy object
+    toast = {
+      info: () => {},
+      success: () => {},
+      error: () => {},
+      warning: () => {}
+    };
+    console.log('Toast provider not available');
+  }
   
   // Create ref for chart
   const chartRef = useRef(null);
@@ -46,6 +58,7 @@ const useEnergyAnalytics = (energyType) => {
   const selectedEndYear = store(state => state.selectedEndYear);
   const additionalData = store(state => state.additionalData);
   const config = store(state => state.config);
+  const apiError = store(state => state.apiError);
   
   // Get actions from the store
   const initialize = store(state => state.initialize);
@@ -63,6 +76,19 @@ const useEnergyAnalytics = (energyType) => {
     
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialize, setChartRef]);
+  
+  // Show a notification when using mock data (only once)
+  // Using a more direct approach without options that might cause errors
+  useEffect(() => {
+    if (apiError && apiError.usingMockData) {
+      try {
+        toast.info(`Using simulated ${energyType} data for years ${selectedStartYear}-${selectedEndYear}.`);
+      } catch (error) {
+        console.log('Error showing toast notification:', error);
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [apiError]);
   
   // Handle year changes
   const handleStartYearChange = (year) => setYearRange(year, selectedEndYear);
@@ -111,11 +137,15 @@ const useEnergyAnalytics = (energyType) => {
     selectedEndYear,
     chartRef,
     config,
+    apiError,
     
     // Actions
     handleStartYearChange,
     handleEndYearChange,
     handleDownload: handleDownloadWithToast,
+    
+    // Flag to indicate if using mock data
+    usingMockData: apiError?.usingMockData || false,
     
     // Energy-specific data
     ...specificData

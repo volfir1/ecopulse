@@ -115,88 +115,216 @@ const createEnergyStore = (energyType) => {
     generationData: [],
     currentProjection: null,
     loading: true,
-    selectedStartYear: new Date().getFullYear(),
-    selectedEndYear: new Date().getFullYear() + 5,
+    selectedStartYear: 2025,  // Keep 2025 as default
+    selectedEndYear: 2030,    // Keep 2030 as default
     chartRef: null,
     additionalData: {}, // For energy-type specific data
+    apiError: null,     // Track API errors
     
     // Set chart reference
     setChartRef: (ref) => set({ chartRef: ref }),
     
     // Actions
     setYearRange: (startYear, endYear) => {
-      set({ selectedStartYear: startYear, selectedEndYear: endYear });
+      set({ 
+        selectedStartYear: startYear, 
+        selectedEndYear: endYear,
+        apiError: null  // Clear any previous errors
+      });
       // Fetch new data with updated years
       get().fetchData(startYear, endYear);
     },
     
-    // Fetch data method
-    fetchData: async (startYear, endYear) => {
-      // Update state to show loading
-      set({ loading: true });
-      
-      try {
-        // Make API request to the appropriate endpoint for this energy type
-        const response = await api.get(`${config.endpoint}?start_year=${startYear}&end_year=${endYear}`);
-        const data = response.data.predictions;
-        
-        // Format the data
-        const formattedData = data.map(item => ({
-          date: item.Year,
-          value: item['Predicted Production']
-        }));
-        
-        // Calculate current projection
-        const projection = formattedData.length > 0 
-          ? formattedData[formattedData.length - 1].value
-          : null;
-        
-        // Additional data processing based on energy type
-        let additionalData = {};
-        
-        if (energyType === 'hydro') {
-          // Hydro-specific data
-          additionalData = {
-            waterFlowData: response.data.water_flow || get().getWaterFlowData(),
-            turbineEfficiency: response.data.efficiency || get().getTurbineEfficiency()
-          };
-        } else if (energyType === 'solar') {
-          // Solar-specific data
-          additionalData = {
-            irradianceData: response.data.irradiance || get().getSolarIrradianceData(),
-            panelPerformance: response.data.performance || get().getPanelPerformance()
-          };
-        } else if (energyType === 'wind') {
-          // Wind-specific data
-          additionalData = {
-            windSpeedData: response.data.wind_speed || get().getWindSpeedData(),
-            turbinePerformance: response.data.turbine_data || get().getTurbinePerformance()
-          };
-        } else if (energyType === 'biomass') {
-          // Biomass-specific data
-          additionalData = {
-            feedstockData: response.data.feedstock || get().getFeedstockData(),
-            efficiencyData: response.data.efficiency || get().getEfficiencyData()
-          };
-        } else if (energyType === 'geothermal') {
-          // Geothermal-specific data
-          additionalData = {
-            temperatureData: response.data.temperature || get().getTemperatureData(),
-            wellPerformance: response.data.wells || get().getWellPerformance()
-          };
-        }
-        
-        // Update state with new data
-        set({ 
-          generationData: formattedData,
-          currentProjection: projection,
-          additionalData,
-          loading: false
-        });
-      } catch (error) {
-        console.error(`Error fetching ${energyType} data:`, error);
-        set({ loading: false });
+    // Enhanced fetchData method with better error handling 
+// Enhanced fetchData method with more robust error handling
+fetchData: async (startYear, endYear) => {
+  // Update state to show loading
+  set({ loading: true, apiError: null });
+  
+  try {
+    // Try to get data from API
+    const response = await api.get(`${config.endpoint}?start_year=${startYear}&end_year=${endYear}`);
+    const data = response.data.predictions;
+    
+    // Format the data
+    const formattedData = data.map(item => ({
+      date: item.Year,
+      value: item['Predicted Production']
+    }));
+    
+    // Calculate current projection
+    const projection = formattedData.length > 0 
+      ? formattedData[formattedData.length - 1].value
+      : null;
+    
+    // Additional data processing based on energy type
+    let additionalData = {};
+    
+    if (energyType === 'hydro') {
+      // Hydro-specific data
+      additionalData = {
+        waterFlowData: response.data.water_flow || get().getWaterFlowData(),
+        turbineEfficiency: response.data.efficiency || get().getTurbineEfficiency()
+      };
+    } else if (energyType === 'solar') {
+      // Solar-specific data
+      additionalData = {
+        irradianceData: response.data.irradiance || get().getSolarIrradianceData(),
+        panelPerformance: response.data.performance || get().getPanelPerformance()
+      };
+    } else if (energyType === 'wind') {
+      // Wind-specific data
+      additionalData = {
+        windSpeedData: response.data.wind_speed || get().getWindSpeedData(),
+        turbinePerformance: response.data.turbine_data || get().getTurbinePerformance()
+      };
+    } else if (energyType === 'biomass') {
+      // Biomass-specific data
+      additionalData = {
+        feedstockData: response.data.feedstock || get().getFeedstockData(),
+        efficiencyData: response.data.efficiency || get().getEfficiencyData()
+      };
+    } else if (energyType === 'geothermal') {
+      // Geothermal-specific data
+      additionalData = {
+        temperatureData: response.data.temperature || get().getTemperatureData(),
+        wellPerformance: response.data.wells || get().getWellPerformance()
+      };
+    }
+    
+    // Update state with new data
+    set({ 
+      generationData: formattedData,
+      currentProjection: projection,
+      additionalData,
+      loading: false,
+      apiError: null
+    });
+  } catch (error) {
+    console.error(`Error fetching ${energyType} data:`, error);
+    
+    // Get error message from response if available
+    let errorMessage = '';
+    if (error.response && error.response.data) {
+      if (typeof error.response.data === 'string') {
+        errorMessage = error.response.data;
+      } else if (typeof error.response.data === 'object') {
+        errorMessage = JSON.stringify(error.response.data);
       }
+    } else {
+      errorMessage = error.toString();
+    }
+    
+    // Log the detailed error information
+    console.error('Error details:', errorMessage);
+
+    // Check for specific error types
+    const gdpErrorPatterns = [
+      "Gross Domestic Product",
+      "GDP",
+      "not in index"
+    ];
+    
+    const isGdpError = gdpErrorPatterns.some(pattern => 
+      errorMessage.includes(pattern)
+    );
+    
+    // Consider all year range errors as GDP-related for future years
+    const isFutureYearRequest = endYear > new Date().getFullYear();
+    const isYearRangeError = isFutureYearRequest && (
+      errorMessage.includes("year") || 
+      errorMessage.includes("index") || 
+      errorMessage.includes("data")
+    );
+    
+    const shouldUseMockData = isGdpError || isYearRangeError;
+
+    // Generate mock data for the requested years using the generateMockData helper
+    const mockData = get().generateMockData(startYear, endYear);
+    
+    // Generate mock additional data using the helper method
+    const mockAdditionalData = get().generateMockAdditionalData();
+    
+    // Update state with mock data and appropriate error message
+    set({
+      generationData: mockData,
+      currentProjection: mockData.length > 0 ? mockData[mockData.length - 1].value : null,
+      additionalData: mockAdditionalData,
+      loading: false,
+      apiError: {
+        message: shouldUseMockData ? 
+          "Future economic data is not available for predictions. Using simulated data." : 
+          "Could not retrieve prediction data. Using simulated data instead.",
+        code: error.response ? error.response.status : 'NETWORK_ERROR',
+        details: errorMessage,
+        usingMockData: true
+      }
+    });
+  }
+},
+    
+    // Generate mock data for the specified year range
+    generateMockData: (startYear, endYear) => {
+      const years = [];
+      for (let year = startYear; year <= endYear; year++) {
+        years.push(year);
+      }
+      
+      return years.map(year => {
+        // Use a deterministic algorithm to generate predictable values
+        // This ensures the same year always gets the same value
+        const baseValue = 75 + (year % 10) * 8;
+        const randomOffset = Math.sin(year * 0.5) * 15;
+        
+        // Add energy-specific patterns
+        let energyFactor = 1;
+        if (energyType === 'solar') energyFactor = 1.2;
+        if (energyType === 'wind') energyFactor = 1.1;
+        if (energyType === 'hydro') energyFactor = 0.95;
+        if (energyType === 'biomass') energyFactor = 0.85;
+        if (energyType === 'geothermal') energyFactor = 1.05;
+        
+        // Calculate final value with growth trend
+        const growthTrend = (year - startYear) * 2.5;
+        const value = (baseValue + randomOffset + growthTrend) * energyFactor;
+        
+        return {
+          date: year,
+          value: parseFloat(value.toFixed(2))
+        };
+      });
+    },
+    
+    // Generate mock additional data specific to each energy type
+    generateMockAdditionalData: () => {
+      if (energyType === 'solar') {
+        return {
+          irradianceData: get().getSolarIrradianceData(),
+          panelPerformance: get().getPanelPerformance()
+        };
+      } else if (energyType === 'hydro') {
+        return {
+          waterFlowData: get().getWaterFlowData(),
+          turbineEfficiency: get().getTurbineEfficiency()
+        };
+      } else if (energyType === 'wind') {
+        return {
+          windSpeedData: get().getWindSpeedData(),
+          turbinePerformance: get().getTurbinePerformance()
+        };
+      } else if (energyType === 'biomass') {
+        return {
+          feedstockData: get().getFeedstockData(),
+          efficiencyData: get().getEfficiencyData()
+        };
+      } else if (energyType === 'geothermal') {
+        return {
+          temperatureData: get().getTemperatureData(),
+          wellPerformance: get().getWellPerformance()
+        };
+      }
+      
+      return {};
     },
     
     // Initialize data - call this when component mounts
@@ -282,11 +410,20 @@ const createEnergyStore = (energyType) => {
         selectedEndYear, 
         currentProjection, 
         chartRef,
-        config
+        config,
+        apiError
       } = get();
       
+      // Show a warning if using mock data - safely check toast object
+      if (apiError && apiError.usingMockData && toast && typeof toast.warning === 'function') {
+        toast.warning("Note: Using simulated data for this report as actual data could not be retrieved.");
+      }
+      
       try {
-        if (toast) toast.info('Preparing your download...');
+        // Safely check toast object
+        if (toast && typeof toast.info === 'function') {
+          toast.info('Preparing your download...');
+        }
         
         // Create new PDF document
         const doc = new jsPDF({
@@ -348,6 +485,18 @@ const createEnergyStore = (energyType) => {
         const projectionX = (pageWidth - projectionWidth) / 2;
         doc.text(projectionText, projectionX, yPosition);
         yPosition += 15;
+        
+        // Add simulation notice if using mock data
+        if (apiError && apiError.usingMockData) {
+          doc.setFontSize(10);
+          doc.setTextColor(192, 0, 0); // Red text for warning
+          const simulationText = "Note: Using simulated data for this report";
+          const simulationWidth = doc.getStringUnitWidth(simulationText) * doc.internal.getFontSize() / doc.internal.scaleFactor;
+          const simulationX = (pageWidth - simulationWidth) / 2;
+          doc.text(simulationText, simulationX, yPosition);
+          doc.setTextColor(0, 0, 0); // Reset to black
+          yPosition += 10;
+        }
     
         // 8) CHART SECTION - CENTERED
         if (chartRef && chartRef.current) {
@@ -509,12 +658,21 @@ const createEnergyStore = (energyType) => {
         
         // Save the PDF
         doc.save(config.fileName);
-        if (toast) toast.success('Summary downloaded successfully!');
+        
+        // Safely check toast object
+        if (toast && typeof toast.success === 'function') {
+          toast.success('Summary downloaded successfully!');
+        }
         
         return { success: true };
       } catch (error) {
         console.error('Download error:', error);
-        if (toast) toast.error('Failed to download summary. Please try again.');
+        
+        // Safely check toast object
+        if (toast && typeof toast.error === 'function') {
+          toast.error('Failed to download summary. Please try again.');
+        }
+        
         return { success: false, error };
       }
     }

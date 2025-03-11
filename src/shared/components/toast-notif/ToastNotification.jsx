@@ -93,30 +93,35 @@ export const SnackbarProvider = ({ children }) => {
     }
   }, [queue, currentSnackbar, open]);
 
+  // Helper to safely parse position string
+  const parsePosition = (positionStr) => {
+    // Default position
+    const defaultPosition = { vertical: 'top', horizontal: 'center' };
+    
+    // If position is not a string, return default
+    if (typeof positionStr !== 'string') {
+      return defaultPosition;
+    }
+    
+    const vertical = positionStr.includes('bottom') ? 'bottom' : 'top';
+    const horizontal = positionStr.includes('left') ? 'left' : 
+                      positionStr.includes('right') ? 'right' : 'center';
+    
+    return { vertical, horizontal };
+  };
+
   const toast = {
-    success: (message, position = 'top-center') => {
-      const vertical = position?.includes('bottom') ? 'bottom' : 'top';
-      const horizontal = position?.includes('left') ? 'left' : 
-                        position?.includes('right') ? 'right' : 'center';
-      enqueueSnackbar(message, 'success', { vertical, horizontal });
+    success: (message, position) => {
+      enqueueSnackbar(message, 'success', parsePosition(position));
     },
-    error: (message, position = 'top-center') => {
-      const vertical = position?.includes('bottom') ? 'bottom' : 'top';
-      const horizontal = position?.includes('left') ? 'left' : 
-                        position?.includes('right') ? 'right' : 'center';
-      enqueueSnackbar(message, 'error', { vertical, horizontal });
+    error: (message, position) => {
+      enqueueSnackbar(message, 'error', parsePosition(position));
     },
-    info: (message, position = 'top-center') => {
-      const vertical = position?.includes('bottom') ? 'bottom' : 'top';
-      const horizontal = position?.includes('left') ? 'left' : 
-                        position?.includes('right') ? 'right' : 'center';
-      enqueueSnackbar(message, 'info', { vertical, horizontal });
+    info: (message, position) => {
+      enqueueSnackbar(message, 'info', parsePosition(position));
     },
-    warning: (message, position = 'top-center') => {
-      const vertical = position?.includes('bottom') ? 'bottom' : 'top';
-      const horizontal = position?.includes('left') ? 'left' : 
-                        position?.includes('right') ? 'right' : 'center';
-      enqueueSnackbar(message, 'warning', { vertical, horizontal });
+    warning: (message, position) => {
+      enqueueSnackbar(message, 'warning', parsePosition(position));
     }
   };
 
