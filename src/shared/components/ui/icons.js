@@ -30,7 +30,8 @@ import {
     FileText,
     Ticket,
     Network,
-    Check
+    Check,
+    Upload
   
 } from 'lucide-react';
 import { useTheme } from "@emotion/react";
@@ -49,6 +50,7 @@ export const IconLibrary = {
     recommendation: BadgeCheck,
     myaccount: UserPen,
     ticket: Ticket,
+    upload: Upload,
     // Profile Related Icons
     profile: User,
     email: Mail,

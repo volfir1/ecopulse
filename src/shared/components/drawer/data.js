@@ -130,6 +130,13 @@ export const ADMIN_NAVIGATION = [
     children: [
       {
         kind: 'item',
+        segment: 'input',
+        title: 'Insert Record',
+        icon: <AppIcon name="upload" />,
+        path: '/admin/modules/input',
+      },
+      {
+        kind: 'item',
         segment: 'modules-solar',
         title: 'Solar',
         icon: <AppIcon name="solar" />,

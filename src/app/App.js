@@ -33,7 +33,9 @@ const App = () => {
     { path: '/admin/modules/geothermal', component: <adminRoutes.GeoAdmin />, roles: ['admin'] },
     { path: '/admin/modules/hydropower', component: <adminRoutes.HydroAdmin/>, roles: ['admin'] },
     { path: '/admin/modules/biomass', component: <adminRoutes.BioAdmin />, roles: ['admin'] },
-    
+    { path: '/admin/modules/input', component: <adminRoutes.Input />, roles: ['admin'] },
+    { path: '/admin/modules/add', component: <adminRoutes.AddRecord />, roles: ['admin'] },
+
     // Admin routes
     { path: '/admin/dashboard', component: <adminRoutes.Dashboard />, roles: ['admin'] },
     { path: '/admin/analytics', component: <adminRoutes.Analytics />, roles: ['admin'] },

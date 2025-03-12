@@ -44,6 +44,8 @@ export const adminRoutes = {
   HydroAdmin: lazy(() => import('@admin/modules/Hydro/HydroAdmin')),
   BioAdmin: lazy(() => import('@admin/modules/Bio/BioAdmin')),
   Peer: lazy(() => import('@admin/peer/Peer')),
+  Input: lazy(() => import('@admin/modules/input/renewablePage')),
+  AddRecord: lazy(() => import('@admin/modules/input/moduleInput')),
   // Ticket management routes
   AdminDetailView: lazy(() => import('@admin/ticket/TicketDetail/AdminDetailView')),
   AdminTicket: lazy(() => import('@admin/ticket/AdminTicket')),
