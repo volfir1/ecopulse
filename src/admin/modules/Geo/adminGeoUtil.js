@@ -3,7 +3,7 @@ import React from 'react';
 import { AppIcon, theme } from '@shared/index';
 
 // Get table columns with memoized action buttons
-export const getTableColumns = (handleEdit, handleDelete, data) => [
+export const getTableColumns = (handleEdit, handleDelete, handleRecover, data) => [
   { 
     id: 'year', 
     label: 'Year', 
@@ -31,8 +31,10 @@ export const getTableColumns = (handleEdit, handleDelete, data) => [
     sortable: false,
     format: (_, row) => {
       // Only show actions if isPredicted is explicitly false
-      if (row.isPredicted === false) {
+      if (row.isPredicted === false && !row.isDeleted) {
         return <ActionButtons row={row} onEdit={handleEdit} onDelete={handleDelete} />;
+      } else if (row.isPredicted === false && row.isDeleted === true) {
+        return <ActionButtons row={row} onRecover={handleRecover} />;
       }
       return null; // No actions for predicted data
     }
@@ -40,7 +42,7 @@ export const getTableColumns = (handleEdit, handleDelete, data) => [
 ];
 
 // Create a separate component for the action buttons
-const ActionButtons = React.memo(({ row, onEdit, onDelete }) => {
+const ActionButtons = React.memo(({ row, onEdit, onDelete, onRecover }) => {
   const handleEdit = (e) => {
     e.stopPropagation();
     onEdit(row);
@@ -50,23 +52,46 @@ const ActionButtons = React.memo(({ row, onEdit, onDelete }) => {
     e.stopPropagation();
     onDelete(row.year);  // Pass the year instead of the ID
   };
+
+  const handleRecover = (e) => {
+    e.stopPropagation();
+    onRecover(row.year);  // Pass the year instead of the ID
+  };
   
   return (
     <div className="flex justify-center gap-2">
-      <button 
-        onClick={handleEdit}
-        className="p-1 text-blue-600 hover:text-blue-800 hover:bg-blue-100 rounded-full transition-colors"
-        title="Edit"
-      >
-        <AppIcon name="edit" size={18} />
-      </button>
-      <button 
-        onClick={handleDelete}
-        className="p-1 text-red-600 hover:text-red-800 hover:bg-red-100 rounded-full transition-colors"
-        title="Delete"
-      >
-        <AppIcon name="trash" size={18} />
-      </button>
+      {/* Show Edit button only if onEdit is provided */}
+      {onEdit && (
+        <button 
+          onClick={handleEdit}
+          className="p-1 text-blue-600 hover:text-blue-800 hover:bg-blue-100 rounded-full transition-colors"
+          title="Edit"
+        >
+          <AppIcon name="edit" size={18} />
+        </button>
+      )}
+
+      {/* Show Delete button only if onDelete is provided */}
+      {onDelete && (
+        <button 
+          onClick={handleDelete}
+          className="p-1 text-red-600 hover:text-red-800 hover:bg-red-100 rounded-full transition-colors"
+          title="Delete"
+        >
+          <AppIcon name="trash" size={18} />
+        </button>
+      )}
+
+      {/* Show Recover button only if onRecover is provided */}
+      {onRecover && (
+        <button 
+          onClick={handleRecover}
+          className="p-1 text-green-600 hover:text-green-800 hover:bg-green-100 rounded-full transition-colors"
+          title="Recover"
+        >
+          <AppIcon name="refresh" size={18} />
+        </button>
+      )}
     </div>
   );
 });
@@ -215,6 +240,16 @@ export const formatForExport = (data) => {
   }));
 };
 
+// Recover data by setting isDeleted to false
+export const recoverData = (year, data) => {
+  return data.map(item => {
+    if (item.year === year) {
+      return { ...item, isDeleted: false };
+    }
+    return item;
+  });
+};
+
 export default {
   getTableColumns,
   formatDataForChart,
@@ -222,5 +257,6 @@ export default {
   validateInputs,
   generateSampleData,
   calculateStats,
-  formatForExport
+  formatForExport,
+  recoverData
 };

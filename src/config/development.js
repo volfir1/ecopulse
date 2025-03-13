@@ -1,5 +1,5 @@
 export const DEV_CONFIG = {
-    SKIP_AUTH: false,
+    SKIP_AUTH: true,
     API_MOCKING: false,
     DEBUG_MODE: true,
     // Get role from localStorage if available, otherwise default to 'admin'

@@ -6,7 +6,7 @@ import jsPDF from 'jspdf';
 import 'jspdf-autotable';
 import html2canvas from 'html2canvas';
 
-export const useBiomassAnalytics = () => {
+export const useGeothermalAnalytics = () => {
   // Properly extract the snackbar function
   const snackbar = useSnackbar();
   const enqueueSnackbar = snackbar?.enqueueSnackbar || 
@@ -31,7 +31,7 @@ export const useBiomassAnalytics = () => {
 const fetchData = useCallback(async (startYear, endYear) => {
   setLoading(true);
   try {
-    const response = await api.get(`/api/predictions/biomass/?start_year=${startYear}&end_year=${endYear}`);
+    const response = await api.get(`/api/predictions/hydro/?start_year=${startYear}&end_year=${endYear}`);
     
     // Clean the response by replacing "NaN" with "null"
     const cleanedResponse = cleanResponse(response.data);
@@ -156,7 +156,7 @@ const fetchData = useCallback(async (startYear, endYear) => {
         body: generationData.map(item => [item.date, item.value.toFixed(2)]),
         startY: tableY,
         margin: { left: 15, right: 15 },
-        headStyles: { fillColor: [255, 107, 107] }, // Red color for biomass
+        headStyles: { fillColor: [255, 107, 107] }, // Red color for hydro
         styles: {
           fontSize: 10,
           cellPadding: 3
@@ -205,7 +205,7 @@ const fetchData = useCallback(async (startYear, endYear) => {
         'Geothermal (GWh)': value
       };
       
-      await api.post('/api/predictions/biomass/', payload);
+      await api.post('/api/predictions/hydro/', payload);
       
       try {
         enqueueSnackbar('Geothermal generation data added successfully', { variant: 'success' });
@@ -218,7 +218,7 @@ const fetchData = useCallback(async (startYear, endYear) => {
       console.error('Error adding data:', error);
       
       try {
-        enqueueSnackbar('Failed to add biomass generation data', { variant: 'error' });
+        enqueueSnackbar('Failed to add hydro generation data', { variant: 'error' });
       } catch (snackbarError) {
         console.error('Error showing notification:', snackbarError);
       }
@@ -243,7 +243,7 @@ const fetchData = useCallback(async (startYear, endYear) => {
       console.error('Error updating data:', error);
       
       try {
-        enqueueSnackbar('Failed to update biomass generation data', { variant: 'error' });
+        enqueueSnackbar('Failed to update hydro generation data', { variant: 'error' });
       } catch (snackbarError) {
         console.error('Error showing notification:', snackbarError);
       }
@@ -268,7 +268,7 @@ const fetchData = useCallback(async (startYear, endYear) => {
       console.error('Error deleting data:', error);
       
       try {
-        enqueueSnackbar('Failed to delete biomass generation data', { variant: 'error' });
+        enqueueSnackbar('Failed to delete hydro generation data', { variant: 'error' });
       } catch (snackbarError) {
         console.error('Error showing notification:', snackbarError);
       }
@@ -296,4 +296,4 @@ const fetchData = useCallback(async (startYear, endYear) => {
   };
 };
 
-export default useBiomassAnalytics;
+export default useGeothermalAnalytics;

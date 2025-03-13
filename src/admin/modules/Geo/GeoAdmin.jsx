@@ -23,7 +23,7 @@ import {
 } from '@shared/index';
 
 import useGeothermalAnalytics from './adminGeoHook';
-import { getTableColumns, formatDataForChart, getChartConfig, generateSampleData, validateInputs } from './adminGeoUtil';
+import { getTableColumns, formatDataForChart, getChartConfig, generateSampleData, validateInputs, recoverData } from './adminGeoUtil';
 
 const GeothermalAdmin = () => {
   // Define all handlers at the top of component - BEFORE any useMemo calls
@@ -42,6 +42,7 @@ const GeothermalAdmin = () => {
     addRecord,
     updateRecord,
     deleteRecord,
+    recoverRecord,
     temperatureData,
     wellPerformance,
     chartRef
@@ -118,6 +119,15 @@ const GeothermalAdmin = () => {
     }
   }, [deleteRecord]);
 
+  const handleRecover = useCallback(async (year) => {
+    try {
+      await recoverRecord(year);
+      setGenerationData(prevData => recoverData(year, prevData));
+    } catch (error) {
+      console.error('Error recovering data:', error);
+    }
+  }, [recoverRecord]);
+
   // Form submit handler
   const handleSubmit = useCallback(async () => {
     if (!selectedYear || !generationValue || !nonRenewableEnergy || !population || !gdp) {
@@ -158,17 +168,17 @@ const GeothermalAdmin = () => {
         id: index + 1,
         year: item.date,
         generation: item.value,
-        nonRenewableEnergy: item.nonRenewableEnergy, // Include non-renewable energy
-        population: item.population, // Include population
-        gdp: item.gdp, // Include GDP
+        nonRenewableEnergy: item.nonRenewableEnergy,
+        population: item.population,
+        gdp: item.gdp,
         dateAdded: new Date().toISOString(),
-        isPredicted: item.isPredicted !== undefined ? item.isPredicted : false // Ensure isPredicted is included
+        isPredicted: item.isPredicted !== undefined ? item.isPredicted : false,
+        isDeleted: item.isDeleted !== undefined ? item.isDeleted : false // Include isDeleted
       }));
-      // Log the effective data to verify the isPredicted column
       console.log("Effective data:", data);
       return data;
     }
-    return generateSampleData().map(item => ({ ...item, isPredicted: true })); // Mark sample data as predicted
+    return generateSampleData().map(item => ({ ...item, isPredicted: true }));
   }, [generationData]);
 
   // Year range for filtering
@@ -193,8 +203,8 @@ const GeothermalAdmin = () => {
 
   // Configure data table columns
   const tableColumns = useMemo(() => 
-    getTableColumns(handleOpenEditModal, handleDelete, effectiveData), 
-    [handleOpenEditModal, handleDelete, effectiveData]);
+    getTableColumns(handleOpenEditModal, handleDelete, handleRecover, effectiveData), 
+    [handleOpenEditModal, handleDelete, handleRecover, effectiveData]);
   
   // Use useDataTable hook with filtered data
   const {

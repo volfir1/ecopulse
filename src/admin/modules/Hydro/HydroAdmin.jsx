@@ -22,7 +22,7 @@ import {
   useDataTable
 } from '@shared/index';
 
-import useGeothermalAnalytics from '../Geo/adminGeoHook';
+import useGeothermalAnalytics from './adminHydroHook';
 import { getTableColumns, formatDataForChart, getChartConfig, generateSampleData, validateInputs } from '../Geo/adminGeoUtil';
 
 const GeothermalAdmin = () => {

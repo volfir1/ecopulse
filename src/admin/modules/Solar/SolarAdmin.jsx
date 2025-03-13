@@ -118,6 +118,18 @@ const SolarAdmin = () => {
     }
   }, [deleteRecord]);
 
+  const handleRecover = useCallback(async (year) => {
+    if (!window.confirm('Are you sure you want to recover this record?')) {
+      return;
+    }
+    
+    try {
+      await updateRecord(year, { isDeleted: false });
+    } catch (error) {
+      console.error('Error recovering data:', error);
+    }
+  }, [updateRecord]);
+
   // Form submit handler
   const handleSubmit = useCallback(async () => {
     if (!selectedYear || !generationValue || !nonRenewableEnergy || !population || !gdp) {
@@ -162,13 +174,14 @@ const SolarAdmin = () => {
         population: item.population, // Include population
         gdp: item.gdp, // Include GDP
         dateAdded: new Date().toISOString(),
-        isPredicted: item.isPredicted !== undefined ? item.isPredicted : false // Ensure isPredicted is included
+        isPredicted: item.isPredicted !== undefined ? item.isPredicted : false, // Ensure isPredicted is included
+        isDeleted: item.isDeleted !== undefined ? item.isDeleted : false // Ensure isDeleted is included
       }));
-      // Log the effective data to verify the isPredicted column
+      // Log the effective data to verify the isPredicted and isDeleted columns
       console.log("Effective data:", data);
       return data;
     }
-    return generateSampleData().map(item => ({ ...item, isPredicted: true })); // Mark sample data as predicted
+    return generateSampleData().map(item => ({ ...item, isPredicted: true, isDeleted: false })); // Mark sample data as predicted and not deleted
   }, [generationData]);
 
   // Year range for filtering
@@ -193,8 +206,8 @@ const SolarAdmin = () => {
 
   // Configure data table columns
   const tableColumns = useMemo(() => 
-    getTableColumns(handleOpenEditModal, handleDelete, effectiveData), 
-    [handleOpenEditModal, handleDelete, effectiveData]);
+    getTableColumns(handleOpenEditModal, handleDelete, handleRecover, effectiveData), 
+    [handleOpenEditModal, handleDelete, handleRecover, effectiveData]);
   
   // Use useDataTable hook with filtered data
   const {

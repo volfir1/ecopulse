@@ -47,7 +47,8 @@ const fetchData = useCallback(async (startYear, endYear) => {
         nonRenewableEnergy: item.isPredicted ? null : (item['Non-Renewable Energy (GWh)'] ? parseFloat(item['Non-Renewable Energy (GWh)']) : null),
         population: item.isPredicted ? null : (item['Population (in millions)'] ? parseFloat(item['Population (in millions)']) : null),
         gdp: item.isPredicted ? null : (item['Gross Domestic Product'] === null ? null : parseFloat(item['Gross Domestic Product'])),
-        isPredicted: item.isPredicted !== undefined ? item.isPredicted : false // Ensure isPredicted is included
+        isPredicted: item.isPredicted !== undefined ? item.isPredicted : false, // Ensure isPredicted is included
+        isDeleted: item.isDeleted !== undefined ? item.isDeleted : false 
       }));
 
       // Log the raw fetched data and the formatted data to verify the isPredicted column
@@ -66,12 +67,11 @@ const fetchData = useCallback(async (startYear, endYear) => {
   }
 }, [enqueueSnackbar]);
 
-  
-
   // Fetch data on component mount and when year range or refresh trigger changes
   useEffect(() => {
     fetchData(selectedStartYear, selectedEndYear);
   }, [selectedStartYear, selectedEndYear, refreshTrigger]); // fetchData removed
+
   // Year range handlers
   const handleStartYearChange = useCallback((year) => {
     setSelectedStartYear(year);
@@ -255,7 +255,7 @@ const fetchData = useCallback(async (startYear, endYear) => {
   const deleteRecord = useCallback(async (year) => {
     setLoading(true);
     try {
-      await api.delete(`/api/delete/${year}/`);
+      await api.put(`/api/update/${year}/`, { isDeleted: true });
       
       try {
         enqueueSnackbar('Geothermal generation data deleted successfully', { variant: 'success' });
@@ -277,6 +277,31 @@ const fetchData = useCallback(async (startYear, endYear) => {
     }
   }, [enqueueSnackbar]);
 
+  const recoverRecord = useCallback(async (year) => {
+    setLoading(true);
+    try {
+      await api.put(`/api/recover/${year}/`, { isDeleted: false });
+      
+      try {
+        enqueueSnackbar('Geothermal generation data recovered successfully', { variant: 'success' });
+      } catch (error) {
+        console.log('Geothermal generation data deleted successfully');
+      }
+      
+      setRefreshTrigger(prev => prev + 1); // Trigger refetch
+    } catch (error) {
+      console.error('Error recovering data:', error);
+      
+      try {
+        enqueueSnackbar('Failed to recover geothermal generation data', { variant: 'error' });
+      } catch (snackbarError) {
+        console.error('Error showing notification:', snackbarError);
+      }
+    } finally {
+      setLoading(false);
+    }
+  }, [enqueueSnackbar]);
+
   return {
     generationData,
     currentProjection,
@@ -290,6 +315,7 @@ const fetchData = useCallback(async (startYear, endYear) => {
     addRecord,
     updateRecord,
     deleteRecord,
+    recoverRecord,
     temperatureData,
     wellPerformance,
     chartRef // Export the chart ref

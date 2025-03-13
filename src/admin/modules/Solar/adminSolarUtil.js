@@ -3,7 +3,7 @@ import React from 'react';
 import { AppIcon, theme } from '@shared/index';
 
 // Get table columns with memoized action buttons
-export const getTableColumns = (handleEdit, handleDelete, data) => [
+export const getTableColumns = (handleEdit, handleDelete, handleRecover, data) => [
   { 
     id: 'year', 
     label: 'Year', 
@@ -30,6 +30,9 @@ export const getTableColumns = (handleEdit, handleDelete, data) => [
     align: 'center',
     sortable: false,
     format: (_, row) => {
+      if (row.isDeleted === true) {
+        return <RecoverButton row={row} onRecover={handleRecover} />;
+      }
       // Only show actions if isPredicted is explicitly false
       if (row.isPredicted === false) {
         return <ActionButtons row={row} onEdit={handleEdit} onDelete={handleDelete} />;
@@ -66,6 +69,26 @@ const ActionButtons = React.memo(({ row, onEdit, onDelete }) => {
         title="Delete"
       >
         <AppIcon name="trash" size={18} />
+      </button>
+    </div>
+  );
+});
+
+// Create a separate component for the recover button
+const RecoverButton = React.memo(({ row, onRecover }) => {
+  const handleRecover = (e) => {
+    e.stopPropagation();
+    onRecover(row.year);  // Pass the year instead of the ID
+  };
+  
+  return (
+    <div className="flex justify-center gap-2">
+      <button 
+        onClick={handleRecover}
+        className="p-1 text-green-600 hover:text-green-800 hover:bg-green-100 rounded-full transition-colors"
+        title="Recover"
+      >
+        <AppIcon name="refresh-cw" size={18} />
       </button>
     </div>
   );
