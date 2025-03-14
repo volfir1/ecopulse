@@ -1,4 +1,6 @@
-import React, { useState, useCallback } from 'react';
+'use client';
+
+import React, { useState, useCallback, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Box,
@@ -14,10 +16,20 @@ import {
 } from '@mui/material';
 import { ChevronLeft, Save } from 'lucide-react';
 import { SingleYearPicker } from '@shared/index';
+import useSolarAdmin from './inputHook';
 
-const SimplifiedEnergyForm = () => {
+const ModelInputPage = () => {
   // Navigation hook
   const navigate = useNavigate();
+  
+  // Get ALL functions from the hook at the top level
+  const { 
+    loading, 
+    handleSubmit: submitToApi, 
+    formValidation,
+    handleYearChange: hookYearChange,
+    handleGenerationChange: hookGenerationChange
+  } = useSolarAdmin();
   
   // Form state
   const [formData, setFormData] = useState({
@@ -27,7 +39,9 @@ const SimplifiedEnergyForm = () => {
     hydro: '',
     geothermal: '',
     biomass: '',
+    totalRenewable: '',
     nonRenewableEnergy: '',
+    totalPower: '',
     population: '',
     gdp: '',
     isPredicted: false
@@ -45,7 +59,32 @@ const SimplifiedEnergyForm = () => {
     if (year > currentYear && !formData.isPredicted) {
       setFormData(prev => ({ ...prev, isPredicted: true }));
     }
-  }, [formData.isPredicted]);
+    
+    // Also update the hook's year state
+    hookYearChange(year);
+  }, [formData.isPredicted, hookYearChange]);
+  
+  // Calculate total renewable energy and total power
+  useEffect(() => {
+    const solar = parseFloat(formData.solar) || 0;
+    const wind = parseFloat(formData.wind) || 0;
+    const hydro = parseFloat(formData.hydro) || 0;
+    const geothermal = parseFloat(formData.geothermal) || 0;
+    const biomass = parseFloat(formData.biomass) || 0;
+    const nonRenewable = parseFloat(formData.nonRenewableEnergy) || 0;
+    
+    // Calculate total renewable energy
+    const totalRenewable = solar + wind + hydro + geothermal + biomass;
+    
+    // Calculate total power generation
+    const totalPower = totalRenewable + nonRenewable;
+    
+    setFormData(prev => ({
+      ...prev,
+      totalRenewable: totalRenewable > 0 ? totalRenewable.toFixed(2) : '',
+      totalPower: totalPower > 0 ? totalPower.toFixed(2) : ''
+    }));
+  }, [formData.solar, formData.wind, formData.hydro, formData.geothermal, formData.biomass, formData.nonRenewableEnergy]);
   
   // Handle input changes
   const handleInputChange = useCallback((e) => {
@@ -60,7 +99,20 @@ const SimplifiedEnergyForm = () => {
     if (errors[name]) {
       setErrors(prev => ({ ...prev, [name]: null }));
     }
-  }, [errors]);
+    
+    // Update hook's state for API submission
+    // Map the field names if they differ
+    const hookFieldMap = {
+      nonRenewableEnergy: 'nonRenewable'
+    };
+    
+    const hookFieldName = hookFieldMap[name] || name;
+    
+    // Only update hook state for relevant fields
+    if (['solar', 'wind', 'hydro', 'geothermal', 'biomass', 'nonRenewableEnergy', 'population', 'gdp', 'totalRenewable', 'totalPower'].includes(name)) {
+      hookGenerationChange({ target: { value: inputValue } }, hookFieldName);
+    }
+  }, [errors, hookGenerationChange]);
   
   // Load sample data
   const loadSampleData = useCallback(() => {
@@ -74,8 +126,19 @@ const SimplifiedEnergyForm = () => {
       nonRenewableEnergy: '3200.75',
       population: '42.3',
       gdp: '1850'
+      // totalRenewable and totalPower will be calculated by useEffect
     }));
-  }, []);
+    
+    // Also load sample data to the hook state
+    hookGenerationChange({ target: { value: '1567.52' } }, 'solar');
+    hookGenerationChange({ target: { value: '1346.78' } }, 'wind');
+    hookGenerationChange({ target: { value: '2105.63' } }, 'hydro');
+    hookGenerationChange({ target: { value: '945.31' } }, 'geothermal');
+    hookGenerationChange({ target: { value: '872.44' } }, 'biomass');
+    hookGenerationChange({ target: { value: '3200.75' } }, 'nonRenewable');
+    hookGenerationChange({ target: { value: '42.3' } }, 'population');
+    hookGenerationChange({ target: { value: '1850' } }, 'gdp');
+  }, [hookGenerationChange]);
   
   // Validate form
   const validateForm = useCallback(() => {
@@ -107,37 +170,23 @@ const SimplifiedEnergyForm = () => {
     return Object.keys(newErrors).length === 0;
   }, [formData]);
   
-  // Handle form submission
-  const handleSubmit = useCallback((e) => {
+  // Handle form submission using the hook's submitToApi
+  const handleFormSubmit = useCallback(async (e) => {
     e.preventDefault();
     
     if (validateForm()) {
-      // Format the data for submission
-      const submissionData = {
-        year: formData.year,
-        solar: formData.solar ? parseFloat(formData.solar) : null,
-        wind: formData.wind ? parseFloat(formData.wind) : null,
-        hydro: formData.hydro ? parseFloat(formData.hydro) : null,
-        geothermal: formData.geothermal ? parseFloat(formData.geothermal) : null,
-        biomass: formData.biomass ? parseFloat(formData.biomass) : null,
-        nonRenewableEnergy: formData.nonRenewableEnergy ? parseFloat(formData.nonRenewableEnergy) : null,
-        population: formData.population ? parseFloat(formData.population) : null,
-        gdp: formData.gdp ? parseFloat(formData.gdp) : null,
-        isPredicted: formData.isPredicted,
-        dateAdded: new Date().toISOString()
-      };
+      // Data is already synced with the hook via handleInputChange
+      // Just call the submit function without trying to use hooks inside this function
+      await submitToApi();
       
-      // Here you would typically save the data to your API
-      console.log('Saving record:', submissionData);
-      
-      // Navigate back to main page after successful save
-      navigate('/');
+      // Navigate back to dashboard on success
+      navigate('/dashboard');
     }
-  }, [formData, navigate, validateForm]);
+  }, [validateForm, navigate, submitToApi]);
   
   // Handle cancel
   const handleCancel = useCallback(() => {
-    navigate('/');
+    navigate('/dashboard');
   }, [navigate]);
   
   return (
@@ -158,7 +207,7 @@ const SimplifiedEnergyForm = () => {
       
       {/* Form */}
       <Paper elevation={0} className="border p-6 mb-6">
-        <form onSubmit={handleSubmit}>
+        <form onSubmit={handleFormSubmit}>
           <Grid container spacing={4}>
             {/* Year Section */}
             <Grid item xs={12} md={6}>
@@ -200,10 +249,10 @@ const SimplifiedEnergyForm = () => {
               </Grid>
             )}
             
-            {/* Renewable Energy Inputs */}
+            {/* Energy Inputs */}
             <Grid item xs={12}>
               <Typography variant="subtitle1" className="mb-3 font-medium">
-                Renewable Energy Values
+                Energy Values
               </Typography>
               
               <Grid container spacing={3}>
@@ -211,18 +260,16 @@ const SimplifiedEnergyForm = () => {
                 <Grid item xs={12} md={6} lg={4}>
                   <TextField
                     name="solar"
-                    label="Solar Energy"
+                    label="Solar Energy (GWh)"
                     value={formData.solar}
                     onChange={handleInputChange}
                     placeholder="Enter solar generation"
                     fullWidth
                     variant="outlined"
                     type="number"
+                    inputProps={{ min: 0, step: 0.01 }}
                     error={!!errors.solar}
                     helperText={errors.solar}
-                    InputProps={{
-                      endAdornment: <Typography variant="caption" color="text.secondary">GWh</Typography>
-                    }}
                   />
                 </Grid>
                 
@@ -230,18 +277,16 @@ const SimplifiedEnergyForm = () => {
                 <Grid item xs={12} md={6} lg={4}>
                   <TextField
                     name="wind"
-                    label="Wind Energy"
+                    label="Wind Energy (GWh)"
                     value={formData.wind}
                     onChange={handleInputChange}
                     placeholder="Enter wind generation"
                     fullWidth
                     variant="outlined"
                     type="number"
+                    inputProps={{ min: 0, step: 0.01 }}
                     error={!!errors.wind}
                     helperText={errors.wind}
-                    InputProps={{
-                      endAdornment: <Typography variant="caption" color="text.secondary">GWh</Typography>
-                    }}
                   />
                 </Grid>
                 
@@ -249,18 +294,16 @@ const SimplifiedEnergyForm = () => {
                 <Grid item xs={12} md={6} lg={4}>
                   <TextField
                     name="hydro"
-                    label="Hydroelectric Energy"
+                    label="Hydroelectric Energy (GWh)"
                     value={formData.hydro}
                     onChange={handleInputChange}
                     placeholder="Enter hydro generation"
                     fullWidth
                     variant="outlined"
                     type="number"
+                    inputProps={{ min: 0, step: 0.01 }}
                     error={!!errors.hydro}
                     helperText={errors.hydro}
-                    InputProps={{
-                      endAdornment: <Typography variant="caption" color="text.secondary">GWh</Typography>
-                    }}
                   />
                 </Grid>
                 
@@ -268,18 +311,16 @@ const SimplifiedEnergyForm = () => {
                 <Grid item xs={12} md={6} lg={4}>
                   <TextField
                     name="geothermal"
-                    label="Geothermal Energy"
+                    label="Geothermal Energy (GWh)"
                     value={formData.geothermal}
                     onChange={handleInputChange}
                     placeholder="Enter geothermal generation"
                     fullWidth
                     variant="outlined"
                     type="number"
+                    inputProps={{ min: 0, step: 0.01 }}
                     error={!!errors.geothermal}
                     helperText={errors.geothermal}
-                    InputProps={{
-                      endAdornment: <Typography variant="caption" color="text.secondary">GWh</Typography>
-                    }}
                   />
                 </Grid>
                 
@@ -287,18 +328,65 @@ const SimplifiedEnergyForm = () => {
                 <Grid item xs={12} md={6} lg={4}>
                   <TextField
                     name="biomass"
-                    label="Biomass Energy"
+                    label="Biomass Energy (GWh)"
                     value={formData.biomass}
                     onChange={handleInputChange}
                     placeholder="Enter biomass generation"
                     fullWidth
                     variant="outlined"
                     type="number"
+                    inputProps={{ min: 0, step: 0.01 }}
                     error={!!errors.biomass}
                     helperText={errors.biomass}
+                  />
+                </Grid>
+                
+                {/* Total Renewable Energy - Auto-calculated and read-only */}
+                <Grid item xs={12} md={6} lg={4}>
+                  <TextField
+                    name="totalRenewable"
+                    label="Total Renewable Energy (GWh)"
+                    value={formData.totalRenewable}
                     InputProps={{
-                      endAdornment: <Typography variant="caption" color="text.secondary">GWh</Typography>
+                      readOnly: true,
                     }}
+                    placeholder="Auto-calculated"
+                    fullWidth
+                    variant="outlined"
+                    helperText="Automatically calculated"
+                  />
+                </Grid>
+                
+                {/* Non-Renewable Energy */}
+                <Grid item xs={12} md={6} lg={4}>
+                  <TextField
+                    name="nonRenewableEnergy"
+                    label="Non-Renewable Energy (GWh)"
+                    value={formData.nonRenewableEnergy}
+                    onChange={handleInputChange}
+                    placeholder="Enter non-renewable energy"
+                    fullWidth
+                    variant="outlined"
+                    type="number"
+                    inputProps={{ min: 0, step: 0.01 }}
+                    error={!!errors.nonRenewableEnergy}
+                    helperText={errors.nonRenewableEnergy}
+                  />
+                </Grid>
+                
+                {/* Total Power Generation - Auto-calculated and read-only */}
+                <Grid item xs={12} md={6} lg={4}>
+                  <TextField
+                    name="totalPower"
+                    label="Total Power Generation (GWh)"
+                    value={formData.totalPower}
+                    InputProps={{
+                      readOnly: true,
+                    }}
+                    placeholder="Auto-calculated"
+                    fullWidth
+                    variant="outlined"
+                    helperText="Automatically calculated"
                   />
                 </Grid>
               </Grid>
@@ -312,64 +400,50 @@ const SimplifiedEnergyForm = () => {
               </Typography>
               
               <Grid container spacing={3}>
-                {/* Non-Renewable Energy */}
-                <Grid item xs={12} md={4}>
-                  <TextField
-                    name="nonRenewableEnergy"
-                    label="Non-Renewable Energy"
-                    value={formData.nonRenewableEnergy}
-                    onChange={handleInputChange}
-                    placeholder="Enter value"
-                    fullWidth
-                    variant="outlined"
-                    type="number"
-                    error={!!errors.nonRenewableEnergy}
-                    helperText={errors.nonRenewableEnergy}
-                    InputProps={{
-                      endAdornment: <Typography variant="caption" color="text.secondary">GWh</Typography>
-                    }}
-                  />
-                </Grid>
-                
                 {/* Population */}
-                <Grid item xs={12} md={4}>
+                <Grid item xs={12} md={6}>
                   <TextField
                     name="population"
-                    label="Population"
+                    label="Population (in millions)"
                     value={formData.population}
                     onChange={handleInputChange}
-                    placeholder="Enter value"
+                    placeholder="Enter population in millions"
                     fullWidth
                     variant="outlined"
                     type="number"
+                    inputProps={{ min: 0, step: 0.01 }}
                     error={!!errors.population}
                     helperText={errors.population}
-                    InputProps={{
-                      endAdornment: <Typography variant="caption" color="text.secondary">M</Typography>
-                    }}
                   />
                 </Grid>
                 
                 {/* GDP */}
-                <Grid item xs={12} md={4}>
+                <Grid item xs={12} md={6}>
                   <TextField
                     name="gdp"
-                    label="Gross Domestic Product"
+                    label="Gross Domestic Product (GDP)"
                     value={formData.gdp}
                     onChange={handleInputChange}
                     placeholder="Enter GDP value"
                     fullWidth
                     variant="outlined"
                     type="number"
+                    inputProps={{ min: 0, step: 0.01 }}
                     error={!!errors.gdp}
                     helperText={errors.gdp}
-                    InputProps={{
-                      endAdornment: <Typography variant="caption" color="text.secondary">USD</Typography>
-                    }}
                   />
                 </Grid>
               </Grid>
             </Grid>
+            
+            {/* Submission error */}
+            {errors.submission && (
+              <Grid item xs={12}>
+                <Typography variant="body2" color="error">
+                  {errors.submission}
+                </Typography>
+              </Grid>
+            )}
           </Grid>
           
           {/* Form Actions */}
@@ -386,8 +460,9 @@ const SimplifiedEnergyForm = () => {
               variant="contained" 
               color="primary"
               startIcon={<Save size={18} />}
+              disabled={loading}
             >
-              Save Record
+              {loading ? 'Saving...' : 'Save Record'}
             </Button>
           </Box>
         </form>
@@ -396,4 +471,4 @@ const SimplifiedEnergyForm = () => {
   );
 };
 
-export default SimplifiedEnergyForm;
+export default ModelInputPage;
