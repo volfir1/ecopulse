@@ -1,4 +1,4 @@
-// SolarAdmin.jsx
+// GeothermalAdmin.jsx
 import React, { useMemo, useState, useCallback, useRef } from 'react';
 import {
   Dialog,
@@ -10,7 +10,7 @@ import {
   Box
 } from '@mui/material';
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
-import { Thermometer,Sun, X } from 'lucide-react';
+import { Sun, X } from 'lucide-react';
 import {
   DataTable,
   Button,
@@ -22,10 +22,10 @@ import {
   useDataTable
 } from '@shared/index';
 
-import useSolarAnalytics from './adminSolarHook';
-import { getTableColumns, formatDataForChart, getChartConfig, generateSampleData, validateInputs } from './adminSolarUtil';
+import useGeothermalAnalytics from './adminSolarHook';
+import { getTableColumns, formatDataForChart, getChartConfig, generateSampleData, validateInputs, recoverData } from './adminSolarUtil';
 
-const SolarAdmin = () => {
+const GeothermalAdmin = () => {
   // Define all handlers at the top of component - BEFORE any useMemo calls
   
   // Custom hooks
@@ -42,10 +42,11 @@ const SolarAdmin = () => {
     addRecord,
     updateRecord,
     deleteRecord,
+    recoverRecord,
     temperatureData,
     wellPerformance,
     chartRef
-  } = useSolarAnalytics();
+  } = useGeothermalAnalytics();
 
   // State for modal
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -119,16 +120,13 @@ const SolarAdmin = () => {
   }, [deleteRecord]);
 
   const handleRecover = useCallback(async (year) => {
-    if (!window.confirm('Are you sure you want to recover this record?')) {
-      return;
-    }
-    
     try {
-      await updateRecord(year, { isDeleted: false });
+      await recoverRecord(year);
+      setGenerationData(prevData => recoverData(year, prevData));
     } catch (error) {
       console.error('Error recovering data:', error);
     }
-  }, [updateRecord]);
+  }, [recoverRecord]);
 
   // Form submit handler
   const handleSubmit = useCallback(async () => {
@@ -170,18 +168,17 @@ const SolarAdmin = () => {
         id: index + 1,
         year: item.date,
         generation: item.value,
-        nonRenewableEnergy: item.nonRenewableEnergy, // Include non-renewable energy
-        population: item.population, // Include population
-        gdp: item.gdp, // Include GDP
+        nonRenewableEnergy: item.nonRenewableEnergy,
+        population: item.population,
+        gdp: item.gdp,
         dateAdded: new Date().toISOString(),
-        isPredicted: item.isPredicted !== undefined ? item.isPredicted : false, // Ensure isPredicted is included
-        isDeleted: item.isDeleted !== undefined ? item.isDeleted : false // Ensure isDeleted is included
+        isPredicted: item.isPredicted !== undefined ? item.isPredicted : false,
+        isDeleted: item.isDeleted !== undefined ? item.isDeleted : false // Include isDeleted
       }));
-      // Log the effective data to verify the isPredicted and isDeleted columns
       console.log("Effective data:", data);
       return data;
     }
-    return generateSampleData().map(item => ({ ...item, isPredicted: true, isDeleted: false })); // Mark sample data as predicted and not deleted
+    return generateSampleData().map(item => ({ ...item, isPredicted: true }));
   }, [generationData]);
 
   // Year range for filtering
@@ -227,7 +224,7 @@ const SolarAdmin = () => {
     const config = getChartConfig();
     // Add line chart specific configuration
     config.line = {
-      stroke: '#FFD700', // Gold color
+      stroke: '#FFD700', // Geothermal color
       strokeWidth: 2,
       dot: {
         r: 5,
@@ -272,8 +269,8 @@ const SolarAdmin = () => {
       <div className="p-6 max-w-7xl mx-auto">
         <div className="flex justify-between items-center mb-6">
           <div className="flex items-center gap-2">
-            <div className="p-2 rounded-lg bg-yellow-100">
-              <Sun className="text-yellow-500" size={24} />
+            <div className="p-2 rounded-lg bg-amber-100">
+              <Sun className="text-amber-500" size={24} />
             </div>
             <div>
               <h1 className="text-2xl font-semibold">Solar Generation Data</h1>
@@ -283,9 +280,9 @@ const SolarAdmin = () => {
         </div>
         <Card.Base className="mb-6 p-4 flex justify-center items-center h-96">
           <div className="animate-pulse flex flex-col items-center">
-            <div className="w-16 h-16 bg-yellow-200 rounded-full mb-4"></div>
-            <div className="h-4 w-36 bg-yellow-200 rounded mb-2"></div>
-            <div className="h-3 w-24 bg-yellow-200 rounded"></div>
+            <div className="w-16 h-16 bg-amber-200 rounded-full mb-4"></div>
+            <div className="h-4 w-36 bg-amber-200 rounded mb-2"></div>
+            <div className="h-3 w-24 bg-amber-200 rounded"></div>
           </div>
         </Card.Base>
       </div>
@@ -297,12 +294,12 @@ const SolarAdmin = () => {
       {/* Header */}
       <div className="flex justify-between items-center mb-6">
         <div className="flex items-center gap-2">
-          <div className="p-2 rounded-lg bg-yellow-100">
-            <Sun className="text-yellow-500" size={24} />
+          <div className="p-2 rounded-lg bg-amber-100">
+            <Sun className="text-amber-500" size={24} />
           </div>
           <div>
             <h1 className="text-2xl font-semibold">Solar Generation Data</h1>
-            <p className="text-gray-500">Manage historical and projected solar generation data</p>
+            <p className="text-gray-500">Manage historical and projected hydropower generation data</p>
           </div>
         </div>
         {/* <Button
@@ -369,7 +366,7 @@ const SolarAdmin = () => {
 
       {/* Data Table */}
       <DataTable
-        title={`Solar Generation Records (${yearRange.startYear} - ${yearRange.endYear})`}
+        title={`Solar Power Generation Records (${yearRange.startYear} - ${yearRange.endYear})`}
         columns={tableColumns}
         data={tableData}
         loading={tableLoading}
@@ -547,4 +544,4 @@ const SolarAdmin = () => {
   );
 };
 
-export default SolarAdmin;
+export default GeothermalAdmin;

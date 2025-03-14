@@ -1,8 +1,9 @@
-// adminBioUtil.js
+// adminGeoUtil.js
 import React from 'react';
 import { AppIcon, theme } from '@shared/index';
 
-export const getTableColumns = (handleEdit, handleDelete) => [
+// Get table columns with memoized action buttons
+export const getTableColumns = (handleEdit, handleDelete, handleRecover, data) => [
   { 
     id: 'year', 
     label: 'Year', 
@@ -28,11 +29,20 @@ export const getTableColumns = (handleEdit, handleDelete) => [
     label: 'Actions', 
     align: 'center',
     sortable: false,
-    format: (_, row) => <ActionButtons row={row} onEdit={handleEdit} onDelete={handleDelete} />
+    format: (_, row) => {
+      // Only show actions if isPredicted is explicitly false
+      if (row.isPredicted === false && !row.isDeleted) {
+        return <ActionButtons row={row} onEdit={handleEdit} onDelete={handleDelete} />;
+      } else if (row.isPredicted === false && row.isDeleted === true) {
+        return <ActionButtons row={row} onRecover={handleRecover} />;
+      }
+      return null; // No actions for predicted data
+    }
   }
 ];
 
-const ActionButtons = React.memo(({ row, onEdit, onDelete }) => {
+// Create a separate component for the action buttons
+const ActionButtons = React.memo(({ row, onEdit, onDelete, onRecover }) => {
   const handleEdit = (e) => {
     e.stopPropagation();
     onEdit(row);
@@ -40,32 +50,57 @@ const ActionButtons = React.memo(({ row, onEdit, onDelete }) => {
   
   const handleDelete = (e) => {
     e.stopPropagation();
-    onDelete(row.id);
+    onDelete(row.year);  // Pass the year instead of the ID
+  };
+
+  const handleRecover = (e) => {
+    e.stopPropagation();
+    onRecover(row.year);  // Pass the year instead of the ID
   };
   
   return (
     <div className="flex justify-center gap-2">
-      <button 
-        onClick={handleEdit}
-        className="p-1 text-green-600 hover:text-green-800 hover:bg-green-100 rounded-full transition-colors"
-        title="Edit"
-      >
-        <AppIcon name="edit" size={18} />
-      </button>
-      <button 
-        onClick={handleDelete}
-        className="p-1 text-red-600 hover:text-red-800 hover:bg-red-100 rounded-full transition-colors"
-        title="Delete"
-      >
-        <AppIcon name="trash" size={18} />
-      </button>
+      {/* Show Edit button only if onEdit is provided */}
+      {onEdit && (
+        <button 
+          onClick={handleEdit}
+          className="p-1 text-blue-600 hover:text-blue-800 hover:bg-blue-100 rounded-full transition-colors"
+          title="Edit"
+        >
+          <AppIcon name="edit" size={18} />
+        </button>
+      )}
+
+      {/* Show Delete button only if onDelete is provided */}
+      {onDelete && (
+        <button 
+          onClick={handleDelete}
+          className="p-1 text-red-600 hover:text-red-800 hover:bg-red-100 rounded-full transition-colors"
+          title="Delete"
+        >
+          <AppIcon name="trash" size={18} />
+        </button>
+      )}
+
+      {/* Show Recover button only if onRecover is provided */}
+      {onRecover && (
+        <button 
+          onClick={handleRecover}
+          className="p-1 text-green-600 hover:text-green-800 hover:bg-green-100 rounded-full transition-colors"
+          title="Recover"
+        >
+          <AppIcon name="refresh" size={18} />
+        </button>
+      )}
     </div>
   );
 });
 
+// Format data for the chart
 export const formatDataForChart = (data) => {
   if (!data || data.length === 0) return [];
   
+  // Sort by year ascending
   return [...data]
     .sort((a, b) => a.year - b.year)
     .map(item => ({
@@ -74,20 +109,21 @@ export const formatDataForChart = (data) => {
     }));
 };
 
+// Get chart configuration
 export const getChartConfig = () => {
   const { elements, text } = theme.palette;
-  const biomassColor = '#16A34A'; // Biomass specific green color
+  const geothermalColor = '#16A34A'; // Use geothermal red color
   
   return {
     bar: {
       dataKey: 'value',
-      fill: biomassColor,
+      fill: geothermalColor,
       radius: [4, 4, 0, 0],
       barSize: 30,
       name: 'Generation (GWh)'
     },
     tooltip: {
-      formatter: (value) => [`${value.toFixed(2)} GWh`, 'Biomass Generation'],
+      formatter: (value) => [`${value.toFixed(2)} GWh`, 'Generation'],
       labelFormatter: (label) => `Year: ${label}`
     },
     xAxis: {
@@ -98,20 +134,22 @@ export const getChartConfig = () => {
     yAxis: {
       axisLine: { stroke: '#E0E0E0' },
       tickLine: false,
-      label: 'Biomass Generation (GWh)'
+      // This base label will be extended in the component
+      label: ''
     },
+    // Default line configuration
     line: {
-      stroke: biomassColor,
+      stroke: geothermalColor,
       strokeWidth: 2,
       dot: {
         r: 4,
-        fill: biomassColor,
+        fill: geothermalColor,
         stroke: '#fff',
         strokeWidth: 2
       },
       activeDot: {
         r: 6,
-        fill: biomassColor,
+        fill: geothermalColor,
         stroke: '#fff',
         strokeWidth: 2
       }
@@ -119,6 +157,7 @@ export const getChartConfig = () => {
   };
 };
 
+// Validate form inputs
 export const validateInputs = (year, generation) => {
   const errors = {};
   
@@ -130,10 +169,8 @@ export const validateInputs = (year, generation) => {
   
   if (!generation) {
     errors.generation = 'Generation value is required';
-  } else if (isNaN(generation) || parseFloat(generation) < 0) {
-    errors.generation = 'Generation must be a non-negative number';
-  } else if (parseFloat(generation) > 50000) { // Lower max capacity for biomass
-    errors.generation = 'Generation value exceeds maximum biomass capacity';
+  } else if (isNaN(generation) || parseFloat(generation) <= 0) {
+    errors.generation = 'Generation must be a positive number';
   }
   
   return {
@@ -142,17 +179,18 @@ export const validateInputs = (year, generation) => {
   };
 };
 
+// Generate sample data for development
 export const generateSampleData = () => {
   const currentYear = new Date().getFullYear();
   return Array.from({ length: 8 }, (_, i) => ({
     id: i + 1,
     year: currentYear - 4 + i,
-    // Biomass-specific generation pattern
-    generation: 800 + Math.random() * 400 + Math.sin(i * Math.PI / 2) * 150,
+    generation: 900 + Math.random() * 300 + i * 60, // Different formula for geothermal
     dateAdded: new Date(Date.now() - i * 86400000).toISOString()
   }));
 };
 
+// Calculate statistics for geothermal data
 export const calculateStats = (data) => {
   if (!data || data.length === 0) {
     return {
@@ -193,12 +231,23 @@ export const calculateStats = (data) => {
   };
 };
 
+// Format for export
 export const formatForExport = (data) => {
   return data.map(item => ({
     Year: item.year,
     'Generation (GWh)': item.generation.toFixed(2),
     'Date Added': new Date(item.dateAdded).toLocaleDateString()
   }));
+};
+
+// Recover data by setting isDeleted to false
+export const recoverData = (year, data) => {
+  return data.map(item => {
+    if (item.year === year) {
+      return { ...item, isDeleted: false };
+    }
+    return item;
+  });
 };
 
 export default {
@@ -208,5 +257,6 @@ export default {
   validateInputs,
   generateSampleData,
   calculateStats,
-  formatForExport
+  formatForExport,
+  recoverData
 };

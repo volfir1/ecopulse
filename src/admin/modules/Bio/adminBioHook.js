@@ -6,7 +6,7 @@ import jsPDF from 'jspdf';
 import 'jspdf-autotable';
 import html2canvas from 'html2canvas';
 
-export const useBiomassAnalytics = () => {
+export const useGeothermalAnalytics = () => {
   // Properly extract the snackbar function
   const snackbar = useSnackbar();
   const enqueueSnackbar = snackbar?.enqueueSnackbar || 
@@ -47,7 +47,8 @@ const fetchData = useCallback(async (startYear, endYear) => {
         nonRenewableEnergy: item.isPredicted ? null : (item['Non-Renewable Energy (GWh)'] ? parseFloat(item['Non-Renewable Energy (GWh)']) : null),
         population: item.isPredicted ? null : (item['Population (in millions)'] ? parseFloat(item['Population (in millions)']) : null),
         gdp: item.isPredicted ? null : (item['Gross Domestic Product'] === null ? null : parseFloat(item['Gross Domestic Product'])),
-        isPredicted: item.isPredicted !== undefined ? item.isPredicted : false // Ensure isPredicted is included
+        isPredicted: item.isPredicted !== undefined ? item.isPredicted : false, // Ensure isPredicted is included
+        isDeleted: item.isDeleted !== undefined ? item.isDeleted : false 
       }));
 
       // Log the raw fetched data and the formatted data to verify the isPredicted column
@@ -66,12 +67,11 @@ const fetchData = useCallback(async (startYear, endYear) => {
   }
 }, [enqueueSnackbar]);
 
-  
-
   // Fetch data on component mount and when year range or refresh trigger changes
   useEffect(() => {
     fetchData(selectedStartYear, selectedEndYear);
   }, [selectedStartYear, selectedEndYear, refreshTrigger]); // fetchData removed
+
   // Year range handlers
   const handleStartYearChange = useCallback((year) => {
     setSelectedStartYear(year);
@@ -104,7 +104,7 @@ const fetchData = useCallback(async (startYear, endYear) => {
       
       // Add title and metadata
       doc.setFontSize(16);
-      doc.text('Geothermal Power Generation Summary', 15, 15);
+      doc.text('Biomass Power Generation Summary', 15, 15);
       
       doc.setFontSize(11);
       doc.text(`Year Range: ${selectedStartYear} - ${selectedEndYear}`, 15, 25);
@@ -148,7 +148,7 @@ const fetchData = useCallback(async (startYear, endYear) => {
       
       // Add table header
       doc.setFontSize(12);
-      doc.text('Geothermal Generation Data Table', 15, tableY - 5);
+      doc.text('Biomass Generation Data Table', 15, tableY - 5);
       
       // Create table data
       doc.autoTable({
@@ -156,7 +156,7 @@ const fetchData = useCallback(async (startYear, endYear) => {
         body: generationData.map(item => [item.date, item.value.toFixed(2)]),
         startY: tableY,
         margin: { left: 15, right: 15 },
-        headStyles: { fillColor: [255, 107, 107] }, // Red color for biomass
+        headStyles: { fillColor: [255, 107, 107] }, // Red color for geothermal
         styles: {
           fontSize: 10,
           cellPadding: 3
@@ -164,7 +164,7 @@ const fetchData = useCallback(async (startYear, endYear) => {
       });
       
       // Save PDF
-      doc.save('Geothermal_Power_Generation_Summary.pdf');
+      doc.save('Biomass_Power_Generation_Summary.pdf');
       
       try {
         enqueueSnackbar('Summary downloaded successfully!', { variant: 'success' });
@@ -218,7 +218,7 @@ const fetchData = useCallback(async (startYear, endYear) => {
       console.error('Error adding data:', error);
       
       try {
-        enqueueSnackbar('Failed to add biomass generation data', { variant: 'error' });
+        enqueueSnackbar('Failed to add geothermal generation data', { variant: 'error' });
       } catch (snackbarError) {
         console.error('Error showing notification:', snackbarError);
       }
@@ -243,7 +243,7 @@ const fetchData = useCallback(async (startYear, endYear) => {
       console.error('Error updating data:', error);
       
       try {
-        enqueueSnackbar('Failed to update biomass generation data', { variant: 'error' });
+        enqueueSnackbar('Failed to update geothermal generation data', { variant: 'error' });
       } catch (snackbarError) {
         console.error('Error showing notification:', snackbarError);
       }
@@ -255,7 +255,7 @@ const fetchData = useCallback(async (startYear, endYear) => {
   const deleteRecord = useCallback(async (year) => {
     setLoading(true);
     try {
-      await api.delete(`/api/delete/${year}/`);
+      await api.put(`/api/update/${year}/`, { isDeleted: true });
       
       try {
         enqueueSnackbar('Geothermal generation data deleted successfully', { variant: 'success' });
@@ -268,7 +268,32 @@ const fetchData = useCallback(async (startYear, endYear) => {
       console.error('Error deleting data:', error);
       
       try {
-        enqueueSnackbar('Failed to delete biomass generation data', { variant: 'error' });
+        enqueueSnackbar('Failed to delete geothermal generation data', { variant: 'error' });
+      } catch (snackbarError) {
+        console.error('Error showing notification:', snackbarError);
+      }
+    } finally {
+      setLoading(false);
+    }
+  }, [enqueueSnackbar]);
+
+  const recoverRecord = useCallback(async (year) => {
+    setLoading(true);
+    try {
+      await api.put(`/api/recover/${year}/`, { isDeleted: false });
+      
+      try {
+        enqueueSnackbar('Geothermal generation data recovered successfully', { variant: 'success' });
+      } catch (error) {
+        console.log('Geothermal generation data deleted successfully');
+      }
+      
+      setRefreshTrigger(prev => prev + 1); // Trigger refetch
+    } catch (error) {
+      console.error('Error recovering data:', error);
+      
+      try {
+        enqueueSnackbar('Failed to recover geothermal generation data', { variant: 'error' });
       } catch (snackbarError) {
         console.error('Error showing notification:', snackbarError);
       }
@@ -290,10 +315,11 @@ const fetchData = useCallback(async (startYear, endYear) => {
     addRecord,
     updateRecord,
     deleteRecord,
+    recoverRecord,
     temperatureData,
     wellPerformance,
     chartRef // Export the chart ref
   };
 };
 
-export default useBiomassAnalytics;
+export default useGeothermalAnalytics;

@@ -23,7 +23,7 @@ import {
 } from '@shared/index';
 
 import useGeothermalAnalytics from './adminHydroHook';
-import { getTableColumns, formatDataForChart, getChartConfig, generateSampleData, validateInputs } from '../Geo/adminGeoUtil';
+import { getTableColumns, formatDataForChart, getChartConfig, generateSampleData, validateInputs, recoverData } from './adminHydroUtil';
 
 const GeothermalAdmin = () => {
   // Define all handlers at the top of component - BEFORE any useMemo calls
@@ -42,6 +42,7 @@ const GeothermalAdmin = () => {
     addRecord,
     updateRecord,
     deleteRecord,
+    recoverRecord,
     temperatureData,
     wellPerformance,
     chartRef
@@ -118,6 +119,15 @@ const GeothermalAdmin = () => {
     }
   }, [deleteRecord]);
 
+  const handleRecover = useCallback(async (year) => {
+    try {
+      await recoverRecord(year);
+      setGenerationData(prevData => recoverData(year, prevData));
+    } catch (error) {
+      console.error('Error recovering data:', error);
+    }
+  }, [recoverRecord]);
+
   // Form submit handler
   const handleSubmit = useCallback(async () => {
     if (!selectedYear || !generationValue || !nonRenewableEnergy || !population || !gdp) {
@@ -129,7 +139,7 @@ const GeothermalAdmin = () => {
       
       const payload = {
         Year: selectedYear,
-        'Geothermal (GWh)': parseFloat(generationValue),
+        'Hydro (GWh)': parseFloat(generationValue),
         'Non-Renewable Energy (GWh)': parseFloat(nonRenewableEnergy),
         'Population (in millions)': parseFloat(population),
         'Gross Domestic Product': parseFloat(gdp)
@@ -158,17 +168,17 @@ const GeothermalAdmin = () => {
         id: index + 1,
         year: item.date,
         generation: item.value,
-        nonRenewableEnergy: item.nonRenewableEnergy, // Include non-renewable energy
-        population: item.population, // Include population
-        gdp: item.gdp, // Include GDP
+        nonRenewableEnergy: item.nonRenewableEnergy,
+        population: item.population,
+        gdp: item.gdp,
         dateAdded: new Date().toISOString(),
-        isPredicted: item.isPredicted !== undefined ? item.isPredicted : false // Ensure isPredicted is included
+        isPredicted: item.isPredicted !== undefined ? item.isPredicted : false,
+        isDeleted: item.isDeleted !== undefined ? item.isDeleted : false // Include isDeleted
       }));
-      // Log the effective data to verify the isPredicted column
       console.log("Effective data:", data);
       return data;
     }
-    return generateSampleData().map(item => ({ ...item, isPredicted: true })); // Mark sample data as predicted
+    return generateSampleData().map(item => ({ ...item, isPredicted: true }));
   }, [generationData]);
 
   // Year range for filtering
@@ -193,8 +203,8 @@ const GeothermalAdmin = () => {
 
   // Configure data table columns
   const tableColumns = useMemo(() => 
-    getTableColumns(handleOpenEditModal, handleDelete, effectiveData), 
-    [handleOpenEditModal, handleDelete, effectiveData]);
+    getTableColumns(handleOpenEditModal, handleDelete, handleRecover, effectiveData), 
+    [handleOpenEditModal, handleDelete, handleRecover, effectiveData]);
   
   // Use useDataTable hook with filtered data
   const {
@@ -288,8 +298,8 @@ const GeothermalAdmin = () => {
             <Droplets className="text-blue-500" size={24} />
           </div>
           <div>
-            <h1 className="text-2xl font-semibold">Hydro Generation Data</h1>
-            <p className="text-gray-500">Manage historical and projected hydro generation data</p>
+            <h1 className="text-2xl font-semibold">Hydropower Generation Data</h1>
+            <p className="text-gray-500">Manage historical and projected hydropower generation data</p>
           </div>
         </div>
         {/* <Button
@@ -356,7 +366,7 @@ const GeothermalAdmin = () => {
 
       {/* Data Table */}
       <DataTable
-        title={`Hydro Generation Records (${yearRange.startYear} - ${yearRange.endYear})`}
+        title={`Hydro Power Generation Records (${yearRange.startYear} - ${yearRange.endYear})`}
         columns={tableColumns}
         data={tableData}
         loading={tableLoading}
@@ -373,7 +383,7 @@ const GeothermalAdmin = () => {
           headerCell: "bg-gray-50",
           row: "hover:bg-red-50"
         }}
-        emptyMessage={`No hydro generation data available for years ${yearRange.startYear} - ${yearRange.endYear}`}
+        emptyMessage={`No geothermal generation data available for years ${yearRange.startYear} - ${yearRange.endYear}`}
       />
 
       {/* Add/Edit Modal */}

@@ -6,7 +6,7 @@ import jsPDF from 'jspdf';
 import 'jspdf-autotable';
 import html2canvas from 'html2canvas';
 
-export const useSolarAnalytics = () => {
+export const useGeothermalAnalytics = () => {
   // Properly extract the snackbar function
   const snackbar = useSnackbar();
   const enqueueSnackbar = snackbar?.enqueueSnackbar || 
@@ -15,22 +15,17 @@ export const useSolarAnalytics = () => {
   const [generationData, setGenerationData] = useState([]);
   const [currentProjection, setCurrentProjection] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [selectedStartYear, setSelectedStartYear] = useState(new Date().getFullYear());
-  const [selectedEndYear, setSelectedEndYear] = useState(new Date().getFullYear() + 5);
+  const [selectedStartYear, setSelectedStartYear] = useState(new Date().getFullYear() - 4);
+  const [selectedEndYear, setSelectedEndYear] = useState(new Date().getFullYear() + 1);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
   
-  const chartRef = useRef(null);
-
-
   // Ref for chart element
+  const chartRef = useRef(null);
   const cleanResponse = (response) => {
-    // Only apply replace if it's a string
-    if (typeof response === 'string') {
-      return response.replace(/NaN/g, 'null');
-    }
-    // If it's not a string, return it as is
-    return response;
+    // Replace "NaN" with "null" in the response string
+    return response.replace(/NaN/g, 'null');
   };
+
 
   // Fetch data based on selected year range
 const fetchData = useCallback(async (startYear, endYear) => {
@@ -39,14 +34,10 @@ const fetchData = useCallback(async (startYear, endYear) => {
     const response = await api.get(`/api/predictions/solar/?start_year=${startYear}&end_year=${endYear}`);
     
     // Clean the response by replacing "NaN" with "null"
-    const cleanedResponse = typeof response.data === 'string' 
-    ? cleanResponse(response.data)
-    : response.data;
+    const cleanedResponse = cleanResponse(response.data);
 
     // Parse the cleaned JSON string
-    const responseData = typeof cleanedResponse === 'string' 
-    ? JSON.parse(cleanedResponse) 
-    : cleanedResponse;
+    const responseData = JSON.parse(cleanedResponse);
 
     // Check if the response contains the expected data
     if (responseData.status === "success" && Array.isArray(responseData.predictions)) {
@@ -56,7 +47,8 @@ const fetchData = useCallback(async (startYear, endYear) => {
         nonRenewableEnergy: item.isPredicted ? null : (item['Non-Renewable Energy (GWh)'] ? parseFloat(item['Non-Renewable Energy (GWh)']) : null),
         population: item.isPredicted ? null : (item['Population (in millions)'] ? parseFloat(item['Population (in millions)']) : null),
         gdp: item.isPredicted ? null : (item['Gross Domestic Product'] === null ? null : parseFloat(item['Gross Domestic Product'])),
-        isPredicted: item.isPredicted !== undefined ? item.isPredicted : false // Ensure isPredicted is included
+        isPredicted: item.isPredicted !== undefined ? item.isPredicted : false, // Ensure isPredicted is included
+        isDeleted: item.isDeleted !== undefined ? item.isDeleted : false 
       }));
 
       // Log the raw fetched data and the formatted data to verify the isPredicted column
@@ -75,12 +67,11 @@ const fetchData = useCallback(async (startYear, endYear) => {
   }
 }, [enqueueSnackbar]);
 
-  
-
   // Fetch data on component mount and when year range or refresh trigger changes
   useEffect(() => {
     fetchData(selectedStartYear, selectedEndYear);
   }, [selectedStartYear, selectedEndYear, refreshTrigger]); // fetchData removed
+
   // Year range handlers
   const handleStartYearChange = useCallback((year) => {
     setSelectedStartYear(year);
@@ -113,7 +104,7 @@ const fetchData = useCallback(async (startYear, endYear) => {
       
       // Add title and metadata
       doc.setFontSize(16);
-      doc.text('Solar Power Generation Summary', 15, 15);
+      doc.text('Geothermal Power Generation Summary', 15, 15);
       
       doc.setFontSize(11);
       doc.text(`Year Range: ${selectedStartYear} - ${selectedEndYear}`, 15, 25);
@@ -145,7 +136,7 @@ const fetchData = useCallback(async (startYear, endYear) => {
           
           // Add chart title
           doc.setFontSize(12);
-          doc.text('Solar Generation Chart', 15, 45);
+          doc.text('Geothermal Generation Chart', 15, 45);
         } catch (chartError) {
           console.error('Error capturing chart:', chartError);
           // Continue without chart if it fails
@@ -157,7 +148,7 @@ const fetchData = useCallback(async (startYear, endYear) => {
       
       // Add table header
       doc.setFontSize(12);
-      doc.text('Solar Generation Data Table', 15, tableY - 5);
+      doc.text('Geothermal Generation Data Table', 15, tableY - 5);
       
       // Create table data
       doc.autoTable({
@@ -165,7 +156,7 @@ const fetchData = useCallback(async (startYear, endYear) => {
         body: generationData.map(item => [item.date, item.value.toFixed(2)]),
         startY: tableY,
         margin: { left: 15, right: 15 },
-        headStyles: { fillColor: [255, 107, 107] }, // Red color for solar
+        headStyles: { fillColor: [255, 107, 107] }, // Red color for geothermal
         styles: {
           fontSize: 10,
           cellPadding: 3
@@ -173,7 +164,7 @@ const fetchData = useCallback(async (startYear, endYear) => {
       });
       
       // Save PDF
-      doc.save('solar_Power_Generation_Summary.pdf');
+      doc.save('Geothermal_Power_Generation_Summary.pdf');
       
       try {
         enqueueSnackbar('Summary downloaded successfully!', { variant: 'success' });
@@ -190,7 +181,7 @@ const fetchData = useCallback(async (startYear, endYear) => {
         alert('Failed to download summary. Please try again.');
       }
     }
-  }, [generationData, selectedStartYear, selectedEndYear, currentProjection, enqueueSnackbar]);
+  }, [generationData, selectedStartYear, selectedEndYear, currentProjection, enqueueSnackbar, chartRef]);
 
   // Additional data for potential future use
   const temperatureData = Array.from({ length: 7 }, (_, i) => ({
@@ -211,15 +202,15 @@ const fetchData = useCallback(async (startYear, endYear) => {
     try {
       const payload = {
         Year: year,
-        'Solar (GWh)': value
+        'Geothermal (GWh)': value
       };
       
       await api.post('/api/predictions/solar/', payload);
       
       try {
-        enqueueSnackbar('solar generation data added successfully', { variant: 'success' });
+        enqueueSnackbar('Geothermal generation data added successfully', { variant: 'success' });
       } catch (error) {
-        console.log('solar generation data added successfully');
+        console.log('Geothermal generation data added successfully');
       }
       
       setRefreshTrigger(prev => prev + 1); // Trigger refetch
@@ -227,7 +218,7 @@ const fetchData = useCallback(async (startYear, endYear) => {
       console.error('Error adding data:', error);
       
       try {
-        enqueueSnackbar('Failed to add solar generation data', { variant: 'error' });
+        enqueueSnackbar('Failed to add geothermal generation data', { variant: 'error' });
       } catch (snackbarError) {
         console.error('Error showing notification:', snackbarError);
       }
@@ -242,9 +233,9 @@ const fetchData = useCallback(async (startYear, endYear) => {
       await api.put(`/api/update/${year}/`, payload);
       
       try {
-        enqueueSnackbar('solar generation data updated successfully', { variant: 'success' });
+        enqueueSnackbar('Geothermal generation data updated successfully', { variant: 'success' });
       } catch (error) {
-        console.log('solar generation data updated successfully');
+        console.log('Geothermal generation data updated successfully');
       }
       
       setRefreshTrigger(prev => prev + 1); // Trigger refetch
@@ -252,7 +243,7 @@ const fetchData = useCallback(async (startYear, endYear) => {
       console.error('Error updating data:', error);
       
       try {
-        enqueueSnackbar('Failed to update solar generation data', { variant: 'error' });
+        enqueueSnackbar('Failed to update geothermal generation data', { variant: 'error' });
       } catch (snackbarError) {
         console.error('Error showing notification:', snackbarError);
       }
@@ -264,12 +255,12 @@ const fetchData = useCallback(async (startYear, endYear) => {
   const deleteRecord = useCallback(async (year) => {
     setLoading(true);
     try {
-      await api.delete(`/api/delete/${year}/`);
+      await api.put(`/api/update/${year}/`, { isDeleted: true });
       
       try {
-        enqueueSnackbar('solar generation data deleted successfully', { variant: 'success' });
+        enqueueSnackbar('Geothermal generation data deleted successfully', { variant: 'success' });
       } catch (error) {
-        console.log('solar generation data deleted successfully');
+        console.log('Geothermal generation data deleted successfully');
       }
       
       setRefreshTrigger(prev => prev + 1); // Trigger refetch
@@ -277,7 +268,32 @@ const fetchData = useCallback(async (startYear, endYear) => {
       console.error('Error deleting data:', error);
       
       try {
-        enqueueSnackbar('Failed to delete solar generation data', { variant: 'error' });
+        enqueueSnackbar('Failed to delete geothermal generation data', { variant: 'error' });
+      } catch (snackbarError) {
+        console.error('Error showing notification:', snackbarError);
+      }
+    } finally {
+      setLoading(false);
+    }
+  }, [enqueueSnackbar]);
+
+  const recoverRecord = useCallback(async (year) => {
+    setLoading(true);
+    try {
+      await api.put(`/api/recover/${year}/`, { isDeleted: false });
+      
+      try {
+        enqueueSnackbar('Geothermal generation data recovered successfully', { variant: 'success' });
+      } catch (error) {
+        console.log('Geothermal generation data deleted successfully');
+      }
+      
+      setRefreshTrigger(prev => prev + 1); // Trigger refetch
+    } catch (error) {
+      console.error('Error recovering data:', error);
+      
+      try {
+        enqueueSnackbar('Failed to recover geothermal generation data', { variant: 'error' });
       } catch (snackbarError) {
         console.error('Error showing notification:', snackbarError);
       }
@@ -299,10 +315,11 @@ const fetchData = useCallback(async (startYear, endYear) => {
     addRecord,
     updateRecord,
     deleteRecord,
+    recoverRecord,
     temperatureData,
     wellPerformance,
     chartRef // Export the chart ref
   };
 };
 
-export default useSolarAnalytics;
+export default useGeothermalAnalytics;
