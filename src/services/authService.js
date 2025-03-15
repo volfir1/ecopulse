@@ -4,13 +4,14 @@ import {
   getIdToken
 } from 'firebase/auth';
 import { auth } from '../features/auth/firebase/firebase';
+import { getRedirectResult as firebaseGetRedirectResult } from 'firebase/auth';
 
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
 let currentAuthRequest = null;
 
 const authService = {
   
-  register: async (userData) => {
+register: async (userData) => {
     try {
       const response = await fetch(`${API_URL}/auth/register`, {
         method: "POST",
@@ -38,32 +39,65 @@ const authService = {
 
   login: async (email, password) => {
     try {
+      console.log('Attempting login for:', email);
+      
       const response = await fetch(`${API_URL}/auth/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, password }),
         credentials: "include"
       });
-
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.message || "Login failed");
-
+  
+      // Get the response text
+      const responseText = await response.text();
+      console.log('Raw login response text:', responseText.substring(0, 200) + (responseText.length > 200 ? '...' : ''));
+      
+      // Parse the response
+      let data;
+      try {
+        data = JSON.parse(responseText);
+      } catch (parseError) {
+        console.error('Error parsing login response:', parseError);
+        throw new Error(`Invalid server response: ${responseText.substring(0, 50)}...`);
+      }
+  
+      // Log the parsed data
+      console.log('Parsed login response:', data);
+  
+      if (!response.ok) {
+        throw new Error(data.message || "Login failed");
+      }
+  
+      // Store token if available
       if (data.user?.accessToken) {
         localStorage.setItem('authToken', data.user.accessToken);
       }
-
-      // Don't require verification during login - use server's response
-      return { 
-        success: true, 
-        user: data.user,
-        // Only include requireVerification if the server explicitly mentions it
-        ...(data.requireVerification && { requireVerification: data.requireVerification }) 
+  
+      // CRITICAL: Log and normalize verification status to prevent undefined values
+      console.log('Original verification status:', {
+        userIsVerified: data.user?.isVerified,
+        requireVerification: data.requireVerification
+      });
+  
+      // Normalize the response to ensure verification status is always a boolean
+      const normalizedResponse = {
+        success: true,
+        user: {
+          ...data.user,
+          // Force isVerified to be a boolean based on requireVerification
+          isVerified: data.requireVerification === true ? false : (data.user?.isVerified === true)
+        },
+        // Only include requireVerification if it's explicitly true
+        ...(data.requireVerification === true && { requireVerification: true })
       };
+  
+      console.log('Normalized login response:', normalizedResponse);
+      return normalizedResponse;
     } catch (error) {
+      console.error('Login error in authService:', error);
       throw new Error(error.message);
     }
   },
-
   // Improved logout that properly clears all auth data
   logout: async () => {
     try {
@@ -329,90 +363,326 @@ const authService = {
       return { success: false, error: error.message };
     }
   },
+// Add this method to your authService object, typically right before or after googleSignIn
 
+// Initiate Google Auth to get email before completing sign-in
+initiateGoogleAuth: async () => {
+  try {
+    console.log('Starting Google auth initiation');
+    const provider = new GoogleAuthProvider();
+    provider.addScope('profile');
+    provider.addScope('email');
+    provider.setCustomParameters({ prompt: 'select_account' });
+    
+    // Get user info from Google but don't complete sign-in yet
+    const result = await signInWithPopup(auth, provider);
+    const user = result.user;
+    
+    console.log('Google auth initiation successful:', user.email);
+    
+    if (!user.email) {
+      throw new Error('Failed to get email from Google');
+    }
+    
+    return {
+      success: true,
+      email: user.email,
+      displayName: user.displayName || '',
+      photoURL: user.photoURL || '',
+      uid: user.uid
+    };
+  } catch (error) {
+    console.error("Google Auth Initiation Error:", error);
+    
+    if (error.code) {
+      const errorMessages = {
+        'auth/popup-closed-by-user': "Sign-in was cancelled",
+        'auth/popup-blocked': "Sign-in popup was blocked. Please enable popups",
+        'auth/cancelled-popup-request': "Sign-in was cancelled",
+        'auth/account-exists-with-different-credential': "Account exists with different sign-in method"
+      };
+      throw new Error(errorMessages[error.code] || error.message || "Failed to sign in with Google");
+    }
+    
+    throw error;
+  }
+},
   // Rest of your functions (googleSignIn, verifyEmail, etc.)
-  googleSignIn: async () => {
+ // Enhanced googleSignIn method in authService.js
+
+ googleSignIn: async () => {
+  try {
+    console.log('Starting Google sign-in with popup');
+    
+    const provider = new GoogleAuthProvider();
+    // Minimize scopes to reduce consent screens
+    provider.addScope('email');
+    
+    // Attempt popup sign in
+    const result = await signInWithPopup(auth, provider);
+    
+    // Process credentials
+    const credential = GoogleAuthProvider.credentialFromResult(result);
+    const token = credential.accessToken;
+    const user = result.user;
+    
+    console.log('Google sign-in successful with Firebase:', user.email);
+    
+    // Format the user object
+    const formattedUser = {
+      id: user.uid,
+      firstName: user.displayName?.split(' ')[0] || '',
+      lastName: user.displayName?.split(' ').slice(1).join(' ') || '',
+      email: user.email,
+      photoURL: user.photoURL,
+      isVerified: user.emailVerified,
+      role: 'user', // Default role, can be updated after checking with backend
+      accessToken: token
+    };
+    
+    // Call your backend API to register/login the user and get proper role
     try {
-      console.log('Starting Google sign-in process');
-      const provider = new GoogleAuthProvider();
-      provider.addScope('profile');
-      provider.addScope('email');
-      provider.setCustomParameters({ prompt: 'select_account' });
+      const idToken = await user.getIdToken();
       
-      const result = await signInWithPopup(auth, provider);
-      const user = result.user;
-      const idToken = await getIdToken(user);
-      
-      console.log('Google auth successful:', user.email);
-      
-      if (!user.email || !idToken) {
-        throw new Error('Failed to get required user data from Google');
-      }
-  
-      console.log('Sending data to backend');
-      const response = await fetch(`${API_URL}/auth/google-signin`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
+      console.log('Calling backend with Google auth data');
+      const apiResponse = await fetch(`${API_URL}/auth/google-signin`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
         body: JSON.stringify({
           idToken,
           email: user.email,
-          displayName: user.displayName || '',
-          photoURL: user.photoURL || '',
-          uid: user.uid
+          uid: user.uid,
+          displayName: user.displayName,
+          photoURL: user.photoURL
         }),
-        credentials: "include"
+        credentials: 'include'
       });
-    
-      // Get the raw text response
-      const responseText = await response.text();
-      console.log('Raw server response:', responseText);
-  
-      // Parse the response
-      let data;
+      
+      // Read the response text first before trying to parse as JSON
+      const responseText = await apiResponse.text();
+      let apiData;
+      
       try {
-        data = JSON.parse(responseText);
+        // Try to parse as JSON
+        apiData = JSON.parse(responseText);
       } catch (parseError) {
-        console.error('Failed to parse response:', parseError);
-        throw new Error('Invalid server response format');
+        console.error('Failed to parse response as JSON:', responseText);
+        throw new Error(`Invalid server response: ${responseText}`);
       }
       
-      // Log the parsed response for debugging
-      console.log('Parsed response data:', data);
-      
-      if (!response.ok) {
-        console.error('Server responded with error:', data);
-        throw new Error(data.message || "Google sign-in failed");
+      // If we get a non-200 response
+      if (!apiResponse.ok) {
+        // Special handling for email exists error (likely deactivated account)
+        if (apiResponse.status === 400 && 
+            (apiData.message?.includes('email already exists') || responseText.includes('email already exists'))) {
+          
+          console.log('Received "email already exists" error - this may be a deactivated account');
+          
+          // Return a special format that the frontend can handle
+          throw new Error('Error creating account - email already exists');
+        }
+        
+        // Handle other errors
+        throw new Error(apiData.message || `Server error (${apiResponse.status})`);
       }
       
-      // Store the token if we got one
-      if (data.user?.accessToken) {
-        localStorage.setItem('authToken', data.user.accessToken);
+      // Handle deactivated account scenario
+      if (apiData.isDeactivated) {
+        console.log('Account is deactivated:', apiData);
+        
+        return {
+          success: false,
+          isDeactivated: true,
+          email: apiData.email || user.email,
+          message: apiData.message || "This account has been deactivated. A recovery link has been sent to your email."
+        };
       }
       
-      // Important: Use the server's response about verification
-      // Only require verification if the server says so
+      // Handle verification requirement
+      if (apiData.requireVerification) {
+        console.log('Account requires verification:', apiData);
+        
+        return {
+          success: false,
+          requireVerification: true,
+          userId: apiData.userId,
+          email: apiData.user?.email || user.email,
+          message: apiData.message || "Please verify your email to complete sign-in."
+        };
+      }
+      
+      if (apiData.success) {
+        // Update with server-provided data (roles, etc)
+        return {
+          success: true,
+          user: { ...formattedUser, ...apiData.user },
+          token: apiData.token || token
+        };
+      } else {
+        // Got a non-success response but not one of our special cases
+        throw new Error(apiData.message || "Google sign-in failed on the server");
+      }
+    } catch (apiError) {
+      console.error('Backend API error during Google signin:', apiError);
+      
+      // Rethrow the error to be handled by the calling function
+      throw apiError;
+    }
+  } catch (error) {
+    console.error('Google Sign-In Error:', error);
+    
+    // Handle specific error types
+    if (error.code === 'auth/popup-blocked') {
+      throw new Error('Sign-in popup was blocked. Please enable popups');
+    } else if (error.code === 'auth/popup-closed-by-user') {
+      throw new Error('Sign-in was cancelled');
+    } else if (error.code === 'auth/cancelled-popup-request') {
+      throw new Error('Another sign-in is already in progress');
+    } else if (error.code === 'auth/network-request-failed') {
+      throw new Error('Network error. Please check your internet connection');
+    } else if (error.code === 'auth/too-many-requests') {
+      throw new Error('Too many sign-in attempts. Please try again later');
+    } else {
+      throw error;
+    }
+  }
+},
+  
+
+  googleSignInWithRedirect: async () => {
+    try {
+      const provider = new GoogleAuthProvider();
+      // Add scopes if needed
+      provider.addScope('profile');
+      provider.addScope('email');
+      
+      // Set custom parameters
+      provider.setCustomParameters({
+        prompt: 'select_account'
+      });
+      
+      // Save current URL for redirecting back after authentication
+      sessionStorage.setItem('authRedirectUrl', window.location.pathname);
+      
+      // Start redirect flow
+      await signInWithRedirect(auth, provider);
+      
+      // This function won't return anything immediately as it redirects away
+      return { success: true, redirectStarted: true };
+    } catch (error) {
+      console.error('Google Sign-In Redirect Error:', error);
+      throw error;
+    }
+  },
+  getRedirectResult: async () => {
+    try {
+      console.log('Checking for Google sign-in redirect result');
+      
+      const result = await firebaseGetRedirectResult(auth);
+      
+      if (!result) {
+        // No redirect result - this is normal if user didn't just complete a redirect flow
+        console.log('No redirect result found');
+        return { success: false, user: null };
+      }
+      
+      console.log('Google redirect sign-in successful');
+      
+      // Process credentials
+      const credential = GoogleAuthProvider.credentialFromResult(result);
+      const token = credential.accessToken;
+      const user = result.user;
+      
+      // Format the user object
+      const formattedUser = {
+        id: user.uid,
+        firstName: user.displayName?.split(' ')[0] || '',
+        lastName: user.displayName?.split(' ').slice(1).join(' ') || '',
+        email: user.email,
+        photoURL: user.photoURL,
+        isVerified: user.emailVerified,
+        role: 'user', // Default role, can be updated after checking with backend
+        accessToken: token
+      };
+      
+      // Call your backend API to register/login the user and get proper role
+      try {
+        const idToken = await user.getIdToken();
+        const apiResponse = await fetch(`${API_URL}/auth/google-signin`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            idToken: idToken,
+            email: user.email,
+            uid: user.uid,
+            displayName: user.displayName,
+            photoURL: user.photoURL
+          }),
+          credentials: 'include'
+        });
+        
+        const apiData = await apiResponse.json();
+        
+        // Handle deactivated account scenario
+        if (apiData.isDeactivated) {
+          console.log('Account is deactivated:', apiData);
+          
+          return {
+            success: false,
+            isDeactivated: true,
+            email: apiData.email || user.email,
+            message: apiData.message || "This account has been deactivated. A recovery link has been sent to your email."
+          };
+        }
+        
+        // Handle verification requirement
+        if (apiData.requireVerification) {
+          console.log('Account requires verification:', apiData);
+          
+          return {
+            success: false,
+            requireVerification: true,
+            userId: apiData.userId,
+            email: apiData.user?.email || user.email,
+            message: apiData.message || "Please verify your email to complete sign-in."
+          };
+        }
+        
+        if (apiData.success) {
+          // Update with server-provided data (roles, etc)
+          return {
+            success: true,
+            user: { ...formattedUser, ...apiData.user },
+            token: apiData.token || token
+          };
+        }
+      } catch (apiError) {
+        console.error('Backend API error during Google redirect result:', apiError);
+        // Continue with frontend-only flow as fallback
+      }
+      
+      // Return user data even if backend call failed
       return {
-        ...data,
-        userId: data.userId || data.user?.id,
-        email: user.email
+        success: true,
+        user: formattedUser,
+        token: token
       };
     } catch (error) {
-      console.error("Google Sign-In Error:", error);
+      console.error('Get Redirect Result Error:', error);
       
-      if (error.code) {
-        const errorMessages = {
-          'auth/popup-closed-by-user': "Sign-in was cancelled",
-          'auth/popup-blocked': "Sign-in popup was blocked. Please enable popups",
-          'auth/cancelled-popup-request': "Sign-in was cancelled",
-          'auth/account-exists-with-different-credential': "Account exists with different sign-in method"
-        };
-        throw new Error(errorMessages[error.code] || error.message || "Failed to sign in with Google");
+      if (error.code === 'auth/null-auth-credential') {
+        // This isn't actually an error - just means there's no pending redirect
+        return { success: false, user: null };
       }
       
       throw error;
     }
   },
-
+  
   // Email verification function (unchanged)
   verifyEmail: async (userId, verificationCode) => {
     if (!userId || !verificationCode) {
@@ -728,7 +998,163 @@ const authService = {
       console.error('Direct login error:', error);
       throw error;
     }
+  },
+
+  
+// Account deactivation function
+deactivateAccount: async () => {
+  try {
+    const token = localStorage.getItem('authToken');
+    if (!token) {
+      throw new Error('Not authenticated');
+    }
+
+    const response = await fetch(`${API_URL}/auth/deactivate-account`, {
+      method: "POST",
+      headers: { 
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${token}`
+      },
+      credentials: "include"
+    });
+
+    const data = await response.json();
+    
+    if (!response.ok) {
+      throw new Error(data.message || "Failed to deactivate account");
+    }
+
+    // Clear all auth data on successful deactivation
+    localStorage.removeItem('user');
+    localStorage.removeItem('authToken');
+    
+    return {
+      success: true,
+      message: data.message || "Account successfully deactivated"
+    };
+  } catch (error) {
+    console.error("Account deactivation error:", error);
+    throw error;
   }
+},
+
+
+// Request account recovery function
+requestAccountRecovery: async (email) => {
+  try {
+    const response = await fetch(`${API_URL}/auth/request-recovery`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email }),
+      credentials: "include"
+    });
+
+    const data = await response.json();
+    
+    // For security, we always return a success message, even if the account doesn't exist
+    // The actual error details are handled on the server
+    return {
+      success: true,
+      message: data.message || "If your account exists and is deactivated, a recovery email has been sent."
+    };
+  } catch (error) {
+    console.error("Recovery request error:", error);
+    // Return a generic message to prevent email enumeration
+    return {
+      success: false,
+      message: "We encountered an issue processing your request. Please try again later."
+    };
+  }
+},
+
+// Recover account using token function
+recoverAccount: async (token) => {
+  try {
+    if (!token) {
+      throw new Error("Recovery token is required");
+    }
+  
+    console.log('Sending account recovery request:', {
+      token: token.substring(0, 5) + '...',  // Only log part of the token for security
+      url: `${API_URL}/auth/recover-account`
+    });
+  
+    const response = await fetch(`${API_URL}/auth/recover-account`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Accept": "application/json"
+      },
+      body: JSON.stringify({
+        token
+      }),
+      credentials: "include"
+    });
+  
+    // First get the raw text response
+    const responseText = await response.text();
+    console.log('Raw recovery response:', responseText.substring(0, 200) + (responseText.length > 200 ? '...' : ''));
+    
+    // Then parse it as JSON
+    let data;
+    try {
+      data = JSON.parse(responseText);
+    } catch (parseError) {
+      console.error('Error parsing response:', parseError);
+      throw new Error(`Invalid response from server: ${responseText.substring(0, 50)}...`);
+    }
+  
+    if (!response.ok) {
+      console.error('Recovery failed with status', response.status, data);
+      throw new Error(data.message || `Failed to recover account (${response.status})`);
+    }
+  
+    // Handle successful recovery
+    if (data.accessToken) {
+      localStorage.setItem('authToken', data.accessToken);
+    }
+  
+    // If the server sent back user data, store it
+    if (data.user) {
+      localStorage.setItem('user', JSON.stringify(data.user));
+    }
+  
+    return {
+      success: true,
+      user: data.user || null,
+      message: data.message || "Account recovered successfully"
+    };
+  } catch (error) {
+    console.error("Account recovery error:", error);
+    throw error;
+  }
+},
+
+// Check if account is deactivated during login (handled by enhanced login function)
+checkDeactivatedAccount: async (email) => {
+  try {
+    // This will always return success for security reasons
+    // The server won't reveal if an account exists or is deactivated
+    const response = await fetch(`${API_URL}/auth/check-deactivated`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email }),
+      credentials: "include"
+    });
+
+    const data = await response.json();
+    
+    return {
+      success: true,
+      isDeactivated: data.isDeactivated || false,
+      message: data.message,
+      lockoutRemaining: data.lockoutRemaining
+    };
+  } catch (error) {
+    console.error("Deactivation check error:", error);
+    return { success: false, isDeactivated: false };
+  }
+}
 };
 
 export default authService;

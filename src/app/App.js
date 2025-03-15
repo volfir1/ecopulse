@@ -1,14 +1,19 @@
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
-import React, { Suspense } from 'react';
+import React, { Suspense, useEffect, useState } from 'react';
 import { ThemeProvider } from '@emotion/react';
 import { AppProvider } from '@context/AppContext';
 import { Layout, Loader, theme, SnackbarProvider } from '@shared/index.js';
 import { userRoutes, moduleRoutes, adminRoutes, errorRoutes, publicRoutes } from './routes/routes';
 import PrivateRoute from './routes/PrivateRoute';
-import { AuthProvider } from '@context/AuthContext';
+import { AuthProvider, useAuth } from '@context/AuthContext';
 import DevToolbar from '@config/DevToolbar.jsx';
+import authService from '@services/authService';
 
-const App = () => {
+// Create an inner component to use hooks within the auth provider context
+const AppContent = () => {
+  const { setUser, setIsAuthenticated } = useAuth();
+  const [isRedirectCheckLoading, setIsRedirectCheckLoading] = useState(true);
+  
   // Protected routes array for organization
   const protectedRoutes = [
     // User routes - strictly for users only
@@ -49,43 +54,116 @@ const App = () => {
     { path: '/admin/recommendation', component: <adminRoutes.Recommendations />, roles: ['admin'] }
   ];
 
+  // Check for Google redirect result on app initialization
+  useEffect(() => {
+    const checkRedirectResult = async () => {
+      try {
+        setIsRedirectCheckLoading(true);
+        console.log('Checking for Google redirect authentication result...');
+        
+        // Get the redirect result from Firebase
+        const result = await authService.getRedirectResult();
+        
+        // If we have a successful result, handle the authentication
+        if (result && result.success && result.user) {
+          console.log('Successfully signed in with Google redirect');
+          
+          // Force the user to be verified
+          const verifiedUser = {
+            ...result.user,
+            isVerified: true
+          };
+          
+          // Update authentication state
+          setUser(verifiedUser);
+          setIsAuthenticated(true);
+          
+          // Store user data in localStorage
+          localStorage.setItem('user', JSON.stringify(verifiedUser));
+          
+          // Store the token if available
+          if (result.token) {
+            localStorage.setItem('authToken', result.token);
+          }
+          
+          // Redirect to the appropriate dashboard based on role
+          const redirectPath = verifiedUser.role === 'admin' ? '/admin/dashboard' : '/dashboard';
+          
+          // Check if there was a saved redirect URL before the authentication
+          const savedPath = sessionStorage.getItem('authRedirectUrl');
+          if (savedPath) {
+            window.location.href = savedPath;
+            sessionStorage.removeItem('authRedirectUrl');
+          } else {
+            window.location.href = redirectPath;
+          }
+        }
+      } catch (error) {
+        console.error('Error checking redirect result:', error);
+        // Don't show error UI here - it's normal to not have a redirect result
+      } finally {
+        setIsRedirectCheckLoading(false);
+      }
+    };
+    
+    checkRedirectResult();
+  }, [setUser, setIsAuthenticated]);
+
+  // Show loader while checking for redirect result
+  if (isRedirectCheckLoading) {
+    return <Loader />;
+  }
+
+  return (
+    <>
+      <DevToolbar />
+      <Suspense fallback={<Loader />}>
+        <Routes>
+          {/* Public routes that don't require authentication */}
+          <Route path="/" element={<publicRoutes.LandingPage />} />
+          <Route path="/login" element={<publicRoutes.Login />} />
+          <Route path="/register" element={<publicRoutes.Register />} />
+          <Route path="/verify-email" element={<publicRoutes.VerifyEmail />} />
+          <Route path="/forgot-password" element={<publicRoutes.ForgotPassword />} />
+          <Route path="/reset-password" element={<publicRoutes.ResetPassword />} />
+          
+          {/* Account deactivation and recovery routes */}
+          <Route path="/account-deactivated" element={<publicRoutes.AccountDeactivated />} />
+          <Route path="/recover-account" element={<publicRoutes.AccountRecovery />} />
+          
+          {/* Protected Routes wrapped in Layout */}
+          <Route element={<Layout />}>
+            {protectedRoutes.map(route => (
+              <Route
+                key={route.path}
+                path={route.path}
+                element={
+                  <PrivateRoute allowedRoles={route.roles}>
+                    {route.component}
+                  </PrivateRoute>
+                }
+              />
+            ))}
+          </Route>
+          
+          {/* Error Routes */}
+          <Route path="*" element={<errorRoutes.NotFound />} />
+          <Route path="/404" element={<errorRoutes.NotFound />} />
+        </Routes>
+      </Suspense>
+    </>
+  );
+};
+
+// Main App component
+const App = () => {
   return (
     <ThemeProvider theme={theme}>
       <SnackbarProvider>
         <AppProvider>
           <Router>
             <AuthProvider>
-              <DevToolbar />
-              <Suspense fallback={<Loader />}>
-                <Routes>
-                  {/* Public routes that don't require authentication */}
-                  <Route path="/" element={<publicRoutes.LandingPage />} />
-                  <Route path="/login" element={<publicRoutes.Login />} />
-                  <Route path="/register" element={<publicRoutes.Register />} />
-                  <Route path="/verify-email" element={<publicRoutes.VerifyEmail />} />
-                  <Route path="/forgot-password" element={<publicRoutes.ForgotPassword />} />
-                  <Route path="/reset-password" element={<publicRoutes.ResetPassword />} />
-                  
-                  {/* Protected Routes wrapped in Layout */}
-                  <Route element={<Layout />}>
-                    {protectedRoutes.map(route => (
-                      <Route
-                        key={route.path}
-                        path={route.path}
-                        element={
-                          <PrivateRoute allowedRoles={route.roles}>
-                            {route.component}
-                          </PrivateRoute>
-                        }
-                      />
-                    ))}
-                  </Route>
-                  
-                  {/* Error Routes */}
-                  <Route path="*" element={<errorRoutes.NotFound />} />
-                  <Route path="/404" element={<errorRoutes.NotFound />} />
-                </Routes>
-              </Suspense>
+              <AppContent />
             </AuthProvider>
           </Router>
         </AppProvider>

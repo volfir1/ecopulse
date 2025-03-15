@@ -138,125 +138,44 @@ const createEnergyStore = (energyType) => {
     // Enhanced fetchData method with better error handling 
 // Enhanced fetchData method with more robust error handling
 fetchData: async (startYear, endYear) => {
-  // Update state to show loading
   set({ loading: true, apiError: null });
   
   try {
-    // Try to get data from API
     const response = await api.get(`${config.endpoint}?start_year=${startYear}&end_year=${endYear}`);
-    const data = response.data.predictions;
     
-    // Format the data
-    const formattedData = data.map(item => ({
-      date: item.Year,
-      value: item['Predicted Production']
-    }));
-    
-    // Calculate current projection
-    const projection = formattedData.length > 0 
-      ? formattedData[formattedData.length - 1].value
-      : null;
-    
-    // Additional data processing based on energy type
-    let additionalData = {};
-    
-    if (energyType === 'hydro') {
-      // Hydro-specific data
-      additionalData = {
-        waterFlowData: response.data.water_flow || get().getWaterFlowData(),
-        turbineEfficiency: response.data.efficiency || get().getTurbineEfficiency()
-      };
-    } else if (energyType === 'solar') {
-      // Solar-specific data
-      additionalData = {
-        irradianceData: response.data.irradiance || get().getSolarIrradianceData(),
-        panelPerformance: response.data.performance || get().getPanelPerformance()
-      };
-    } else if (energyType === 'wind') {
-      // Wind-specific data
-      additionalData = {
-        windSpeedData: response.data.wind_speed || get().getWindSpeedData(),
-        turbinePerformance: response.data.turbine_data || get().getTurbinePerformance()
-      };
-    } else if (energyType === 'biomass') {
-      // Biomass-specific data
-      additionalData = {
-        feedstockData: response.data.feedstock || get().getFeedstockData(),
-        efficiencyData: response.data.efficiency || get().getEfficiencyData()
-      };
-    } else if (energyType === 'geothermal') {
-      // Geothermal-specific data
-      additionalData = {
-        temperatureData: response.data.temperature || get().getTemperatureData(),
-        wellPerformance: response.data.wells || get().getWellPerformance()
-      };
+    if (!response?.data?.predictions) {
+      throw new Error('No predictions data available');
     }
-    
-    // Update state with new data
+
+    // Format data for chart
+    const formattedData = response.data.predictions.map(item => ({
+      date: item.Year,
+      value: Math.abs(item['Predicted Production']) // Convert negative values to positive
+    }));
+
+    // Get latest prediction value
+    const projection = formattedData[formattedData.length - 1]?.value || null;
+
+    // Update state with just what's needed for the chart
     set({ 
       generationData: formattedData,
       currentProjection: projection,
-      additionalData,
       loading: false,
       apiError: null
     });
+
   } catch (error) {
     console.error(`Error fetching ${energyType} data:`, error);
     
-    // Get error message from response if available
-    let errorMessage = '';
-    if (error.response && error.response.data) {
-      if (typeof error.response.data === 'string') {
-        errorMessage = error.response.data;
-      } else if (typeof error.response.data === 'object') {
-        errorMessage = JSON.stringify(error.response.data);
-      }
-    } else {
-      errorMessage = error.toString();
-    }
-    
-    // Log the detailed error information
-    console.error('Error details:', errorMessage);
-
-    // Check for specific error types
-    const gdpErrorPatterns = [
-      "Gross Domestic Product",
-      "GDP",
-      "not in index"
-    ];
-    
-    const isGdpError = gdpErrorPatterns.some(pattern => 
-      errorMessage.includes(pattern)
-    );
-    
-    // Consider all year range errors as GDP-related for future years
-    const isFutureYearRequest = endYear > new Date().getFullYear();
-    const isYearRangeError = isFutureYearRequest && (
-      errorMessage.includes("year") || 
-      errorMessage.includes("index") || 
-      errorMessage.includes("data")
-    );
-    
-    const shouldUseMockData = isGdpError || isYearRangeError;
-
-    // Generate mock data for the requested years using the generateMockData helper
+    // Use mock data as fallback
     const mockData = get().generateMockData(startYear, endYear);
     
-    // Generate mock additional data using the helper method
-    const mockAdditionalData = get().generateMockAdditionalData();
-    
-    // Update state with mock data and appropriate error message
     set({
       generationData: mockData,
-      currentProjection: mockData.length > 0 ? mockData[mockData.length - 1].value : null,
-      additionalData: mockAdditionalData,
+      currentProjection: mockData[mockData.length - 1]?.value || null,
       loading: false,
       apiError: {
-        message: shouldUseMockData ? 
-          "Future economic data is not available for predictions. Using simulated data." : 
-          "Could not retrieve prediction data. Using simulated data instead.",
-        code: error.response ? error.response.status : 'NETWORK_ERROR',
-        details: errorMessage,
+        message: "Using simulated data",
         usingMockData: true
       }
     });

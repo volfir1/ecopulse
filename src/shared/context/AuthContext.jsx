@@ -295,7 +295,7 @@ export const AuthProvider = ({ children }) => {
     setError(null);
     
     try {
-      console.log('Calling authService.login');
+      console.log('Calling authService.login for', email);
       const result = await authService.login(email, password);
       console.log('Login result in AuthContext:', result);
       
@@ -310,26 +310,25 @@ export const AuthProvider = ({ children }) => {
           message: errorMessage 
         };
       }
-
-      // More robust verification check
-      console.log('Checking verification status:', {
+  
+      // FIX: Create an explicit verification check with default to true if not specified
+      const isUserVerified = result.requireVerification !== true;
+      
+      console.log('Verification check in AuthContext:', {
+        user: result.user.email,
         isVerified: result.user.isVerified,
-        verificationStatus: result.user.verificationStatus
+        requireVerification: result.requireVerification,
+        determinedStatus: isUserVerified
       });
       
-      const isUserVerified = 
-        result.user.isVerified === true || 
-        result.user.verificationStatus === 'verified' ||
-        result.alreadyVerified === true;
-      
       if (isUserVerified) {
-        // Create a normalized user object with consistent verification status
+        // User is verified - create a normalized user object
         const verifiedUser = {
           ...result.user,
-          isVerified: true
+          isVerified: true  // Force isVerified to be true
         };
         
-        console.log('User is verified, updating state');
+        console.log('Setting verified user in context:', verifiedUser);
         
         // Update state
         setUser(verifiedUser);
@@ -339,8 +338,6 @@ export const AuthProvider = ({ children }) => {
         localStorage.setItem('user', JSON.stringify(verifiedUser));
         if (result.user.accessToken) {
           localStorage.setItem('authToken', result.user.accessToken);
-        } else if (result.token) {
-          localStorage.setItem('authToken', result.token);
         }
         
         // Return consistent result
@@ -349,8 +346,8 @@ export const AuthProvider = ({ children }) => {
           user: verifiedUser 
         };
       } else {
-        // User is not verified - special return format for handling in loginHook
-        console.log('User is not verified, returning requireVerification flag');
+        // Explicitly handle verification requirement
+        console.log('User requires verification, returning requireVerification flag');
         return { 
           success: true, 
           user: result.user,

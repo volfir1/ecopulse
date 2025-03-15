@@ -1,147 +1,159 @@
-import { useState, useEffect, useContext } from 'react';
-import userService from '../../services/userService.js';
-import { useLoader, useSnackbar } from '@shared/index';
-import AuthContext from '@context/AuthContext';
+// src/pages/profile/profileHook.js
+import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useAuth } from '@context/AuthContext';
+import { useSnackbar } from '@shared/index'; // Using your app's snackbar instead of react-hot-toast
+import authService from '../../services/authService';
+import userService from '../../services/userService';
 
 export const useProfile = () => {
-  const { user} = useContext(AuthContext);
-  const { isLoading, startLoading, stopLoading } = useLoader();
-  const { enqueueSnackbar } = useSnackbar(); // Fix: Correctly destructure enqueueSnackbar
+  const { user, logout } = useAuth();
+  const navigate = useNavigate();
+  const toast = useSnackbar(); // Use your app's toast/snackbar system
   
+  const [isLoading, setIsLoading] = useState(false);
+  
+  // Profile form data
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
     email: '',
     phone: '',
-    role: 'user'
+    role: ''
   });
-
+  
+  // Password form data
   const [passwordData, setPasswordData] = useState({
     currentPassword: '',
     newPassword: '',
     confirmPassword: ''
   });
-
+  
+  // Load user data on component mount
   useEffect(() => {
-    let isMounted = true;
-
-    const fetchUserProfile = async () => {
-      if (!user?.id) {
-        console.log('No user ID found, skipping profile fetch');
-        return;
-      }
-      
-      startLoading();
-      try {
-        const response = await userService.getCurrentUser();
-        console.log('Profile Response:', response);
-        
-        if (!isMounted) return;
-      
-        if (!response.success || !response.user) {
-          throw new Error(response.message || 'Failed to fetch profile');
-        }
-      
-        // Ensure all expected fields are present
-        const userData = {
-          firstName: response.user.firstName || '',
-          lastName: response.user.lastName || '',
-          email: response.user.email || '',
-          phone: response.user.phone || '',
-          role: response.user.role || 'user'
-        };
-      
-        console.log('Setting form data:', userData);
-        setFormData(userData);
-      } catch (error) {
-        console.error('Profile fetch error:', error);
-        if (isMounted) {
-          enqueueSnackbar(error.message || 'Failed to fetch profile', { 
-            variant: 'error',
-            preventDuplicate: true
-          });
-        }
-      } finally {
-        if (isMounted) {
-          stopLoading();
-        }
-      }
-    };
-
-    fetchUserProfile();
-
-    return () => {
-      isMounted = false;
-    };
-  }, [user?.id, enqueueSnackbar, startLoading, stopLoading]);
-
+    if (user) {
+      setFormData({
+        firstName: user.firstName || '',
+        lastName: user.lastName || '',
+        email: user.email || '',
+        phone: user.phone || '',
+        role: user.role || 'user'
+      });
+    }
+  }, [user]);
+  
+  // Handle profile form input changes
   const handleInputChange = (e) => {
     const { name, value } = e.target;
-    setFormData(prev => ({
-      ...prev,
+    setFormData({
+      ...formData,
       [name]: value
-    }));
+    });
   };
-
+  
+  // Handle password form input changes
   const handlePasswordChange = (e) => {
     const { name, value } = e.target;
-    setPasswordData(prev => ({
-      ...prev,
+    setPasswordData({
+      ...passwordData,
       [name]: value
-    }));
+    });
   };
-
+  
+  // Handle profile update
   const handleProfileSubmit = async (e) => {
     e.preventDefault();
-    startLoading();
-    try {
-        const response = await userService.updateUserProfile({
-            ...formData,
-            id: user?.id
-          });
-
-      if (!response.success) {
-        throw new Error(response.message);
-      }
-
-      enqueueSnackbar('Profile updated successfully', { 
-        variant: 'success',
-        preventDuplicate: true
-      });
-    } catch (error) {
-      console.error('Profile update error:', error);
-      enqueueSnackbar(error.message || 'Failed to update profile', { 
-        variant: 'error',
-        preventDuplicate: true
-      });
-    } finally {
-      stopLoading();
-    }
-  };
-
-  const handlePasswordSubmit = async (e) => {
-    e.preventDefault();
-    if (passwordData.newPassword !== passwordData.confirmPassword) {
-      enqueueSnackbar('New passwords do not match', { variant: 'error' }); // Fix: Use enqueueSnackbar
+    
+    if (!user?.id) {
+      toast.error("User not authenticated");
       return;
     }
     
-    startLoading();
+    setIsLoading(true);
+    
     try {
-        await userService.changePassword(user.id, passwordData);
-      enqueueSnackbar('Password changed successfully', { variant: 'success' }); // Fix: Use enqueueSnackbar
-      setPasswordData({
-        currentPassword: '',
-        newPassword: '',
-        confirmPassword: ''
-      });
+      const response = await userService.updateProfile(user.id, formData);
+      
+      if (response.success) {
+        toast.success("Profile updated successfully");
+      } else {
+        toast.error(response.message || "Failed to update profile");
+      }
     } catch (error) {
-      enqueueSnackbar(error.message || 'Failed to change password', { variant: 'error' }); // Fix: Use enqueueSnackbar
+      toast.error(error.message || "An error occurred while updating profile");
     } finally {
-      stopLoading();
+      setIsLoading(false);
     }
   };
-
+  
+  // Handle password update
+  const handlePasswordSubmit = async (e) => {
+    e.preventDefault();
+    
+    // Validate password
+    if (passwordData.newPassword !== passwordData.confirmPassword) {
+      toast.error("New passwords don't match");
+      return;
+    }
+    
+    if (passwordData.newPassword.length < 8) {
+      toast.error("Password must be at least 8 characters long");
+      return;
+    }
+    
+    setIsLoading(true);
+    
+    try {
+      const response = await userService.updatePassword(
+        passwordData.currentPassword,
+        passwordData.newPassword
+      );
+      
+      if (response.success) {
+        toast.success("Password updated successfully");
+        // Reset form
+        setPasswordData({
+          currentPassword: '',
+          newPassword: '',
+          confirmPassword: ''
+        });
+      } else {
+        toast.error(response.message || "Failed to update password");
+      }
+    } catch (error) {
+      toast.error(error.message || "An error occurred while updating password");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+  
+  // Handle account deactivation
+  const handleDeactivateAccount = async () => {
+    setIsLoading(true);
+    
+    try {
+      const response = await authService.deactivateAccount();
+      
+      if (response.success) {
+        toast.success(response.message || "Account deleted successfully");
+        
+        // Log out the user
+        await logout();
+        
+        // Redirect to a confirmation page
+        navigate('/account-deactivated', { 
+          state: { email: user?.email }
+        });
+      } else {
+        toast.error(response.message || "Failed to delete account");
+      }
+    } catch (error) {
+      toast.error(error.message || "An error occurred while deleting account");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+  
   return {
     formData,
     passwordData,
@@ -149,6 +161,7 @@ export const useProfile = () => {
     handleInputChange,
     handlePasswordChange,
     handleProfileSubmit,
-    handlePasswordSubmit
+    handlePasswordSubmit,
+    handleDeactivateAccount
   };
 };
