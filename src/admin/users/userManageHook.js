@@ -1,23 +1,24 @@
 import { useState, useEffect, useCallback } from 'react';
 import { userService } from '../../services/userService';
+import authService from '../../services/authService';
 import { userManagementData } from './data';
 
 export const useUserManagement = () => {
   const [data, setData] = useState({
     usersList: [],
-    deletedUsers: [], // Added to store soft-deleted users
+    deletedUsers: [],
     statistics: {
       totalUsers: '0',
       activeUsers: '0',
       newUsers: '0',
       verifiedUsers: '0',
-      deletedUsers: '0' // Added stat for deleted users
+      deletedUsers: '0'
     },
     activityData: []
   });
   const [loading, setLoading] = useState(true);
   const [selectedUser, setSelectedUser] = useState(null);
-  const [refreshTrigger, setRefreshTrigger] = useState(0); // To trigger refresh after operations
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
   
   // Function to refresh the data
   const refreshData = () => {
@@ -155,7 +156,7 @@ export const useUserManagement = () => {
     fetchUsers();
   }, [refreshTrigger]);  // Depend on refreshTrigger to reload data
 
-  // Enhanced delete function for soft delete
+  // Enhanced delete function for soft delete (admin deactivation)
   const handleSoftDeleteUser = async (userId) => {
     try {
       const result = await userService.softDeleteUser(userId);
@@ -184,15 +185,15 @@ export const useUserManagement = () => {
           }));
         }
         
-        return { success: true, message: "User successfully deleted" };
+        return { success: true, message: "User successfully deactivated" };
       } else {
-        throw new Error(result.message || 'Failed to delete user');
+        throw new Error(result.message || 'Failed to deactivate user');
       }
     } catch (error) {
-      console.error('Failed to delete user:', error);
+      console.error('Failed to deactivate user:', error);
       return { 
         success: false, 
-        error: { message: error.message || 'Failed to delete user' }
+        error: { message: error.message || 'Failed to deactivate user' }
       };
     }
   };
@@ -239,6 +240,46 @@ export const useUserManagement = () => {
     }
   };
 
+  // NEW: Function to send account recovery link to deactivated user
+  const handleSendRecoveryLink = async (email) => {
+    try {
+      // Use the authService to send recovery link
+      const result = await authService.requestAccountRecovery(email);
+      
+      if (result.success) {
+        return { success: true, message: "Recovery link sent successfully" };
+      } else {
+        throw new Error(result.message || 'Failed to send recovery link');
+      }
+    } catch (error) {
+      console.error('Failed to send recovery link:', error);
+      return { 
+        success: false, 
+        error: { message: error.message || 'Failed to send recovery link' }
+      };
+    }
+  };
+
+  // NEW: Function to send password reset link
+  const handleSendPasswordResetLink = async (email) => {
+    try {
+      // Use the authService to send password reset link
+      const result = await authService.forgotPassword(email);
+      
+      if (result.success) {
+        return { success: true, message: "Password reset link sent successfully" };
+      } else {
+        throw new Error(result.message || 'Failed to send password reset link');
+      }
+    } catch (error) {
+      console.error('Failed to send password reset link:', error);
+      return { 
+        success: false, 
+        error: { message: error.message || 'Failed to send password reset link' }
+      };
+    }
+  };
+
   const updateUserRole = async (userId, newRole) => {
     try {
       const response = await userService.updateUserRole(userId, newRole);
@@ -268,7 +309,6 @@ export const useUserManagement = () => {
     }
   };
 
-
   return {
     data,
     setData,
@@ -277,6 +317,8 @@ export const useUserManagement = () => {
     setSelectedUser,
     handleSoftDeleteUser,
     handleRestoreUser,
+    handleSendRecoveryLink, // NEW: For sending recovery links
+    handleSendPasswordResetLink, // NEW: For sending password reset links
     updateUserRole,
     refreshData
   };

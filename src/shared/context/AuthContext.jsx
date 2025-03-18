@@ -496,19 +496,19 @@ export const AuthProvider = ({ children }) => {
       const result = await authService.verifyEmail(userId, verificationCode);
       
       if (result.success && result.user) {
+        // Update user in context
         setUser(result.user);
         setIsAuthenticated(true);
+        
+        // Store user in localStorage
         localStorage.setItem('user', JSON.stringify(result.user));
         
-        // Store token if available
+        // Important: Store auth token in localStorage
         if (result.user.accessToken) {
           localStorage.setItem('authToken', result.user.accessToken);
         } else if (result.token) {
           localStorage.setItem('authToken', result.token);
         }
-        
-        // Redirect based on role after successful verification
-        redirectToUserDashboard(result.user);
       }
       
       return result;

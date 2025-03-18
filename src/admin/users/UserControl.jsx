@@ -21,7 +21,9 @@ export default function UserControl() {
     setSelectedUser, 
     handleSoftDeleteUser, 
     handleRestoreUser, 
-    updateUserRole  
+    handleSendRecoveryLink,
+    handleSendPasswordResetLink,
+    updateUserRole
   } = useUserManagement();
   
   const [snackbar, setSnackbar] = useState({
@@ -91,6 +93,58 @@ export default function UserControl() {
     }
   };
 
+  // NEW: Handler for sending recovery links
+  const handleSendRecovery = async (email) => {
+    try {
+      const result = await handleSendRecoveryLink(email);
+      if (result.success) {
+        setSnackbar({
+          open: true,
+          message: 'Recovery link has been sent to the user',
+          severity: 'success'
+        });
+      } else {
+        setSnackbar({
+          open: true,
+          message: result.error?.message || 'Failed to send recovery link',
+          severity: 'error'
+        });
+      }
+    } catch (error) {
+      setSnackbar({
+        open: true,
+        message: 'An error occurred while sending recovery link',
+        severity: 'error'
+      });
+    }
+  };
+
+  // NEW: Handler for sending password reset links
+  const handleSendPasswordReset = async (email) => {
+    try {
+      const result = await handleSendPasswordResetLink(email);
+      if (result.success) {
+        setSnackbar({
+          open: true,
+          message: 'Password reset link has been sent to the user',
+          severity: 'success'
+        });
+      } else {
+        setSnackbar({
+          open: true,
+          message: result.error?.message || 'Failed to send password reset link',
+          severity: 'error'
+        });
+      }
+    } catch (error) {
+      setSnackbar({
+        open: true,
+        message: 'An error occurred while sending password reset link',
+        severity: 'error'
+      });
+    }
+  };
+
   const handleCloseSnackbar = () => {
     setSnackbar({ ...snackbar, open: false });
   };
@@ -150,6 +204,8 @@ export default function UserControl() {
           handleEdit={handleEditUser} 
           handleSoftDelete={handleSoftDelete}
           handleRestore={handleRestore}
+          handleSendRecovery={handleSendRecovery} // NEW: For sending recovery links
+          handleSendPasswordReset={handleSendPasswordReset} // NEW: For sending password reset links
           updateUserRole={updateUserRole}
         />
       )}

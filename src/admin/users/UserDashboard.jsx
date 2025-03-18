@@ -40,11 +40,14 @@ import {
   RestoreFromTrash,
   DeleteForever,
   Block,
-  CheckCircle
+  CheckCircle,
+  LockReset,  // NEW: Icon for password reset
+  MailOutline  // NEW: Icon for sending recovery email
 } from '@mui/icons-material';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend, ResponsiveContainer } from 'recharts';
 
 import PropTypes from 'prop-types';
+
 // Stat Card Component
 export const StatCard = ({ title, value, icon, color }) => {
   return (
@@ -205,7 +208,9 @@ export const UsersList = ({
   deletedUsers, 
   handleEdit, 
   handleSoftDelete, 
-  handleRestore, 
+  handleRestore,
+  handleSendRecovery, // NEW: For sending recovery links
+  handleSendPasswordReset, // NEW: For sending password reset links 
   updateUserRole 
 }) => {
   const [anchorEl, setAnchorEl] = useState(null);
@@ -319,6 +324,28 @@ export const UsersList = ({
       message: `Are you sure you want to restore the user "${userName}"?`,
       confirmText: 'Restore',
       action: () => handleRestore(userId)
+    });
+  };
+
+  // NEW: Handle send recovery link confirmation
+  const openSendRecoveryConfirm = (email, userName) => {
+    setConfirmDialog({
+      open: true,
+      title: 'Send Recovery Link',
+      message: `Are you sure you want to send a recovery link to "${userName}" (${email})?`,
+      confirmText: 'Send Recovery Link',
+      action: () => handleSendRecovery(email)
+    });
+  };
+
+  // NEW: Handle send password reset link confirmation
+  const openSendPasswordResetConfirm = (email, userName) => {
+    setConfirmDialog({
+      open: true,
+      title: 'Send Password Reset Link',
+      message: `Are you sure you want to send a password reset link to "${userName}" (${email})?`,
+      confirmText: 'Send Reset Link',
+      action: () => handleSendPasswordReset(email)
     });
   };
   
@@ -485,6 +512,17 @@ export const UsersList = ({
                   {tabValue === 0 ? (
                     // Actions for active users
                     <>
+                      {/* Password Reset Button - Only for active users */}
+                      <Tooltip title="Send Password Reset Link">
+                        <IconButton 
+                          size="small" 
+                          onClick={() => openSendPasswordResetConfirm(user.email, user.name)}
+                          color="primary"
+                          sx={{ mr: 1 }}
+                        >
+                          <LockReset fontSize="small" />
+                        </IconButton>
+                      </Tooltip>
                       <Tooltip title="Deactivate User">
                         <IconButton 
                           size="small" 
@@ -506,16 +544,29 @@ export const UsersList = ({
                     </>
                   ) : (
                     // Actions for deleted users
-                    <Tooltip title="Restore User">
-                      <IconButton 
-                        size="small" 
-                        onClick={() => openRestoreConfirm(user.id, user.name)}
-                        color="primary"
-                        sx={{ mr: 1 }}
-                      >
-                        <RestoreFromTrash fontSize="small" />
-                      </IconButton>
-                    </Tooltip>
+                    <>
+                      {/* Send Recovery Link Button - Only for deleted users */}
+                      <Tooltip title="Send Recovery Link">
+                        <IconButton 
+                          size="small" 
+                          onClick={() => openSendRecoveryConfirm(user.email, user.name)}
+                          color="warning"
+                          sx={{ mr: 1 }}
+                        >
+                          <MailOutline fontSize="small" />
+                        </IconButton>
+                      </Tooltip>
+                      <Tooltip title="Restore User">
+                        <IconButton 
+                          size="small" 
+                          onClick={() => openRestoreConfirm(user.id, user.name)}
+                          color="primary"
+                          sx={{ mr: 1 }}
+                        >
+                          <RestoreFromTrash fontSize="small" />
+                        </IconButton>
+                      </Tooltip>
+                    </>
                   )}
                 </TableCell>
               </TableRow>
@@ -552,6 +603,16 @@ export const UsersList = ({
           <MenuItem onClick={() => handleRoleChangeRequest('user')}>
             <People fontSize="small" sx={{ mr: 1 }} />
             Remove Admin Privileges
+          </MenuItem>
+        )}
+        {/* NEW: Add Password Reset option in menu */}
+        {menuUser && (
+          <MenuItem onClick={() => {
+            handleMenuClose();
+            openSendPasswordResetConfirm(menuUser.email, menuUser.name);
+          }}>
+            <LockReset fontSize="small" sx={{ mr: 1 }} />
+            Send Password Reset
           </MenuItem>
         )}
       </Menu>
@@ -594,7 +655,7 @@ export const UsersList = ({
         </DialogActions>
       </Dialog>
       
-      {/* Action Confirmation Dialog (Delete/Restore) */}
+      {/* Action Confirmation Dialog (Delete/Restore/Recovery/Reset) */}
       <Dialog open={confirmDialog.open} onClose={() => setConfirmDialog({...confirmDialog, open: false})}>
         <DialogTitle>{confirmDialog.title}</DialogTitle>
         <DialogContent>
@@ -608,7 +669,11 @@ export const UsersList = ({
           </Button>
           <Button 
             variant="contained" 
-            color={confirmDialog.confirmText === 'Deactivate' ? 'error' : 'primary'}
+            color={
+              confirmDialog.confirmText === 'Deactivate' ? 'error' : 
+              confirmDialog.confirmText === 'Send Recovery Link' ? 'warning' :
+              'primary'
+            }
             onClick={handleConfirmAction}
           >
             {confirmDialog.confirmText}
@@ -641,5 +706,7 @@ UsersList.propTypes = {
   handleEdit: PropTypes.func,
   handleSoftDelete: PropTypes.func.isRequired,
   handleRestore: PropTypes.func.isRequired,
+  handleSendRecovery: PropTypes.func.isRequired, // NEW: Added prop validation
+  handleSendPasswordReset: PropTypes.func.isRequired, // NEW: Added prop validation
   updateUserRole: PropTypes.func.isRequired
 };

@@ -1,19 +1,21 @@
-// dashboardUtils.js
 import React from 'react';
-import { AppIcon } from '@shared/index';
 
 // Format numbers with appropriate units (K for thousands, M for millions)
 export const formatNumber = (num) => {
+  if (!num && num !== 0) return '-';
+  
   if (num >= 1000000) {
-    return `${(num / 1000000).toFixed(2)}M`;
+    return `${(num / 1000000).toFixed(1)}M`;
   } else if (num >= 1000) {
-    return `${(num / 1000).toFixed(2)}K`;
+    return `${(num / 1000).toFixed(1)}K`;
   }
-  return num.toFixed(2);
+  return num.toFixed(1);
 };
 
 // Format percentage with sign and 1 decimal place
 export const formatPercentage = (value) => {
+  if (!value && value !== 0) return '-';
+  
   const sign = value >= 0 ? '+' : '';
   return `${sign}${value.toFixed(1)}%`;
 };
@@ -25,134 +27,18 @@ export const getChangeColor = (percentage) => {
   return 'text-gray-500';
 };
 
-// Get appropriate icon for energy source
-export const getEnergyIcon = (source) => {
-  switch (source.toLowerCase()) {
-    case 'wind':
-      return <AppIcon name="wind" className="text-slate-500" />;
-    case 'solar':
-      return <AppIcon name="sun" className="text-yellow-500" />;
-    case 'hydropower':
-      return <AppIcon name="droplet" className="text-blue-500" />;
-    case 'geothermal':
-      return <AppIcon name="thermometer" className="text-red-500" />;
-    case 'biomass':
-      return <AppIcon name="leaf" className="text-green-500" />;
-    default:
-      return <AppIcon name="zap" className="text-purple-500" />;
-  }
-};
-
-// Get configuration for pie chart (energy mix)
-export const getPieChartConfig = () => {
-  return {
-    legend: {
-      position: 'right',
-      offsetY: 30,
-      height: 230
-    },
-    dataLabels: {
-      enabled: true,
-      formatter: function(val) {
-        return val.toFixed(1) + '%';
-      }
-    },
-    tooltip: {
-      y: {
-        formatter: function(val, opts) {
-          const total = opts.series.reduce((a, b) => a + b, 0);
-          const percent = (val / total * 100).toFixed(1);
-          return `${val.toFixed(2)} GWh (${percent}%)`;
-        }
-      }
-    },
-    responsive: [{
-      breakpoint: 768,
-      options: {
-        chart: {
-          height: 350
-        },
-        legend: {
-          position: 'bottom',
-          offsetY: 0,
-          height: 'auto'
-        }
-      }
-    }]
-  };
-};
-
-// Get configuration for line chart (yearly trends)
-export const getLineChartConfig = () => {
-  return {
-    tooltip: {
-      formatter: (value) => [`${value.toFixed(2)} GWh`, 'Generation'],
-      labelFormatter: (label) => `Year: ${label}`
-    },
-    xAxis: {
-      dataKey: 'year',
-      axisLine: { stroke: '#E0E0E0' },
-      tickLine: false
-    },
-    yAxis: {
-      axisLine: { stroke: '#E0E0E0' },
-      tickLine: false,
-      label: {
-        value: 'Generation (GWh)',
-        angle: -90,
-        position: 'insideLeft',
-        style: { textAnchor: 'middle' },
-        offset: -5
-      }
-    }
-  };
-};
-
-// Get configuration for bar chart (comparison)
-export const getBarChartConfig = () => {
-  return {
-    bar: {
-      dataKey: 'currentValue',
-      barSize: 25,
-      radius: [4, 4, 0, 0]
-    },
-    xAxis: {
-      type: 'category',
-      dataKey: 'source',
-      axisLine: { stroke: '#E0E0E0' },
-      tickLine: false
-    },
-    yAxis: {
-      axisLine: { stroke: '#E0E0E0' },
-      tickLine: false,
-      label: {
-        value: 'Generation (GWh)',
-        angle: -90,
-        position: 'insideLeft',
-        style: { textAnchor: 'middle' },
-        offset: -5
-      }
-    },
-    tooltip: {
-      formatter: (value, name, entry) => {
-        const percentChange = entry.payload.percentChange;
-        const changeText = percentChange >= 0 
-          ? `+${percentChange.toFixed(2)}%` 
-          : `${percentChange.toFixed(2)}%`;
-        return [`${value.toFixed(2)} GWh (${changeText})`, entry.payload.source];
-      },
-      labelFormatter: (label) => `Energy Source: ${label}`
-    }
-  };
-};
-
 // Get color for each energy source
 export const getSourceColor = (source) => {
-  switch (source.toLowerCase()) {
+  if (!source) return '#9333EA'; // Default purple
+  
+  const sourceLower = source.toLowerCase();
+  
+  switch (sourceLower) {
     case 'wind':
       return '#64748B'; // Slate
     case 'solar':
-      return '#FFD700'; // Gold
+      return '#FFB800'; // Gold/Yellow
+    case 'hydro':
     case 'hydropower':
       return '#2E90E5'; // Blue
     case 'geothermal':
@@ -164,105 +50,252 @@ export const getSourceColor = (source) => {
   }
 };
 
-// Convert raw energy mix data to format required by pie chart
-export const formatEnergyMixForChart = (mixData) => {
-  if (!mixData || mixData.length === 0) return [];
+// Format date as relative time (e.g., "2 hours ago")
+export const formatRelativeTime = (dateString) => {
+  const now = new Date();
+  const date = new Date(dateString);
+  const diffInSeconds = Math.floor((now - date) / 1000);
   
-  return mixData.map(item => ({
-    name: item.label,
-    value: item.value,
-    percentage: item.percentage,
-    color: item.color || getSourceColor(item.label)
-  }));
+  if (diffInSeconds < 60) {
+    return `${diffInSeconds} seconds ago`;
+  }
+  
+  const diffInMinutes = Math.floor(diffInSeconds / 60);
+  if (diffInMinutes < 60) {
+    return `${diffInMinutes} minute${diffInMinutes !== 1 ? 's' : ''} ago`;
+  }
+  
+  const diffInHours = Math.floor(diffInMinutes / 60);
+  if (diffInHours < 24) {
+    return `${diffInHours} hour${diffInHours !== 1 ? 's' : ''} ago`;
+  }
+  
+  const diffInDays = Math.floor(diffInHours / 24);
+  if (diffInDays < 30) {
+    return `${diffInDays} day${diffInDays !== 1 ? 's' : ''} ago`;
+  }
+  
+  const diffInMonths = Math.floor(diffInDays / 30);
+  if (diffInMonths < 12) {
+    return `${diffInMonths} month${diffInMonths !== 1 ? 's' : ''} ago`;
+  }
+  
+  const diffInYears = Math.floor(diffInMonths / 12);
+  return `${diffInYears} year${diffInYears !== 1 ? 's' : ''} ago`;
 };
 
-// Get the array of energy sources in standard order
-export const getEnergySources = () => [
-  'Wind', 'Solar', 'Hydropower', 'Geothermal', 'Biomass'
-];
-
-// Calculate the growth rate between two time periods
+// Calculate the growth rate between two values
 export const calculateGrowthRate = (current, previous) => {
   if (previous === 0) return current > 0 ? 100 : 0;
   return ((current - previous) / previous) * 100;
 };
 
-// Get year-over-year comparison stats for each energy source
-export const getYearOverYearComparison = (yearlyData) => {
-  if (!yearlyData || yearlyData.length < 2) return [];
+// Format number as currency
+export const formatCurrency = (value, currencySymbol = '₱') => {
+  if (!value && value !== 0) return '-';
   
-  const sources = getEnergySources();
-  const currentYear = yearlyData[yearlyData.length - 1];
-  const previousYear = yearlyData[yearlyData.length - 2];
-  
-  return sources.map(source => {
-    const current = currentYear[source] || 0;
-    const previous = previousYear[source] || 0;
-    const change = calculateGrowthRate(current, previous);
-    
-    return {
-      source,
-      currentYear: currentYear.year,
-      currentValue: current,
-      previousYear: previousYear.year,
-      previousValue: previous,
-      change,
-      color: getSourceColor(source)
-    };
-  });
+  return `${currencySymbol}${formatNumber(value)}`;
 };
 
-// Get summary stats from yearly trends data
-export const getSummaryStats = (yearlyData) => {
-  if (!yearlyData || yearlyData.length === 0) return null;
+// Convert data array to CSV format for export
+export const convertToCSV = (data, fields) => {
+  if (!data || !data.length) return '';
   
-  const latestYear = yearlyData[yearlyData.length - 1];
-  const sources = getEnergySources();
-  const total = sources.reduce((sum, source) => sum + (latestYear[source] || 0), 0);
+  // Header row
+  const header = fields.map(field => field.label || field.key).join(',');
   
-  // Find highest contributing source
-  let highestSource = null;
-  let highestValue = 0;
-  
-  sources.forEach(source => {
-    const value = latestYear[source] || 0;
-    if (value > highestValue) {
-      highestValue = value;
-      highestSource = source;
-    }
+  // Data rows
+  const rows = data.map(item => {
+    return fields.map(field => {
+      const value = field.format ? field.format(item[field.key]) : item[field.key];
+      // Wrap strings with commas in quotes
+      return typeof value === 'string' && value.includes(',') ? `"${value}"` : value;
+    }).join(',');
   });
   
-  // Calculate growth if we have multiple years of data
-  let overallGrowth = 0;
-  if (yearlyData.length >= 2) {
-    const firstYear = yearlyData[0];
-    const firstTotal = sources.reduce((sum, source) => sum + (firstYear[source] || 0), 0);
-    overallGrowth = calculateGrowthRate(total, firstTotal);
+  return [header, ...rows].join('\n');
+};
+
+// Download content as a file
+export const downloadFile = (content, filename, mimeType = 'text/csv') => {
+  const blob = new Blob([content], { type: mimeType });
+  const url = window.URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  
+  link.href = url;
+  link.setAttribute('download', filename);
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  window.URL.revokeObjectURL(url);
+};
+
+// Export data as CSV file
+export const exportToCSV = (data, fields, filename) => {
+  const csvContent = convertToCSV(data, fields);
+  downloadFile(csvContent, filename);
+};
+
+// Get chart configuration for different chart types
+export const getChartConfig = (chartType) => {
+  const baseConfig = {
+    tooltip: {
+      formatter: (value) => [`${value.toFixed(2)} GWh`, 'Generation'],
+      labelFormatter: (label) => `${label}`
+    },
+    xAxis: {
+      axisLine: { stroke: '#E0E0E0' },
+      tickLine: false
+    },
+    yAxis: {
+      axisLine: { stroke: '#E0E0E0' },
+      tickLine: false
+    }
+  };
+  
+  switch (chartType) {
+    case 'bar':
+      return {
+        ...baseConfig,
+        bar: {
+          radius: [4, 4, 0, 0],
+          barSize: 20
+        }
+      };
+    case 'pie':
+      return {
+        legend: {
+          layout: 'vertical',
+          align: 'right',
+          verticalAlign: 'middle'
+        },
+        tooltip: {
+          formatter: (value) => [`${value.toFixed(2)} GWh`, 'Generation'],
+          labelFormatter: (name) => `Source: ${name}`
+        }
+      };
+    case 'line':
+      return {
+        ...baseConfig,
+        line: {
+          strokeWidth: 2,
+          dot: {
+            r: 4,
+            strokeWidth: 2
+          },
+          activeDot: {
+            r: 6,
+            strokeWidth: 2
+          }
+        }
+      };
+    default:
+      return baseConfig;
   }
+};
+
+// Calculate summary statistics from data
+export const calculateSummaryStats = (data) => {
+  if (!data || !data.length) return {};
+  
+  // Calculate total values
+  const total = data.reduce((sum, item) => sum + (item.value || 0), 0);
+  
+  // Find highest value
+  const highest = data.reduce((max, item) => {
+    return (item.value || 0) > max.value ? { name: item.name, value: item.value } : max;
+  }, { name: '', value: 0 });
+  
+  // Find lowest value
+  const lowest = data.reduce((min, item) => {
+    return (item.value || 0) < min.value || min.value === 0 ? { name: item.name, value: item.value } : min;
+  }, { name: '', value: data[0]?.value || 0 });
+  
+  // Calculate average
+  const average = total / data.length;
   
   return {
-    totalGeneration: total,
-    highestSource,
-    highestValue,
-    years: yearlyData.length,
-    startYear: yearlyData[0].year,
-    endYear: latestYear.year,
-    overallGrowth
+    total,
+    highest,
+    lowest,
+    average
   };
+};
+
+// Generate random ID for keys
+export const generateId = () => {
+  return Math.random().toString(36).substring(2, 15);
+};
+
+// Format ISO date string to local format
+export const formatDate = (dateString) => {
+  if (!dateString) return '';
+  
+  try {
+    const date = new Date(dateString);
+    return date.toLocaleDateString(undefined, {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric'
+    });
+  } catch (e) {
+    return dateString;
+  }
+};
+
+// Truncate long text with ellipsis
+export const truncateText = (text, maxLength = 100) => {
+  if (!text) return '';
+  if (text.length <= maxLength) return text;
+  
+  return text.substring(0, maxLength) + '...';
+};
+
+// Map status to appropriate color
+export const getStatusColor = (status) => {
+  switch (status?.toLowerCase()) {
+    case 'active':
+    case 'completed':
+    case 'success':
+      return 'text-green-500';
+    case 'warning':
+    case 'pending':
+    case 'in-progress':
+      return 'text-amber-500';
+    case 'error':
+    case 'failed':
+    case 'inactive':
+      return 'text-red-500';
+    default:
+      return 'text-gray-500';
+  }
+};
+
+// Parse number from string with safety
+export const parseNumber = (value) => {
+  if (typeof value === 'number') return value;
+  if (!value) return 0;
+  
+  const parsed = parseFloat(value.toString().replace(/[^\d.-]/g, ''));
+  return isNaN(parsed) ? 0 : parsed;
 };
 
 export default {
   formatNumber,
   formatPercentage,
   getChangeColor,
-  getEnergyIcon,
-  getPieChartConfig,
-  getLineChartConfig,
-  getBarChartConfig,
   getSourceColor,
-  formatEnergyMixForChart,
-  getEnergySources,
+  formatRelativeTime,
   calculateGrowthRate,
-  getYearOverYearComparison,
-  getSummaryStats
+  formatCurrency,
+  convertToCSV,
+  downloadFile,
+  exportToCSV,
+  getChartConfig,
+  calculateSummaryStats,
+  generateId,
+  formatDate,
+  truncateText,
+  getStatusColor,
+  parseNumber
 };

@@ -1,8 +1,11 @@
+// Define the API URL once at the top of the file
+const API_URL = "http://localhost:5000/api";
+
 export const userService = {
   // Get all users (admin function)
   getAllUsers: async () => {
     try {
-      const response = await fetch("http://localhost:5000/api/auth/users", {
+      const response = await fetch(`${API_URL}/auth/users`, {
         method: "GET",
         headers: {
           "Content-Type": "application/json"
@@ -25,7 +28,7 @@ export const userService = {
   // Get the current logged in user's profile
   getCurrentUser: async () => {
     try {
-      const response = await fetch("http://localhost:5000/api/auth/verify", {
+      const response = await fetch(`${API_URL}/auth/verify`, {
         method: "GET",
         headers: {
           "Content-Type": "application/json"
@@ -38,9 +41,6 @@ export const userService = {
       const data = await response.json();
       console.log('Parsed API Response:', data);
       console.log('User object in response:', data.user);
-      
-      // Add console.log to debug the response
-      console.log('API Response:', data);
 
       if (!response.ok) {
         throw new Error(data.message || "Failed to fetch user profile");
@@ -67,7 +67,7 @@ export const userService = {
   // Get a specific user by ID
   getUserById: async (userId) => {
     try {
-      const response = await fetch(`http://localhost:5000/api/users/${userId}`, {
+      const response = await fetch(`${API_URL}/users/${userId}`, {
         method: "GET",
         headers: {
           "Content-Type": "application/json"
@@ -88,20 +88,15 @@ export const userService = {
   },
 
   // Update user profile
-  updateUserProfile: async (userData) => {
+  updateProfile: async (userId, userData) => {
     try {
-      const response = await fetch(`http://localhost:5000/api/users/${userData.id}`, {
+      const response = await fetch(`${API_URL}/users/${userId}`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json"
         },
         credentials: "include",
-        body: JSON.stringify({
-          firstName: userData.firstName,
-          lastName: userData.lastName,
-          email: userData.email,
-          phone: userData.phone
-        })
+        body: JSON.stringify(userData)
       });
 
       const data = await response.json();
@@ -116,36 +111,96 @@ export const userService = {
     }
   },
 
-  // Change password
-  changePassword: async (userId, passwordData) => {
+  // Reset password with token (forgot password flow)
+  updatePassword: async (token, newPassword) => {
     try {
-      const response = await fetch(`http://localhost:5000/api/users/${userId}/password`, {
-        method: "PUT",
+      const response = await fetch(`${API_URL}/auth/reset-password`, {
+        method: "POST",
         headers: {
-          "Content-Type": "application/json"
+          "Content-Type": "application/json",
         },
         credentials: "include",
         body: JSON.stringify({
-          currentPassword: passwordData.currentPassword,
-          newPassword: passwordData.newPassword
+          token,
+          newPassword
         })
       });
 
       const data = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(data.message || "Failed to update password");
+      }
+
+      return {
+        success: true,
+        message: data.message || "Password updated successfully",
+        accessToken: data.accessToken
+      };
+    } catch (error) {
+      throw {
+        success: false,
+        message: error.message || "Password update failed",
+        error
+      };
+    }
+  },
+
+  // Change password (when user is logged in)
+  changePassword: async (currentPassword, newPassword) => {
+    try {
+      // Get the user ID from localStorage
+      const userString = localStorage.getItem('user');
+      const user = userString ? JSON.parse(userString) : null;
+      const userId = user?.id;
+      
+      console.log("Changing password for user ID:", userId);
+      
+      if (!userId) {
+        throw new Error("User not authenticated");
+      }
+  
+      // Verify userId is in the correct format (MongoDB ObjectId)
+      if (!/^[0-9a-fA-F]{24}$/.test(userId)) {
+        throw new Error("Invalid user ID format");
+      }
+  
+      const response = await fetch(`${API_URL}/users/${userId}/password`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        credentials: "include",
+        body: JSON.stringify({
+          currentPassword,
+          newPassword
+        })
+      });
+  
+      const data = await response.json();
+      
       if (!response.ok) {
         throw new Error(data.message || "Failed to change password");
       }
-
-      return data;
+  
+      return {
+        success: true,
+        message: data.message || "Password changed successfully"
+      };
     } catch (error) {
-      console.error("Error changing password:", error);
-      throw error;
+      console.error("Password change error:", error);
+      throw {
+        success: false,
+        message: error.message || "Password change failed",
+        error
+      };
     }
   },
   
+  // Update user role (admin function)
   updateUserRole: async (userId, role) => {
     try {
-      const response = await fetch(`http://localhost:5000/api/auth/users/${userId}/role`, {
+      const response = await fetch(`${API_URL}/auth/users/${userId}/role`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json"
@@ -173,7 +228,7 @@ export const userService = {
   // Soft delete a user (deactivate)
   softDeleteUser: async (userId) => {
     try {
-      const response = await fetch(`http://localhost:5000/api/users/${userId}`, {
+      const response = await fetch(`${API_URL}/users/${userId}`, {
         method: "DELETE", // Using DELETE method for soft delete
         headers: {
           "Content-Type": "application/json"
@@ -199,7 +254,7 @@ export const userService = {
   // Restore a soft-deleted user
   restoreUser: async (userId) => {
     try {
-      const response = await fetch(`http://localhost:5000/api/users/${userId}/restore`, {
+      const response = await fetch(`${API_URL}/users/${userId}/restore`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json"
@@ -226,7 +281,7 @@ export const userService = {
   // Get all users including deleted ones (admin only)
   getAllUsersWithDeleted: async () => {
     try {
-      const response = await fetch("http://localhost:5000/api/users/users/all", {
+      const response = await fetch(`${API_URL}/users/users/all`, {
         method: "GET",
         headers: {
           "Content-Type": "application/json"

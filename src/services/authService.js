@@ -1071,62 +1071,74 @@ requestAccountRecovery: async (email) => {
 recoverAccount: async (token) => {
   try {
     if (!token) {
-      throw new Error("Recovery token is required");
+      throw new Error("Reactivation token is required");
     }
-  
-    console.log('Sending account recovery request:', {
-      token: token.substring(0, 5) + '...',  // Only log part of the token for security
-      url: `${API_URL}/auth/recover-account`
+
+    console.log('Sending account reactivation request:', {
+      token: token.substring(0, 5) + '...',
     });
-  
-    const response = await fetch(`${API_URL}/auth/recover-account`, {
+
+    const response = await fetch(`${API_URL}/auth/reactivate-account`, { // Changed endpoint
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         "Accept": "application/json"
       },
       body: JSON.stringify({
-        token
+        token: token.trim()
       }),
       credentials: "include"
     });
-  
-    // First get the raw text response
-    const responseText = await response.text();
-    console.log('Raw recovery response:', responseText.substring(0, 200) + (responseText.length > 200 ? '...' : ''));
-    
-    // Then parse it as JSON
-    let data;
-    try {
-      data = JSON.parse(responseText);
-    } catch (parseError) {
-      console.error('Error parsing response:', parseError);
-      throw new Error(`Invalid response from server: ${responseText.substring(0, 50)}...`);
+
+    // Check content type before parsing
+    const contentType = response.headers.get("content-type");
+    if (!contentType || !contentType.includes("application/json")) {
+      console.error('Invalid content type received:', contentType);
+      console.error('Response status:', response.status);
+      const text = await response.text();
+      console.error('Raw response:', text.substring(0, 200));
+      throw new Error(`Server returned invalid response (${response.status})`);
     }
-  
+
+    const data = await response.json();
+
     if (!response.ok) {
-      console.error('Recovery failed with status', response.status, data);
-      throw new Error(data.message || `Failed to recover account (${response.status})`);
+      if (response.status === 401) {
+        return {
+          success: false,
+          expired: true,
+          message: "Reactivation token has expired. Please request a new one."
+        };
+      }
+      throw new Error(data.message || `Reactivation failed (${response.status})`);
     }
-  
-    // Handle successful recovery
+
+    // Handle successful reactivation
     if (data.accessToken) {
       localStorage.setItem('authToken', data.accessToken);
     }
-  
-    // If the server sent back user data, store it
+
     if (data.user) {
       localStorage.setItem('user', JSON.stringify(data.user));
     }
-  
+
     return {
       success: true,
       user: data.user || null,
-      message: data.message || "Account recovered successfully"
+      message: data.message || "Account reactivated successfully"
     };
   } catch (error) {
-    console.error("Account recovery error:", error);
-    throw error;
+    console.error("Account reactivation error:", error);
+    return {
+      success: false,
+      error: true,
+      message: error.message || "Failed to reactivate account",
+      debug: process.env.NODE_ENV === 'development' ? {
+        errorType: error.name,
+        errorMessage: error.message,
+        stack: error.stack
+      } : undefined
+    };
   }
 },
 
@@ -1154,7 +1166,71 @@ checkDeactivatedAccount: async (email) => {
     console.error("Deactivation check error:", error);
     return { success: false, isDeactivated: false };
   }
-}
+},
+
+checkAccountStatus: async (email) => {
+  try {
+    if (!email) {
+      throw new Error("Email is required");
+    }
+    
+    console.log('Checking account status for:', email);
+    
+    const response = await fetch(`${API_URL}/auth/check-account-status`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email }),
+      credentials: "include"
+    });
+
+    const data = await response.json();
+    
+    return {
+      success: data.success,
+      exists: data.exists || false,
+      isActive: data.isActive || false,
+      isAutoDeactivated: data.isAutoDeactivated || false,
+      deactivatedAt: data.deactivatedAt || null,
+      tokenExpired: data.tokenExpired || false,
+      message: data.message || "Account status check completed"
+    };
+  } catch (error) {
+    console.error("Account status check error:", error);
+    throw error;
+  }
+},
+
+
+requestReactivation: async (email) => {
+  try {
+    if (!email) {
+      throw new Error("Email is required");
+    }
+    
+    console.log('Requesting reactivation for:', email);
+    
+    const response = await fetch(`${API_URL}/auth/request-reactivation`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email }),
+      credentials: "include"
+    });
+
+    const data = await response.json();
+    
+    // For security, always return success message
+    return {
+      success: true,
+      message: data.message || "If your account exists and is deactivated, a reactivation email has been sent."
+    };
+  } catch (error) {
+    console.error("Reactivation request error:", error);
+    return {
+      success: false,
+      message: "We encountered an issue processing your request. Please try again later."
+    };
+  }
+},
 };
 
 export default authService;

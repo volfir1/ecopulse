@@ -7,7 +7,7 @@ import { get3DEffect } from './Landing/theme';
 import { useCarousel, useResponsive, useScrollEffect } from './Landing/hook';
 
 // Import data and utility functions
-import { carouselData, energyTypes, features, teamMembers, statistics } from './Landing/util';
+import { carouselData, energyTypes, features, teamMembers, statistics, advisorData } from './Landing/util';
 import { CloudSun, Activity, Globe, ThumbsUp, ArrowRight } from 'lucide-react';
 
 // Import design components
@@ -20,7 +20,8 @@ import {
   FeatureCard,
   TeamMemberCard,
   StatCard,
-  Footer
+  Footer,
+  AdvisorAcknowledgment
 } from './Landing/Design';
 
 // Import theme
@@ -111,11 +112,12 @@ const LandingPage = () => {
         />
       </ContentSection>
 
+
       {/* Meet the Team Section */}
       <ContentSection
         title="Meet Our Team"
         subtitle="The experts behind EcoPulse's innovative renewable energy solutions bringing decades of combined experience"
-        bgColor={theme.palette.background.paper}
+        bgColor={theme.palette.background.subtle}
       >
         <CardGrid 
           items={teamMembers}
@@ -125,95 +127,104 @@ const LandingPage = () => {
           columns={{ xs: 12, sm: 6, md: 3 }}
         />
       </ContentSection>
+      {/* Special Acknowledgment Section */}
+      <ContentSection
+        title="Special Acknowledgment"
+        subtitle="We extend our deepest gratitude to our thesis advisor for her invaluable guidance and support"
+        bgColor={theme.palette.background.paper}
+      >
+        <Box sx={{ mt: 4 }}>
+          <AdvisorAcknowledgment advisor={advisorData} />
+        </Box>
+      </ContentSection>
 
-      {/* Statistics Section */}
-      {/* Mission and Vision Section (replacing Statistics Section) */}
-<ContentSection
-  title="Mission and Vision"
-  subtitle="Guiding principles that drive our innovation and commitment to renewable energy"
-  bgColor={theme.palette.background.subtle}
->
-  <Grid container spacing={6} sx={{ mt: 4 }}>
-    <Grid item xs={12} md={6}>
-      <Card
-        sx={{
-          height: '100%',
-          p: 4,
-          borderRadius: 3,
-          boxShadow: get3DEffect(2),
-          transition: 'all 0.3s ease',
-          '&:hover': {
-            transform: 'translateY(-8px)',
-            boxShadow: get3DEffect(4),
-          },
-          position: 'relative',
-          overflow: 'hidden',
-          '&::before': {
-            content: '""',
-            position: 'absolute',
-            top: 0,
-            left: 0,
-            width: '100%',
-            height: '5px',
-            background: theme.palette.primary.main,
-          }
-        }}
+      {/* Mission and Vision Section */}
+      <ContentSection
+        title="Mission and Vision"
+        subtitle="Guiding principles that drive our innovation and commitment to renewable energy"
+        bgColor={theme.palette.background.paper}
       >
-        <Stack spacing={3}>
-          <Typography 
-            variant="h4" 
-            fontWeight={600}
-            color={theme.palette.primary.main}
-          >
-            Our Mission
-          </Typography>
-          <Typography variant="body1" sx={{ fontSize: '1.1rem', lineHeight: 1.8 }}>
-          Our mission is to make renewable energy more accessible, reliable, and sustainable for the Philippines. Through EcoPulse, we aim to help communities, energy providers, and policymakers make smarter energy decisions by providing accurate forecasting and practical solutions. By combining local knowledge with innovative technology, we strive to bridge the gap between renewable energy potential and real-world application, ensuring a cleaner and more resilient future for all.  
-          </Typography>
-        </Stack>
-      </Card>
-    </Grid>
-    <Grid item xs={12} md={6}>
-      <Card
-        sx={{
-          height: '100%',
-          p: 4,
-          borderRadius: 3,
-          boxShadow: get3DEffect(2),
-          transition: 'all 0.3s ease',
-          '&:hover': {
-            transform: 'translateY(-8px)',
-            boxShadow: get3DEffect(4),
-          },
-          position: 'relative',
-          overflow: 'hidden',
-          '&::before': {
-            content: '""',
-            position: 'absolute',
-            top: 0,
-            left: 0,
-            width: '100%',
-            height: '5px',
-            background: theme.palette.secondary.main,
-          }
-        }}
-      >
-        <Stack spacing={3}>
-          <Typography 
-            variant="h4" 
-            fontWeight={600}
-            color={theme.palette.secondary.main}
-          >
-            Our Vision
-          </Typography>
-          <Typography variant="body1" sx={{ fontSize: '1.1rem', lineHeight: 1.8 }}>
-          We envision a future where every home and business in the Philippines can confidently rely on renewable energy without worrying about shortages or inefficiencies. With EcoPulse, we hope to build a community-driven energy system where people can produce, share, and optimize their energy use effortlessly. Our ultimate goal is to create a sustainable energy landscape that benefits both the environment and the people who depend on it every day.
-          </Typography>
-        </Stack>
-      </Card>
-    </Grid>
-  </Grid>
-</ContentSection>
+        <Grid container spacing={6} sx={{ mt: 4 }}>
+          <Grid item xs={12} md={6}>
+            <Card
+              sx={{
+                height: '100%',
+                p: 4,
+                borderRadius: 3,
+                boxShadow: get3DEffect(2),
+                transition: 'all 0.3s ease',
+                '&:hover': {
+                  transform: 'translateY(-8px)',
+                  boxShadow: get3DEffect(4),
+                },
+                position: 'relative',
+                overflow: 'hidden',
+                '&::before': {
+                  content: '""',
+                  position: 'absolute',
+                  top: 0,
+                  left: 0,
+                  width: '100%',
+                  height: '5px',
+                  background: theme.palette.primary.main,
+                }
+              }}
+            >
+              <Stack spacing={3}>
+                <Typography 
+                  variant="h4" 
+                  fontWeight={600}
+                  color={theme.palette.primary.main}
+                >
+                  Our Mission
+                </Typography>
+                <Typography variant="body1" sx={{ fontSize: '1.1rem', lineHeight: 1.8 }}>
+                Our mission is to make renewable energy more accessible, reliable, and sustainable for the Philippines. Through EcoPulse, we aim to help communities, energy providers, and policymakers make smarter energy decisions by providing accurate forecasting and practical solutions. By combining local knowledge with innovative technology, we strive to bridge the gap between renewable energy potential and real-world application, ensuring a cleaner and more resilient future for all.  
+                </Typography>
+              </Stack>
+            </Card>
+          </Grid>
+          <Grid item xs={12} md={6}>
+            <Card
+              sx={{
+                height: '100%',
+                p: 4,
+                borderRadius: 3,
+                boxShadow: get3DEffect(2),
+                transition: 'all 0.3s ease',
+                '&:hover': {
+                  transform: 'translateY(-8px)',
+                  boxShadow: get3DEffect(4),
+                },
+                position: 'relative',
+                overflow: 'hidden',
+                '&::before': {
+                  content: '""',
+                  position: 'absolute',
+                  top: 0,
+                  left: 0,
+                  width: '100%',
+                  height: '5px',
+                  background: theme.palette.secondary.main,
+                }
+              }}
+            >
+              <Stack spacing={3}>
+                <Typography 
+                  variant="h4" 
+                  fontWeight={600}
+                  color={theme.palette.secondary.main}
+                >
+                  Our Vision
+                </Typography>
+                <Typography variant="body1" sx={{ fontSize: '1.1rem', lineHeight: 1.8 }}>
+                We envision a future where every home and business in the Philippines can confidently rely on renewable energy without worrying about shortages or inefficiencies. With EcoPulse, we hope to build a community-driven energy system where people can produce, share, and optimize their energy use effortlessly. Our ultimate goal is to create a sustainable energy landscape that benefits both the environment and the people who depend on it every day.
+                </Typography>
+              </Stack>
+            </Card>
+          </Grid>
+        </Grid>
+      </ContentSection>
 
       {/* Call to Action Section */}
       <Box 

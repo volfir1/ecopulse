@@ -6,26 +6,25 @@ import { Button, p, t } from '@shared/index';
 import { Formik, Form, Field, ErrorMessage } from 'formik';
 import Loader from '@shared/components/loaders/Loader';
 import { useLogin } from './loginHook';
-// import { useAuth } from '@context/AuthContext';
 import crosswalk from '../../../../assets/images/vectors/crosswalk.jpg';
 
 const Login = () => {
   const {
     handleGoogleSignIn,
-    handleGoogleRedirectSignIn, // New redirect handler
-    showRedirectOption, // New state for showing redirect option
+    handleGoogleRedirectSignIn,
+    showRedirectOption,
     handleSubmit,
     initialValues,
     validationSchema,
     isLoading: hookLoading,
-    authError, // Add this to display auth-specific errors
-    // Account recovery props
+    authError,
+    // Account reactivation props
     isDeactivated,
-    showRecoveryOption,
+    showReactivationOption, // Renamed from showRecoveryOption
     lockoutInfo,
     recoveryEmail,
     setRecoveryEmail,
-    handleRequestRecovery
+    handleRequestReactivation // Renamed from handleRequestRecovery
   } = useLogin();
 
   return (
@@ -90,28 +89,28 @@ const Login = () => {
                   <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg space-y-3">
                     <div className="flex items-center space-x-2 text-yellow-800">
                       <Clock className="w-5 h-5" />
-                      <h3 className="font-medium">Recovery Locked</h3>
+                      <h3 className="font-medium">Reactivation Locked</h3>
                     </div>
                     <p className="text-sm text-yellow-700">
-                      Your account recovery is currently locked. Please try again in {lockoutInfo.hours} hours.
+                      Your account reactivation is currently locked. Please try again in {lockoutInfo.hours} hours.
                     </p>
                   </div>
                 )}
 
-                {/* Recovery Options */}
-                {showRecoveryOption && (
+                {/* Reactivation Options */}
+                {showReactivationOption && (
                   <div className="p-4 bg-green-50 border border-green-200 rounded-lg space-y-3">
                     <div className="flex items-center space-x-2 text-green-800">
                       <AlertTriangle className="w-5 h-5" />
                       <h3 className="font-medium">Account Deactivated</h3>
                     </div>
                     <p className="text-sm text-green-700">
-                      Your account has been deactivated. A recovery link has been sent to your email.
+                      Your account has been deactivated. A reactivation link has been sent to your email.
                     </p>
                     
                     <div className="space-y-2 pt-2">
                       <p className="text-sm font-medium text-gray-700">
-                        Didn't receive the email? Request a new recovery link:
+                        Didn't receive the email? Request a new reactivation link:
                       </p>
                       
                       <div className="flex space-x-2">
@@ -124,7 +123,7 @@ const Login = () => {
                         />
                         
                         <button
-                          onClick={handleRequestRecovery}
+                          onClick={handleRequestReactivation}
                           disabled={hookLoading}
                           className="h-10 px-4 bg-green-700 text-white rounded-lg font-medium hover:bg-green-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm flex items-center"
                         >
@@ -236,11 +235,11 @@ const Login = () => {
                         disabled={hookLoading}
                         className="w-full h-10 flex items-center justify-center gap-2 border border-gray-300 rounded-lg text-gray-700 font-medium hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm"
                       >
-                        <img src="/public/google.svg" alt="Google" className="w-4 h-4" />
+                        <img src="/google.svg" alt="Google" className="w-4 h-4" />
                         <span>Sign in with Google</span>
                       </button>
                       
-                      {/* New Redirect Option - only shows after popup is blocked */}
+                      {/* Redirect Option - only shows after popup is blocked */}
                       {showRedirectOption && (
                         <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg space-y-3">
                           <div className="flex items-center space-x-2 text-blue-800">
@@ -256,7 +255,7 @@ const Login = () => {
                             disabled={hookLoading}
                             className="w-full h-10 flex items-center justify-center gap-2 bg-blue-700 text-white rounded-lg font-medium hover:bg-blue-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm"
                           >
-                            <img src="/public/google.svg" alt="Google" className="w-4 h-4 invert" />
+                            <img src="/google.svg" alt="Google" className="w-4 h-4 invert" />
                             <span>Sign in with Google (Redirect)</span>
                           </button>
                         </div>

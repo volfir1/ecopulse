@@ -31,7 +31,9 @@ import {
     Ticket,
     Network,
     Check,
-    Upload
+    Upload,
+    LogOut,
+    MonitorCheck
   
 } from 'lucide-react';
 import { useTheme } from "@emotion/react";
@@ -66,7 +68,9 @@ export const IconLibrary = {
     shield: Shield,
     mail: Mail,
     net: Network,
-    check: Check
+    check: Check,
+    logout: LogOut,
+    monitor:  MonitorCheck
 };
 
 export const IconTools = {

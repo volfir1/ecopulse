@@ -8,7 +8,8 @@ import {
   Button,
   Paper,
   Tabs,
-  Tab
+  Tab,
+  CircularProgress
 } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -22,6 +23,7 @@ import {
   Download,
   RefreshCw
 } from 'lucide-react';
+import api from '@features/modules/api';
 
 // Energy types configuration
 const energyTypes = [
@@ -33,28 +35,12 @@ const energyTypes = [
   { id: 'biomass', label: 'Biomass', icon: <Leaf size={20} /> }
 ];
 
-// Mock data for demonstration purposes
-const generateMockData = (type = null) => {
-  const types = type ? [type] : ['solar', 'wind', 'hydro', 'geothermal', 'biomass'];
-  const currentYear = new Date().getFullYear();
-  
-  return Array.from({ length: 10 }, (_, i) => {
-    const randomType = types[Math.floor(Math.random() * types.length)];
-    const year = currentYear - Math.floor(Math.random() * 5);
-    const isPredicted = year >= currentYear;
-    
-    return {
-      id: i + 1,
-      type: randomType,
-      year,
-      generation: Math.round(1000 + Math.random() * 2000),
-      nonRenewableEnergy: Math.round(800 + Math.random() * 1500),
-      population: (30 + Math.random() * 10).toFixed(1),
-      gdp: Math.round(1000 + Math.random() * 5000),
-      isPredicted,
-      dateAdded: new Date(2023, Math.floor(Math.random() * 12), Math.floor(Math.random() * 28)).toISOString()
-    };
-  });
+// Clean the response by replacing "NaN" with "null"
+const cleanResponse = (response) => {
+  if (typeof response === 'string') {
+    return response.replace(/NaN/g, 'null');
+  }
+  return JSON.stringify(response).replace(/NaN/g, 'null');
 };
 
 const RenewableEnergyPage = () => {
@@ -65,34 +51,141 @@ const RenewableEnergyPage = () => {
   const [records, setRecords] = useState([]);
   const [loading, setLoading] = useState(false);
   const [selectedEnergyType, setSelectedEnergyType] = useState('all');
+  const [startYear, setStartYear] = useState(new Date().getFullYear() - 10);
+  const [endYear, setEndYear] = useState(new Date().getFullYear());
   
-  // Fetch data
+  // Fetch data from API for the selected energy type
   const fetchData = useCallback(async () => {
     setLoading(true);
     try {
-      // Simulate API call with a delay
-      await new Promise(resolve => setTimeout(resolve, 800));
+      // Get data for the selected energy type
+      const endpoint = selectedEnergyType === 'all' ? 'solar' : selectedEnergyType;
       
-      // Get mock data for the selected energy type
-      const data = generateMockData(selectedEnergyType === 'all' ? null : selectedEnergyType);
-      setRecords(data);
+      const response = await api.get(`/api/predictions/${endpoint}/?start_year=${startYear}&end_year=${endYear}`);
+      
+      // Clean and parse the response
+      const dataString = typeof response.data === 'string' 
+        ? response.data 
+        : JSON.stringify(response.data);
+      
+      const cleanedResponse = cleanResponse(dataString);
+      const responseData = JSON.parse(cleanedResponse);
+      
+      if (responseData.status === "success" && Array.isArray(responseData.predictions)) {
+        // Filter to show only non-predicted data (actual data from the database)
+        const actualData = responseData.predictions
+          .filter(item => !item.isPredicted) // Only include non-predicted data
+          .map(item => ({
+            id: item.id || Math.random().toString(36).substr(2, 9),
+            type: selectedEnergyType === 'all' ? endpoint : selectedEnergyType,
+            year: item.Year,
+            generation: parseFloat(item['Predicted Production']),
+            nonRenewableEnergy: item['Non-Renewable Energy (GWh)'] 
+              ? parseFloat(item['Non-Renewable Energy (GWh)']) 
+              : null,
+            population: item['Population (in millions)'] 
+              ? parseFloat(item['Population (in millions)']) 
+              : null,
+            gdp: item['Gross Domestic Product'] === null 
+              ? null 
+              : parseFloat(item['Gross Domestic Product']),
+            isPredicted: false, // These are actual records
+            dateAdded: item.createdAt || new Date().toISOString(),
+            isDeleted: item.isDeleted || false
+          }))
+          // Don't show deleted records
+          .filter(item => !item.isDeleted);
+        
+        setRecords(prevRecords => {
+          // If we're viewing all energy types, we need to fetch each type individually
+          if (selectedEnergyType === 'all') {
+            // Keep records of other types that were already loaded
+            return [...prevRecords.filter(record => record.type !== endpoint), ...actualData];
+          }
+          return actualData;
+        });
+      }
     } catch (error) {
       console.error("Error fetching data:", error);
       // You would add proper error handling here
     } finally {
       setLoading(false);
     }
-  }, [selectedEnergyType]);
+  }, [selectedEnergyType, startYear, endYear]);
+  
+  // If "all" is selected, fetch data for each energy type
+  const fetchAllEnergyTypes = useCallback(async () => {
+    setLoading(true);
+    try {
+      // Clear previous records when selecting "all"
+      setRecords([]);
+      
+      // Define energy type endpoint names
+      const endpoints = ['solar', 'wind', 'hydro', 'geothermal', 'biomass'];
+      
+      // Fetch each energy type in parallel
+      const promises = endpoints.map(async (endpoint) => {
+        try {
+          const response = await api.get(`/api/predictions/${endpoint}/?start_year=${startYear}&end_year=${endYear}`);
+          
+          const dataString = typeof response.data === 'string' 
+            ? response.data 
+            : JSON.stringify(response.data);
+          
+          const cleanedResponse = cleanResponse(dataString);
+          const responseData = JSON.parse(cleanedResponse);
+          
+          if (responseData.status === "success" && Array.isArray(responseData.predictions)) {
+            return responseData.predictions
+              .filter(item => !item.isPredicted) // Only include non-predicted data
+              .map(item => ({
+                id: item.id || Math.random().toString(36).substr(2, 9),
+                type: endpoint,
+                year: item.Year,
+                generation: parseFloat(item['Predicted Production']),
+                nonRenewableEnergy: item['Non-Renewable Energy (GWh)'] 
+                  ? parseFloat(item['Non-Renewable Energy (GWh)']) 
+                  : null,
+                population: item['Population (in millions)'] 
+                  ? parseFloat(item['Population (in millions)']) 
+                  : null,
+                gdp: item['Gross Domestic Product'] === null 
+                  ? null 
+                  : parseFloat(item['Gross Domestic Product']),
+                isPredicted: false,
+                dateAdded: item.createdAt || new Date().toISOString(),
+                isDeleted: item.isDeleted || false
+              }))
+              .filter(item => !item.isDeleted);
+          }
+          return [];
+        } catch (error) {
+          console.error(`Error fetching ${endpoint} data:`, error);
+          return [];
+        }
+      });
+      
+      // Wait for all requests to complete
+      const results = await Promise.all(promises);
+      
+      // Combine all results
+      const combinedData = results.flat();
+      setRecords(combinedData);
+    } catch (error) {
+      console.error("Error fetching all energy types:", error);
+    } finally {
+      setLoading(false);
+    }
+  }, [startYear, endYear]);
   
   // Load data on mount and when energy type changes
   useEffect(() => {
-    fetchData();
-  }, [fetchData]);
-  
-  // Filter data by energy type
-  const filteredRecords = selectedEnergyType === 'all' 
-    ? records 
-    : records.filter(record => record.type === selectedEnergyType);
+    if (selectedEnergyType === 'all') {
+      fetchAllEnergyTypes();
+    } else {
+      fetchData();
+    }
+  }, [selectedEnergyType, fetchData, fetchAllEnergyTypes]);
   
   // Handle energy type tab change
   const handleEnergyTypeChange = (_, newValue) => {
@@ -107,6 +200,17 @@ const RenewableEnergyPage = () => {
       } 
     });
   };
+  
+  // Handle export
+  const handleExport = () => {
+    // Implement export functionality here
+    console.log("Exporting data...");
+  };
+  
+  // Filter data by energy type
+  const filteredRecords = selectedEnergyType === 'all' 
+    ? records 
+    : records.filter(record => record.type === selectedEnergyType);
   
   // Color utility function for energy types
   const getEnergyTypeColor = (type) => {
@@ -144,7 +248,7 @@ const RenewableEnergyPage = () => {
           <Button 
             variant="outlined" 
             startIcon={<RefreshCw size={18} />}
-            onClick={fetchData}
+            onClick={selectedEnergyType === 'all' ? fetchAllEnergyTypes : fetchData}
             disabled={loading}
           >
             Refresh
@@ -154,6 +258,7 @@ const RenewableEnergyPage = () => {
             variant="outlined"
             color="primary"
             startIcon={<Download size={18} />}
+            onClick={handleExport}
           >
             Export
           </Button>
@@ -195,7 +300,7 @@ const RenewableEnergyPage = () => {
         {loading ? (
           // Loading state
           <Box className="py-12 flex justify-center items-center">
-            <Typography>Loading...</Typography>
+            <CircularProgress />
           </Box>
         ) : filteredRecords.length === 0 ? (
           // Empty state
@@ -230,11 +335,9 @@ const RenewableEnergyPage = () => {
                       <Typography variant="h6" className="font-medium">
                         Year {record.year}
                       </Typography>
-                      {record.isPredicted && (
-                        <span className="px-2 py-0.5 text-xs bg-gray-100 text-gray-600 rounded-full ml-auto">
-                          Projected
-                        </span>
-                      )}
+                      <Typography variant="caption" className="text-gray-500 capitalize ml-auto">
+                        {record.type}
+                      </Typography>
                     </Box>
                     
                     {/* Card Content */}
@@ -254,7 +357,7 @@ const RenewableEnergyPage = () => {
                           Non-Renewable
                         </Typography>
                         <Typography variant="body2">
-                          {record.nonRenewableEnergy.toLocaleString()} GWh
+                          {record.nonRenewableEnergy ? record.nonRenewableEnergy.toLocaleString() + ' GWh' : 'N/A'}
                         </Typography>
                       </Box>
                       
@@ -263,7 +366,7 @@ const RenewableEnergyPage = () => {
                           Population
                         </Typography>
                         <Typography variant="body2">
-                          {record.population}M
+                          {record.population ? record.population + 'M' : 'N/A'}
                         </Typography>
                       </Box>
                       
@@ -272,7 +375,7 @@ const RenewableEnergyPage = () => {
                           GDP
                         </Typography>
                         <Typography variant="body2">
-                          ${record.gdp.toLocaleString()}B
+                          {record.gdp ? '$' + record.gdp.toLocaleString() + 'B' : 'N/A'}
                         </Typography>
                       </Box>
                       

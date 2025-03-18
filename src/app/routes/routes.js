@@ -1,5 +1,6 @@
 // src/routes/routes.js
 import PeerToPeerAdmin from '@admin/peer/Peer';
+import Onboarding from '@features/auth/components/register/onBoarding';
 import { lazy } from 'react';
 
 // Public Routes
@@ -11,13 +12,17 @@ export const publicRoutes = {
   ForgotPassword: lazy(() => import('@features/auth/password/ForgotPassword.jsx')),
   ResetPassword: lazy(() => import('@features/auth/password/resetPassword')),
   // New account deactivation routes
-  AccountDeactivated: lazy(() => import('@features/profile/deactivatedPage')),
-  AccountRecovery: lazy(() => import('@features/auth/components/recover.js'))
+  AccountRecovery: lazy(() => import('@features/auth/components/recover.js')),
+  Onboarding: lazy(() => import('@features/auth/components/register/onBoarding')),
+  ReactivateAccount: lazy(() => import('@features/auth/components/recover.js')),
+  AccountDeactivated: () => null,
+  DownloadApp: lazy(() => import('@features/Landing/Download/AppDownload')),
+  
 };
 
 // User Dashboard & Features
 export const userRoutes = {
-  Dashboard: lazy(() => import('@features/dashboard/components/Index')),
+  Dashboard: lazy(()=> import('@features/dashboard/UserDashboard')),
   EnergySharing: lazy(() => import('@features/energy-sharing/components/Dashboard.jsx')),
   HelpSupport: lazy(() => import('@features/help-support/components/help-support')),
   Recommendations: lazy(() => import('@features/recommendations/components/Recommnedation')),
@@ -53,7 +58,8 @@ export const adminRoutes = {
   AdminDetailView: lazy(() => import('@admin/ticket/TicketDetail/AdminDetailView')),
   AdminTicket: lazy(() => import('@admin/ticket/AdminTicket')),
   TicketDashboard: lazy(() => import('@admin/ticket/TicketDashboard')),
-  Recommendations: lazy(() => import('@admin/recommendation/Recommendation'))
+  Recommendations: lazy(() => import('@admin/recommendation/Recommendation')),
+  AdminMonitor: lazy(() => import('@admin/monitoring/monitor'))
 };
 
 // Error Pages
