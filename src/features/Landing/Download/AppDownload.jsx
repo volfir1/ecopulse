@@ -143,50 +143,9 @@ const AppDownloadPage = () => {
                   spacing={2}
                   sx={{ mb: 4 }}
                 >
-                  <Button
-                    variant="contained"
-                    size="large"
-                    startIcon={<Download />}
-                    sx={{
-                      bgcolor: 'white',
-                      color: theme?.palette?.primary?.main || '#32a832',
-                      fontWeight: 600,
-                      px: 3,
-                      py: 1.5,
-                      '&:hover': {
-                        bgcolor: 'rgba(255,255,255,0.9)',
-                        boxShadow: '0 8px 25px rgba(0,0,0,0.15)',
-                        transform: 'translateY(-3px)'
-                      },
-                      transition: 'all 0.3s ease'
-                    }}
-                  >
-                    App Store
-                  </Button>
-                  <Button
-                    variant="contained"
-                    size="large"
-                    startIcon={<Download />}
-                    sx={{
-                      bgcolor: 'white',
-                      color: theme?.palette?.primary?.main || '#32a832',
-                      fontWeight: 600,
-                      px: 3,
-                      py: 1.5,
-                      '&:hover': {
-                        bgcolor: 'rgba(255,255,255,0.9)',
-                        boxShadow: '0 8px 25px rgba(0,0,0,0.15)',
-                        transform: 'translateY(-3px)'
-                      },
-                      transition: 'all 0.3s ease'
-                    }}
-                  >
-                    Google Play
-                  </Button>
+                
                 </Stack>
-                <Typography variant="body2" sx={{ opacity: 0.8 }}>
-                  *Available for iOS and Android devices
-                </Typography>
+                
               </Box>
             </Grid>
             <Grid item xs={12} md={6}>
@@ -220,27 +179,77 @@ const AppDownloadPage = () => {
                 >
                   {/* Placeholder for mobile app screenshot */}
                   <Box 
-                    sx={{ 
-                      width: '100%', 
-                      height: '100%', 
-                      bgcolor: '#1E293B',
-                      display: 'flex',
-                      flexDirection: 'column',
-                      justifyContent: 'center',
-                      alignItems: 'center',
-                      p: 3,
-                      textAlign: 'center',
-                      color: 'white'
-                    }}
-                  >
-                    <Smartphone size={80} strokeWidth={1.5} />
-                    <Typography variant="h6" sx={{ mt: 3, mb: 1 }}>
-                      EcoPulse Mobile
-                    </Typography>
-                    <Typography variant="body2" sx={{ opacity: 0.7 }}>
-                      App screenshot preview
-                    </Typography>
-                  </Box>
+  sx={{ 
+    width: '100%', 
+    height: '100%', 
+    bgcolor: '#1E293B',
+    position: 'relative',
+    overflow: 'hidden',
+    borderRadius: '24px',
+    padding: '12px'
+  }}
+>
+  {/* Phone Frame Notch */}
+  <Box
+    sx={{
+      position: 'absolute',
+      top: 0,
+      left: '50%',
+      transform: 'translateX(-50%)',
+      width: '40%',
+      height: '24px',
+      bgcolor: '#1E293B',
+      borderBottomLeftRadius: '12px',
+      borderBottomRightRadius: '12px',
+      zIndex: 2
+    }}
+  />
+  
+  {/* App Screenshot */}
+  <Box
+    component="img"
+    src="/public/mobile-show.jpg" // Add your app screenshot image here
+    alt="EcoPulse Mobile App"
+    onError={(e) => {
+      e.target.onerror = null;
+      e.target.style.display = 'none';
+      e.target.nextElementSibling.style.display = 'flex';
+    }}
+    sx={{
+      width: '100%',
+      height: '100%',
+      objectFit: 'cover',
+      objectPosition: 'top center',
+      borderRadius: '20px'
+    }}
+  />
+
+  {/* Fallback Content */}
+  <Box 
+    sx={{ 
+      width: '100%',
+      height: '100%',
+      position: 'absolute',
+      top: 0,
+      left: 0,
+      display: 'none',
+      flexDirection: 'column',
+      justifyContent: 'center',
+      alignItems: 'center',
+      p: 3,
+      textAlign: 'center',
+      color: 'white'
+    }}
+  >
+    <Smartphone size={80} strokeWidth={1.5} />
+    <Typography variant="h6" sx={{ mt: 3, mb: 1 }}>
+      EcoPulse Mobile
+    </Typography>
+    <Typography variant="body2" sx={{ opacity: 0.7 }}>
+      App preview coming soon
+    </Typography>
+  </Box>
+</Box>
                 </Card>
               </Box>
             </Grid>

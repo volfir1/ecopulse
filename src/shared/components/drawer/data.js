@@ -120,13 +120,13 @@ export const ADMIN_NAVIGATION = [
     icon: <AppIcon name="shield" />,
     path: '/admin/dashboard',
   },
-  {
-    kind: 'item',
-    segment: 'admin-monitoring',
-    title: 'Admin Monitoring',
-    icon: <AppIcon name="monitor" />,
-    path: '/admin/monitor',
-  },
+  // {
+  //   kind: 'item',
+  //   segment: 'admin-monitoring',
+  //   title: 'Admin Monitoring',
+  //   icon: <AppIcon name="monitor" />,
+  //   path: '/admin/monitor',
+  // },
   {
     kind: 'item',
     segment: 'manage-users',

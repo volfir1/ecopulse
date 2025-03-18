@@ -142,90 +142,87 @@ export const useLogin = () => {
   };
 
   // Handle form submission
-  const handleSubmit = async (values, { setSubmitting }) => {
-    console.log('Login attempt:', { email: values.email });
-    setSubmitting(true);
-    setAuthError(null);
-    startLoading();
+// Handle form submission
+const handleSubmit = async (values, { setSubmitting }) => {
+  console.log('Login attempt:', { email: values.email });
+  setSubmitting(true);
+  setAuthError(null);
+  startLoading();
+  
+  try {
+    // First check if the account is auto-deactivated
+    const statusCheck = await authService.checkAccountStatus(values.email);
+    console.log('Account status check result:', statusCheck);
     
-    try {
-      // First check if the account is auto-deactivated
-      const statusCheck = await authService.checkAccountStatus(values.email);
-      console.log('Account status check result:', statusCheck);
+    // If account exists and is auto-deactivated, handle accordingly
+    if (statusCheck.exists && statusCheck.isAutoDeactivated) {
+      console.log('Account is auto-deactivated:', statusCheck);
       
-      // If account exists and is auto-deactivated, handle accordingly
-      if (statusCheck.exists && statusCheck.isAutoDeactivated) {
-        console.log('Account is auto-deactivated:', statusCheck);
-        
-        // Store deactivation info
-        setDeactivationInfo({
-          email: values.email,
-          deactivatedAt: statusCheck.deactivatedAt,
-          tokenExpired: statusCheck.tokenExpired
+      // Store deactivation info
+      setDeactivationInfo({
+        email: values.email,
+        deactivatedAt: statusCheck.deactivatedAt,
+        tokenExpired: statusCheck.tokenExpired
+      });
+      
+      // Attempt login to trigger notification, but do not use the result for authentication
+      try {
+        await authService.login(values.email, values.password);
+      } catch (loginError) {
+        // Expected - the backend should return an error for deactivated accounts
+        console.log('Login attempt on deactivated account (for notification):', loginError.message);
+      }
+      
+      // Set isAutoDeactivated state
+      setIsAutoDeactivated(true);
+      setRecoveryEmail(values.email);
+      
+      // Show notification
+      toast.info("Your account has been automatically deactivated due to inactivity. A reactivation link has been sent to your email.");
+      
+      // Request reactivation email with link
+      const reactivationResult = await authService.requestReactivation(values.email);
+      
+      if (reactivationResult.success) {
+        // Navigate to login page with deactivation state
+        navigate('/login', { 
+          state: { 
+            email: values.email,
+            isAutoDeactivated: true,
+            message: "Your account has been automatically deactivated due to inactivity. A reactivation link has been sent to your email."
+          },
+          replace: true
         });
-        
-        // Handle the auto-deactivated account flow
-        await handleAutoDeactivatedAccount(values.email);
-        
-        setSubmitting(false);
-        stopLoading();
-        return;
+      } else {
+        // Navigate with error info
+        navigate('/reactivate-account', { 
+          state: { 
+            email: values.email,
+            isAutoDeactivated: true,
+            hasError: true,
+            message: "We encountered an issue sending the reactivation email. Please try requesting a new one."
+          },
+          replace: true
+        });
       }
       
-      // Continue with normal login flow
-      const result = await contextLogin(values.email, values.password);
-      console.log('Login result:', result);
+      setSubmitting(false);
+      stopLoading();
+      return;
+    }
+    
+    // Continue with normal login flow
+    const result = await contextLogin(values.email, values.password);
+    console.log('Login result:', result);
+    
+    // Check if the login automatically reactivated an account
+    if (result && result.wasReactivated) {
+      console.log('Account was automatically reactivated during login:', result);
       
-      // Check if the login automatically reactivated an account
-      if (result && result.wasReactivated) {
-        console.log('Account was automatically reactivated during login:', result);
-        
-        // Show success message
-        toast.success("Your account has been reactivated. Welcome back!");
-        
-        // Validate user data
-        if (!result.user) {
-          toast.error('Invalid response from server');
-          setSubmitting(false);
-          stopLoading();
-          return;
-        }
-        
-        // Store the user and auth token
-        localStorage.setItem('user', JSON.stringify(result.user));
-        if (result.user.accessToken) {
-          localStorage.setItem('authToken', result.user.accessToken);
-        }
-        
-        // Update the auth context
-        setUser(result.user);
-        setIsAuthenticated(true);
-        
-        // Show welcome back message
-        handleAuthSuccess(result.user);
-        
-        // Navigate based on role
-        if (result.user.role === 'admin') {
-          navigate('/admin/dashboard', { replace: true });
-        } else {
-          navigate('/dashboard', { replace: true });
-        }
-        
-        setSubmitting(false);
-        stopLoading();
-        return;
-      }
+      // Show success message
+      toast.success("Your account has been reactivated. Welcome back!");
       
-      // Handle login failures
-      if (!result || !result.success) {
-        const errorMessage = result?.message || 'Login failed. Please try again.';
-        toast.error(errorMessage);
-        setSubmitting(false);
-        stopLoading();
-        return;
-      }
-      
-      // Rest of your existing login success handling code
+      // Validate user data
       if (!result.user) {
         toast.error('Invalid response from server');
         setSubmitting(false);
@@ -233,66 +230,108 @@ export const useLogin = () => {
         return;
       }
       
-      // Check verification status
-      console.log('Checking verification status:', {
-        userEmail: result.user.email,
-        explicitVerification: !!result.isVerified,
-        userVerification: !!result.user.isVerified,
-        requireVerification: !!result.requireVerification
-      });
-      
-      // Redirect to verification if required
-      if (result.requireVerification === true) {
-        console.log('Server explicitly requires verification');
-        navigate('/verify-email', { 
-          state: { 
-            userId: result.user.id || result.userId, 
-            email: values.email 
-          } 
-        });
-        setSubmitting(false);
-        stopLoading();
-        return;
-      }
-      
-      // If we get here, consider the user verified
-      console.log('User considered verified, proceeding with login');
-      
-      // Ensure the user has the isVerified flag set to true
-      const verifiedUser = {
-        ...result.user,
-        isVerified: true // Force this to be true
-      };
-      
-      // Store the enhanced user in localStorage
-      localStorage.setItem('user', JSON.stringify(verifiedUser));
-      
-      // Store the auth token if available
+      // Store the user and auth token
+      localStorage.setItem('user', JSON.stringify(result.user));
       if (result.user.accessToken) {
         localStorage.setItem('authToken', result.user.accessToken);
       }
       
-      // Update the auth context with our verified user
-      setUser(verifiedUser);
+      // Update the auth context
+      setUser(result.user);
       setIsAuthenticated(true);
       
-      // Show success message
-      handleAuthSuccess(verifiedUser);
+      // Show welcome back message
+      handleAuthSuccess(result.user);
       
       // Navigate based on role
-      if (verifiedUser.role === 'admin') {
+      if (result.user.role === 'admin') {
         navigate('/admin/dashboard', { replace: true });
       } else {
         navigate('/dashboard', { replace: true });
       }
-    } catch (error) {
-      console.error('Login submission error:', error);
-      handleAuthError(error);
-    } finally {
+      
       setSubmitting(false);
       stopLoading();
+      return;
     }
-  };
+    
+    // Handle login failures
+    if (!result || !result.success) {
+      const errorMessage = result?.message || 'Login failed. Please try again.';
+      toast.error(errorMessage);
+      setSubmitting(false);
+      stopLoading();
+      return;
+    }
+    
+    // Rest of your existing login success handling code
+    if (!result.user) {
+      toast.error('Invalid response from server');
+      setSubmitting(false);
+      stopLoading();
+      return;
+    }
+    
+    // Check verification status
+    console.log('Checking verification status:', {
+      userEmail: result.user.email,
+      explicitVerification: !!result.isVerified,
+      userVerification: !!result.user.isVerified,
+      requireVerification: !!result.requireVerification
+    });
+    
+    // Redirect to verification if required
+    if (result.requireVerification === true) {
+      console.log('Server explicitly requires verification');
+      navigate('/verify-email', { 
+        state: { 
+          userId: result.user.id || result.userId, 
+          email: values.email 
+        } 
+      });
+      setSubmitting(false);
+      stopLoading();
+      return;
+    }
+    
+    // If we get here, consider the user verified
+    console.log('User considered verified, proceeding with login');
+    
+    // Ensure the user has the isVerified flag set to true
+    const verifiedUser = {
+      ...result.user,
+      isVerified: true // Force this to be true
+    };
+    
+    // Store the enhanced user in localStorage
+    localStorage.setItem('user', JSON.stringify(verifiedUser));
+    
+    // Store the auth token if available
+    if (result.user.accessToken) {
+      localStorage.setItem('authToken', result.user.accessToken);
+    }
+    
+    // Update the auth context with our verified user
+    setUser(verifiedUser);
+    setIsAuthenticated(true);
+    
+    // Show success message
+    handleAuthSuccess(verifiedUser);
+    
+    // Navigate based on role
+    if (verifiedUser.role === 'admin') {
+      navigate('/admin/dashboard', { replace: true });
+    } else {
+      navigate('/dashboard', { replace: true });
+    }
+  } catch (error) {
+    console.error('Login submission error:', error);
+    handleAuthError(error);
+  } finally {
+    setSubmitting(false);
+    stopLoading();
+  }
+};
 
   // Updated for consistency with reactivate endpoint
   const handleGoogleSignIn = async () => {
