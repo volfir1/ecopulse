@@ -33,7 +33,9 @@ import {
     Check,
     Upload,
     LogOut,
-    MonitorCheck
+    MonitorCheck,
+    Pencil,
+    Trash
   
 } from 'lucide-react';
 import { useTheme } from "@emotion/react";
@@ -70,7 +72,9 @@ export const IconLibrary = {
     net: Network,
     check: Check,
     logout: LogOut,
-    monitor:  MonitorCheck
+    monitor:  MonitorCheck,
+    edit: Pencil,
+    trash: Trash
 };
 
 export const IconTools = {

@@ -1,7 +1,8 @@
+// src/hooks/useUserManagement.js
 import { useState, useEffect, useCallback } from 'react';
-import { userService } from '../../services/userService';
-import authService from '../../services/authService';
-import { userManagementData } from './data';
+import { userService } from '@services/userService';
+import authService from '@services/authService';
+import { userManagementData } from './data'; // Make sure this path is correct
 
 export const useUserManagement = () => {
   const [data, setData] = useState({
@@ -17,18 +18,21 @@ export const useUserManagement = () => {
     activityData: []
   });
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [selectedUser, setSelectedUser] = useState(null);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
   
   // Function to refresh the data
-  const refreshData = () => {
+  const refreshData = useCallback(() => {
+    console.log('Refreshing user management data...');
     setRefreshTrigger(prev => prev + 1);
-  };
+  }, []);
   
   useEffect(() => {
     const fetchUsers = async () => {
       try {
         setLoading(true);
+        setError(null);
         
         // Attempt to fetch regular and deleted users
         let users = [];
@@ -37,16 +41,49 @@ export const useUserManagement = () => {
         let activityData = [];
         
         try {
+          console.log('Fetching all users...');
           // Get regular users
           const response = await userService.getAllUsers();
-          users = response.users || [];
+          console.log('getAllUsers response:', response);
+          users = response?.users || [];
           
+          console.log('Fetching users with deleted...');
           // Get all users including deleted ones (for admin)
           const allUsersResponse = await userService.getAllUsersWithDeleted();
-          const allUsers = allUsersResponse.users || [];
+          console.log('getAllUsersWithDeleted response:', allUsersResponse);
+          const allUsers = allUsersResponse?.users || [];
           
-          // Filter out deleted users
-          deletedUsers = allUsers.filter(user => user.isDeleted);
+          // Debug the first few users to see their properties
+          if (allUsers.length > 0) {
+            console.log('Sample user properties:', Object.keys(allUsers[0]));
+            console.log('Sample user data:', JSON.stringify(allUsers[0], null, 2));
+          }
+          
+          // More robust filtering for deactivated users
+          deletedUsers = allUsers.filter(user => {
+            const isDeactivated = user.isDeactivated === true;
+            const isAutoDeactivated = user.isAutoDeactivated === true;
+            const hasDeletedStatus = user.status === 'deleted' || user.status === 'deactivated';
+            const isInactive = user.status === 'inactive' && user.deactivatedAt;
+            
+            // Debug user filtering
+            if (isDeactivated || isAutoDeactivated || hasDeletedStatus || isInactive) {
+              console.log(`Deactivated user found: ${user.email || user.name}`, { 
+                isDeactivated, isAutoDeactivated, hasDeletedStatus, isInactive,
+                status: user.status, deactivatedAt: user.deactivatedAt
+              });
+            }
+            
+            return isDeactivated || isAutoDeactivated || hasDeletedStatus || isInactive;
+          });
+          
+          console.log(`Found ${deletedUsers.length} deleted/deactivated users`);
+          
+          // Ensure active users don't include any deactivated ones (double check)
+          users = users.filter(user => {
+            return !user.isDeactivated && !user.isAutoDeactivated && 
+                   user.status !== 'deleted' && user.status !== 'deactivated';
+          });
           
           // Calculate statistics
           const activeUsers = users.filter(user => user.lastLogin).length;
@@ -116,36 +153,77 @@ export const useUserManagement = () => {
             activityData = response.userActivity || userManagementData.activityData;
           }
         } catch (error) {
-          console.warn('API fetch failed, using mock data:', error);
+          console.error('API fetch failed, using mock data:', error);
           // Fallback to mock data if API call fails
+          console.log('Using mock data as fallback');
           users = userManagementData.usersList;
           statistics = userManagementData.statistics;
           activityData = userManagementData.activityData;
+          deletedUsers = userManagementData.deletedUsers || [];
         }
         
-        // Format users data for the UI
-        const formatUserList = (users, isDeleted = false) => {
-          return users.map(user => ({
-            id: user._id || user.id,
-            name: user.name || `${user.firstName || ''} ${user.lastName || ''}`.trim(),
-            email: user.email,
-            role: user.role,
-            status: isDeleted ? 'deleted' : (user.status || (user.lastLogin ? 'active' : 'inactive')),
-            lastActive: user.lastActive || user.lastLogin || user.updatedAt || new Date(),
-            isDeleted: isDeleted,
-            createdAt: user.createdAt,
-            deletedAt: user.updatedAt // For deleted users, updatedAt typically has the deletion time
-          }));
+        // Format users data for the UI - UPDATED FUNCTION
+        const formatUserList = (users, isDeactivated = false) => {
+          // Make sure users is an array before attempting to map
+          if (!Array.isArray(users)) {
+            console.error('Expected users to be an array but got:', typeof users);
+            return [];
+          }
+          
+          return users.map(user => {
+            // Debug each user to check its format
+            console.log(`Formatting user:`, user.email || user._id || 'unknown', 
+                        `isDeactivated=${isDeactivated}, status=${user.status}`,
+                        `isDeactivated flag=${user.isDeactivated}, isAutoDeactivated=${user.isAutoDeactivated}`);
+            
+            // Use optional chaining and nullish coalescing to safely access properties
+            const firstName = user?.firstName || '';
+            const lastName = user?.lastName || '';
+            const formattedName = user?.name || `${firstName} ${lastName}`.trim();
+            
+            // Better status detection logic
+            let status = 'unknown';
+            if (isDeactivated || user?.isDeactivated === true || user?.isAutoDeactivated === true) {
+              status = 'deactivated';
+            } else if (user?.status) {
+              status = user.status;
+            } else if (user?.isVerified === false) {
+              status = 'unverified';
+            } else if (user?.lastLogin) {
+              status = 'active';
+            } else {
+              status = 'inactive';
+            }
+            
+            return {
+              id: user?._id || user?.id || 'unknown-id',
+              name: formattedName || 'Unnamed User',
+              email: user?.email || 'no-email',
+              role: user?.role || 'user',
+              status: status,
+              lastActive: user?.lastActive || user?.lastLogin || user?.updatedAt || new Date(),
+              isDeactivated: isDeactivated || user?.isDeactivated === true || user?.isAutoDeactivated === true,
+              createdAt: user?.createdAt || new Date(),
+              deactivatedAt: user?.deletedAt || user?.deactivatedAt || null
+            };
+          });
         };
         
+        const formattedUsers = formatUserList(users);
+        const formattedDeletedUsers = formatUserList(deletedUsers, true);
+        
+        console.log(`Formatted ${formattedUsers.length} active users and ${formattedDeletedUsers.length} deleted users`);
+        
         setData({
-          usersList: formatUserList(users),
-          deletedUsers: formatUserList(deletedUsers, true),
+          usersList: formattedUsers,
+          deletedUsers: formattedDeletedUsers,
           statistics,
           activityData
         });
       } catch (error) {
         console.error('Failed to process users data:', error);
+        // Set the error state
+        setError(error.message || 'An error occurred while fetching user data');
         // Fallback to mock data
         setData(userManagementData);
       } finally {
@@ -157,29 +235,31 @@ export const useUserManagement = () => {
   }, [refreshTrigger]);  // Depend on refreshTrigger to reload data
 
   // Enhanced delete function for soft delete (admin deactivation)
-  const handleSoftDeleteUser = async (userId) => {
+  const handleDeactivateUser = async (userId) => {
     try {
-      const result = await userService.softDeleteUser(userId);
+      // Call the renamed service function
+      const result = await userService.deactivateUser(userId);
       
       if (result.success) {
-        // Move the user from active to deleted list
-        const userToDelete = data.usersList.find(user => user.id === userId);
-        if (userToDelete) {
-          const deletedUser = {
-            ...userToDelete,
-            status: 'deleted',
-            isDeleted: true,
-            deletedAt: new Date().toISOString()
+        // Move the user from active to deactivated list
+        const userToDeactivate = data.usersList.find(user => user.id === userId);
+        if (userToDeactivate) {
+          const deactivatedUser = {
+            ...userToDeactivate,
+            status: 'deactivated', // Use "deactivated" instead of "deleted"
+            isDeactivated: true, // Keep this for backend compatibility
+            deactivatedAt: new Date().toISOString() // Use deactivatedAt instead of deletedAt
           };
           
           // Update state
           setData(prev => ({
             ...prev,
             usersList: prev.usersList.filter(user => user.id !== userId),
-            deletedUsers: [...prev.deletedUsers, deletedUser],
+            deletedUsers: [...prev.deletedUsers, deactivatedUser], // This array should be renamed in a full refactor
             statistics: {
               ...prev.statistics,
-              totalUsers: (parseInt(prev.statistics.totalUsers.replace(/,/g, ''), 10) - 1).toLocaleString(),
+              // Update relevant statistics
+              activeUsers: (parseInt(prev.statistics.activeUsers.replace(/,/g, ''), 10) - 1).toLocaleString(),
               deletedUsers: (parseInt(prev.statistics.deletedUsers.replace(/,/g, ''), 10) + 1).toLocaleString()
             }
           }));
@@ -197,6 +277,9 @@ export const useUserManagement = () => {
       };
     }
   };
+
+  // For backward compatibility
+  const handleSoftDeleteUser = handleDeactivateUser;
   
   // Function to restore a deleted user
   const handleRestoreUser = async (userId) => {
@@ -210,7 +293,7 @@ export const useUserManagement = () => {
           const restoredUser = {
             ...userToRestore,
             status: 'active',
-            isDeleted: false,
+            isDeactivated: false,
             lastActive: new Date().toISOString()
           };
           
@@ -313,13 +396,15 @@ export const useUserManagement = () => {
     data,
     setData,
     loading,
+    error,
     selectedUser,
     setSelectedUser,
-    handleSoftDeleteUser,
+    handleDeactivateUser,
     handleRestoreUser,
-    handleSendRecoveryLink, // NEW: For sending recovery links
-    handleSendPasswordResetLink, // NEW: For sending password reset links
+    handleSendRecoveryLink,
+    handleSendPasswordResetLink,
     updateUserRole,
-    refreshData
+    refreshData,
+    handleSoftDeleteUser // Keep for backward compatibility
   };
 };

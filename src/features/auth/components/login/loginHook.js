@@ -1,6 +1,5 @@
-// Streamlined loginHook.js with simplified reactivation handling
+// Refactored loginHook.js with improved modularity and organization
 
-import { auth } from '@features/auth/firebase/firebase'; 
 import { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@context/AuthContext';
@@ -14,6 +13,7 @@ export const useLogin = () => {
   const location = useLocation();
   const toast = useSnackbar();
   
+  // State management
   const [isLoading, setIsLoading] = useState(false);
   const [authError, setAuthError] = useState(null);
   const [recoveryEmail, setRecoveryEmail] = useState('');
@@ -21,78 +21,7 @@ export const useLogin = () => {
   const [isAutoDeactivated, setIsAutoDeactivated] = useState(false);
   const [deactivationInfo, setDeactivationInfo] = useState(null);
 
-  // Start/stop loading helpers
-  const startLoading = () => setIsLoading(true);
-  const stopLoading = () => setIsLoading(false);
-
-  // Handle authentication success
-  const handleAuthSuccess = (userData) => {
-    setAuthError(null);
-    toast.success(`Welcome back, ${userData.firstName || 'User'}!`);
-  };
-
-  // Handle authentication errors
-  const handleAuthError = (error) => {
-    console.error('Auth error:', error);
-    setAuthError(error.message);
-    toast.error(error.message || 'Authentication failed');
-  };
-
-  // Handle auto-deactivated account
-  const handleAutoDeactivatedAccount = async (email) => {
-    console.log('Handling auto-deactivated account:', email);
-    
-    // Set state for reactivation UI
-    setIsAutoDeactivated(true);
-    setRecoveryEmail(email);
-    
-    // Show notification
-    toast.info("Your account has been automatically deactivated due to inactivity. A reactivation link has been sent to your email.");
-    
-    try {
-      // Send reactivation email
-      console.log('Sending reactivation email...');
-      const result = await authService.requestReactivation(email);
-      
-      if (result.success) {
-        // Navigate to reactivation page
-        navigate('/login', { 
-          state: { 
-            email: email,
-            isAutoDeactivated: true,
-            message: "Your account has been automatically deactivated due to inactivity. A reactivation link has been sent to your email."
-          },
-          replace: true
-        });
-      } else {
-        // Navigate with error info
-        navigate('/reactivate-account', { 
-          state: { 
-            email: email,
-            isAutoDeactivated: true,
-            hasError: true,
-            message: "We encountered an issue sending the reactivation email. Please try requesting a new one."
-          },
-          replace: true
-        });
-      }
-    } catch (error) {
-      console.error('Error in auto-deactivated account flow:', error);
-      
-      // Navigate with error info
-      navigate('/reactivate-account', { 
-        state: { 
-          email: email,
-          isAutoDeactivated: true,
-          hasError: true,
-          message: "We encountered an issue sending the reactivation email. Please try requesting a new one."
-        },
-        replace: true
-      });
-    }
-  };
-
-  // Form validation schema
+  // Validation configuration
   const validationSchema = Yup.object({
     email: Yup.string()
       .email('Invalid email format')
@@ -101,13 +30,131 @@ export const useLogin = () => {
       .required('Password is required')
   });
 
-  // Initial form values
   const initialValues = {
     email: '',
     password: ''
   };
 
-  // Request account reactivation email
+  // Helper functions
+  const startLoading = () => setIsLoading(true);
+  const stopLoading = () => setIsLoading(false);
+  
+  const showSuccessToast = (userData) => {
+    toast.success(`Welcome back, ${userData.firstName || 'User'}!`);
+  };
+
+  const showErrorToast = (error) => {
+    console.error('Auth error:', error);
+    const errorMessage = error?.message || 'Authentication failed';
+    setAuthError(errorMessage);
+    toast.error(errorMessage);
+  };
+
+  // Store user data in localStorage and context
+  const storeUserData = (user, accessToken) => {
+    const verifiedUser = {
+      ...user,
+      isVerified: true
+    };
+    
+    localStorage.setItem('user', JSON.stringify(verifiedUser));
+    
+    if (accessToken || user.accessToken) {
+      localStorage.setItem('authToken', accessToken || user.accessToken);
+    }
+    
+    setUser(verifiedUser);
+    setIsAuthenticated(true);
+    
+    return verifiedUser;
+  };
+
+  // Handle navigation based on user role
+  const navigateAfterAuth = (user) => {
+    const targetPath = user.role === 'admin' ? '/admin/dashboard' : '/dashboard';
+    navigate(targetPath, { replace: true });
+  };
+
+  // Reactivation handlers
+  const navigateToReactivation = (email, hasError = false) => {
+    navigate('/reactivate-account', { 
+      state: { 
+        email,
+        isAutoDeactivated: true,
+        hasError,
+        message: hasError 
+          ? "We encountered an issue sending the reactivation email. Please try requesting a new one."
+          : "A reactivation link has been sent to your email."
+      },
+      replace: true
+    });
+  };
+
+  const navigateToLoginWithDeactivationInfo = (email) => {
+    navigate('/login', { 
+      state: { 
+        email,
+        isAutoDeactivated: true,
+        message: "Your account has been automatically deactivated due to inactivity. A reactivation link has been sent to your email."
+      },
+      replace: true
+    });
+  };
+
+  const handleAutoDeactivatedAccount = async (email) => {
+    console.log('Handling auto-deactivated account:', email);
+    
+    setIsAutoDeactivated(true);
+    setRecoveryEmail(email);
+    
+    toast.info("Your account has been automatically deactivated due to inactivity. A reactivation link has been sent to your email.");
+    
+    try {
+      console.log('Sending reactivation email...');
+      const result = await authService.requestReactivation(email);
+      
+      if (result.success) {
+        navigateToLoginWithDeactivationInfo(email);
+      } else {
+        navigateToReactivation(email, true);
+      }
+    } catch (error) {
+      console.error('Error in auto-deactivated account flow:', error);
+      navigateToReactivation(email, true);
+    }
+  };
+
+  const handleDeactivatedAccount = async (email, statusCheck) => {
+    setDeactivationInfo({
+      email,
+      deactivatedAt: statusCheck.deactivatedAt,
+      tokenExpired: statusCheck.tokenExpired
+    });
+
+    setIsAutoDeactivated(true);
+    setRecoveryEmail(email);
+    toast.info("Account deactivated due to inactivity. Reactivation link sent.");
+
+    const reactivationResult = await authService.requestReactivation(email);
+
+    if (reactivationResult.success) {
+      navigateToLoginWithDeactivationInfo(email);
+    } else {
+      navigateToReactivation(email, true);
+    }
+  };
+
+  const handleReactivatedAccount = async (result) => {
+    if (!result.user) {
+      toast.error('Invalid server response');
+      return;
+    }
+
+    const userData = storeUserData(result.user);
+    toast.success("Account reactivated. Welcome back!");
+    navigateAfterAuth(userData);
+  };
+
   const handleRequestReactivation = async () => {
     if (!recoveryEmail) {
       toast.error("Email is required");
@@ -121,290 +168,199 @@ export const useLogin = () => {
       
       if (result.success) {
         toast.success("Reactivation email sent. Please check your inbox and follow the instructions.");
-        
-        // Redirect to reactivation page with email info
-        navigate('/reactivate-account', { 
-          state: { 
-            email: recoveryEmail,
-            isAutoDeactivated: true,
-            message: "A reactivation link has been sent to your email."
-          },
-          replace: true
-        });
+        navigateToReactivation(recoveryEmail);
       } else {
         toast.error(result.message || "Failed to send reactivation email");
       }
     } catch (error) {
-      handleAuthError(error);
+      console.error('Reactivation request error:', error);
+      setAuthError(error.message || 'Failed to request reactivation');
+      toast.error(error.message || 'Failed to request reactivation');
     } finally {
       stopLoading();
     }
   };
 
-  // Handle form submission
-// Handle form submission
-const handleSubmit = async (values, { setSubmitting }) => {
-  console.log('Login attempt:', { email: values.email });
-  setSubmitting(true);
-  setAuthError(null);
-  startLoading();
-  
-  try {
-    // First check if the account is auto-deactivated
-    const statusCheck = await authService.checkAccountStatus(values.email);
-    console.log('Account status check result:', statusCheck);
-    
-    // If account exists and is auto-deactivated, handle accordingly
-    if (statusCheck.exists && statusCheck.isAutoDeactivated) {
-      console.log('Account is auto-deactivated:', statusCheck);
-      
-      // Store deactivation info
-      setDeactivationInfo({
-        email: values.email,
-        deactivatedAt: statusCheck.deactivatedAt,
-        tokenExpired: statusCheck.tokenExpired
-      });
-      
-      // Attempt login to trigger notification, but do not use the result for authentication
-      try {
-        await authService.login(values.email, values.password);
-      } catch (loginError) {
-        // Expected - the backend should return an error for deactivated accounts
-        console.log('Login attempt on deactivated account (for notification):', loginError.message);
+  // Authentication handlers
+  const handleVerificationRequired = (result) => {
+    navigate('/verify-email', {
+      state: {
+        userId: result.userId,
+        email: result.email || ''
       }
-      
-      // Set isAutoDeactivated state
-      setIsAutoDeactivated(true);
-      setRecoveryEmail(values.email);
-      
-      // Show notification
-      toast.info("Your account has been automatically deactivated due to inactivity. A reactivation link has been sent to your email.");
-      
-      // Request reactivation email with link
-      const reactivationResult = await authService.requestReactivation(values.email);
-      
-      if (reactivationResult.success) {
-        // Navigate to login page with deactivation state
-        navigate('/login', { 
-          state: { 
-            email: values.email,
-            isAutoDeactivated: true,
-            message: "Your account has been automatically deactivated due to inactivity. A reactivation link has been sent to your email."
-          },
-          replace: true
-        });
-      } else {
-        // Navigate with error info
-        navigate('/reactivate-account', { 
-          state: { 
-            email: values.email,
-            isAutoDeactivated: true,
-            hasError: true,
-            message: "We encountered an issue sending the reactivation email. Please try requesting a new one."
-          },
-          replace: true
-        });
-      }
-      
-      setSubmitting(false);
-      stopLoading();
+    });
+    toast.info(result.message || "Please verify your email");
+  };
+
+  const handleSuccessfulSignIn = async (result) => {
+    if (!result.user) {
+      toast.error('Invalid user data received');
       return;
     }
+
+    const userData = storeUserData(result.user);
+    toast.success(`Welcome, ${userData.firstName || 'User'}!`);
+    navigateAfterAuth(userData);
+  };
+
+  const handleGoogleSignInError = (error) => {
+    console.error('Google sign-in error handler:', error);
     
-    // Continue with normal login flow
-    const result = await contextLogin(values.email, values.password);
-    console.log('Login result:', result);
+    let errorMessage = error.message || 'Google sign-in failed';
     
-    // Check if the login automatically reactivated an account
-    if (result && result.wasReactivated) {
-      console.log('Account was automatically reactivated during login:', result);
+    if (error.code === 'auth/popup-closed-by-user') {
+      errorMessage = 'Sign-in process was cancelled';
+      toast.info('Sign-in cancelled');
+    } else if (error.code === 'auth/popup-blocked') {
+      errorMessage = 'Popup blocked - try direct redirect';
+      toast.error('Enable popups or use email sign-in');
+      setShowRedirectOption(true);
+    }
+  
+    setAuthError(errorMessage);
+    
+    if (!['auth/popup-closed-by-user', 'auth/popup-blocked'].includes(error.code)) {
+      toast.error(errorMessage);
+    }
+  };
+
+  // Main authentication flows
+  const handleSubmit = async (values, { setSubmitting }) => {
+    console.log('Login attempt:', { email: values.email });
+    setSubmitting(true);
+    setAuthError(null);
+    startLoading();
+    
+    try {
+      // Check if account is auto-deactivated
+      const statusCheck = await authService.checkAccountStatus(values.email);
+      console.log('Account status check result:', statusCheck);
       
-      // Show success message
-      toast.success("Your account has been reactivated. Welcome back!");
-      
-      // Validate user data
-      if (!result.user) {
-        toast.error('Invalid response from server');
-        setSubmitting(false);
-        stopLoading();
+      if (statusCheck.exists && statusCheck.isAutoDeactivated) {
+        console.log('Account is auto-deactivated:', statusCheck);
+        
+        // Store deactivation info
+        setDeactivationInfo({
+          email: values.email,
+          deactivatedAt: statusCheck.deactivatedAt,
+          tokenExpired: statusCheck.tokenExpired
+        });
+        
+        // Try login to trigger notification (expect error)
+        try {
+          await authService.login(values.email, values.password);
+        } catch (loginError) {
+          console.log('Login attempt on deactivated account (for notification):', loginError.message);
+        }
+        
+        // Handle deactivated account flow
+        await handleAutoDeactivatedAccount(values.email);
         return;
       }
       
-      // Store the user and auth token
-      localStorage.setItem('user', JSON.stringify(result.user));
-      if (result.user.accessToken) {
-        localStorage.setItem('authToken', result.user.accessToken);
+      // Normal login flow
+      const result = await contextLogin(values.email, values.password);
+      console.log('Login result:', result);
+      
+      // Check if the login automatically reactivated an account
+      if (result && result.wasReactivated) {
+        await handleReactivatedAccount(result);
+        return;
       }
       
-      // Update the auth context
-      setUser(result.user);
-      setIsAuthenticated(true);
-      
-      // Show welcome back message
-      handleAuthSuccess(result.user);
-      
-      // Navigate based on role
-      if (result.user.role === 'admin') {
-        navigate('/admin/dashboard', { replace: true });
-      } else {
-        navigate('/dashboard', { replace: true });
+      // Handle login failures
+      if (!result || !result.success) {
+        const errorMessage = result?.message || 'Login failed. Please try again.';
+        toast.error(errorMessage);
+        return;
       }
       
-      setSubmitting(false);
-      stopLoading();
-      return;
-    }
-    
-    // Handle login failures
-    if (!result || !result.success) {
-      const errorMessage = result?.message || 'Login failed. Please try again.';
-      toast.error(errorMessage);
-      setSubmitting(false);
-      stopLoading();
-      return;
-    }
-    
-    // Rest of your existing login success handling code
-    if (!result.user) {
-      toast.error('Invalid response from server');
-      setSubmitting(false);
-      stopLoading();
-      return;
-    }
-    
-    // Check verification status
-    console.log('Checking verification status:', {
-      userEmail: result.user.email,
-      explicitVerification: !!result.isVerified,
-      userVerification: !!result.user.isVerified,
-      requireVerification: !!result.requireVerification
-    });
-    
-    // Redirect to verification if required
-    if (result.requireVerification === true) {
-      console.log('Server explicitly requires verification');
-      navigate('/verify-email', { 
-        state: { 
-          userId: result.user.id || result.userId, 
-          email: values.email 
-        } 
+      if (!result.user) {
+        toast.error('Invalid response from server');
+        return;
+      }
+      
+      // Check verification status
+      console.log('Checking verification status:', {
+        userEmail: result.user.email,
+        explicitVerification: !!result.isVerified,
+        userVerification: !!result.user.isVerified,
+        requireVerification: !!result.requireVerification
       });
+      
+      // Redirect to verification if required
+      if (result.requireVerification === true) {
+        console.log('Server explicitly requires verification');
+        handleVerificationRequired({
+          userId: result.user.id || result.userId,
+          email: values.email,
+          message: result.message
+        });
+        return;
+      }
+      
+      // Normal successful login flow
+      console.log('User considered verified, proceeding with login');
+      const userData = storeUserData(result.user);
+      showSuccessToast(userData);
+      navigateAfterAuth(userData);
+      
+    } catch (error) {
+      console.error('Login submission error:', error);
+      setAuthError(error.message || 'Authentication failed');
+      toast.error(error.message || 'Authentication failed');
+    } finally {
       setSubmitting(false);
       stopLoading();
-      return;
     }
-    
-    // If we get here, consider the user verified
-    console.log('User considered verified, proceeding with login');
-    
-    // Ensure the user has the isVerified flag set to true
-    const verifiedUser = {
-      ...result.user,
-      isVerified: true // Force this to be true
-    };
-    
-    // Store the enhanced user in localStorage
-    localStorage.setItem('user', JSON.stringify(verifiedUser));
-    
-    // Store the auth token if available
-    if (result.user.accessToken) {
-      localStorage.setItem('authToken', result.user.accessToken);
-    }
-    
-    // Update the auth context with our verified user
-    setUser(verifiedUser);
-    setIsAuthenticated(true);
-    
-    // Show success message
-    handleAuthSuccess(verifiedUser);
-    
-    // Navigate based on role
-    if (verifiedUser.role === 'admin') {
-      navigate('/admin/dashboard', { replace: true });
-    } else {
-      navigate('/dashboard', { replace: true });
-    }
-  } catch (error) {
-    console.error('Login submission error:', error);
-    handleAuthError(error);
-  } finally {
-    setSubmitting(false);
-    stopLoading();
-  }
-};
+  };
 
-  // Updated for consistency with reactivate endpoint
   const handleGoogleSignIn = async () => {
     try {
       setAuthError(null);
       setShowRedirectOption(false);
       startLoading();
-  
-      // Remove the initialization check since it's causing double popup
+
       console.log('Starting Google sign-in attempt');
-  
       const result = await contextGoogleSignIn();
       console.log('Google sign-in result received:', result);
-  
+
       if (result && result.email) {
-        // Check account status after successful sign-in
+        // Check account status first
         const statusCheck = await authService.checkAccountStatus(result.email);
         console.log('Account status check result:', statusCheck);
-  
+
         if (statusCheck.exists && statusCheck.isAutoDeactivated) {
-          console.log('Account is auto-deactivated:', statusCheck);
-          
-          setDeactivationInfo({
-            email: result.email,
-            deactivatedAt: statusCheck.deactivatedAt,
-            tokenExpired: statusCheck.tokenExpired
-          });
-  
-          await handleAutoDeactivatedAccount(result.email);
-          stopLoading();
+          await handleDeactivatedAccount(result.email, statusCheck);
+          return;
+        }
+
+        if (result.wasReactivated) {
+          await handleReactivatedAccount(result);
           return;
         }
       }
-  
-      // Handle verification requirement
-      if (result && result.requireVerification) {
-        console.log('Account requires verification:', result);
-        navigate('/verify-email', { 
-          state: { 
-            userId: result.userId, 
-            email: result.email || '' 
-          } 
-        });
-        toast.info(result.message || "Please verify your email to complete sign-in.");
-        stopLoading();
+
+      if (result?.requireVerification) {
+        handleVerificationRequired(result);
         return;
       }
-  
-      if (result && result.success) {
-        toast.success('Google sign-in successful');
-      } else {
-        throw new Error(result?.message || 'Google sign-in failed');
+
+      if (result?.success) {
+        await handleSuccessfulSignIn(result);
+        return;
       }
-  
+
+      throw new Error(result?.message || 'Google authentication failed');
+
     } catch (error) {
       console.error('Google sign-in error:', error);
-      
-      if (error.code === 'auth/popup-closed-by-user') {
-        toast.info('Sign-in was cancelled');
-        setAuthError('Sign-in was cancelled. Please try again.');
-      } else if (error.code === 'auth/popup-blocked') {
-        toast.error('Sign-in popup was blocked. Please try again or use redirect sign-in.');
-        setAuthError('Browser blocked the popup. Please enable popups or use redirect sign-in.');
-        setShowRedirectOption(true);
-      } else {
-        handleAuthError(error);
-      }
+      handleGoogleSignInError(error);
     } finally {
       stopLoading();
     }
   };
 
-  // Google Redirect Sign-in handler
   const handleGoogleRedirectSignIn = async () => {
     try {
       setAuthError(null);
@@ -420,7 +376,8 @@ const handleSubmit = async (values, { setSubmitting }) => {
       
     } catch (error) {
       console.error('Google redirect sign-in error:', error);
-      handleAuthError(error);
+      setAuthError(error.message || 'Google sign-in redirect failed');
+      toast.error(error.message || 'Google sign-in redirect failed');
       stopLoading();
     }
   };

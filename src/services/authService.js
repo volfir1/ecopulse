@@ -1042,7 +1042,8 @@ deactivateAccount: async () => {
 // Request account recovery function
 requestAccountRecovery: async (email) => {
   try {
-    const response = await fetch(`${API_URL}/auth/request-recovery`, {
+    // Update the endpoint from 'request-recovery' to 'request-reactivation'
+    const response = await fetch(`${API_URL}/auth/request-reactivation`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ email }),
@@ -1051,11 +1052,10 @@ requestAccountRecovery: async (email) => {
 
     const data = await response.json();
     
-    // For security, we always return a success message, even if the account doesn't exist
-    // The actual error details are handled on the server
+    // For security, we always return a success message
     return {
       success: true,
-      message: data.message || "If your account exists and is deactivated, a recovery email has been sent."
+      message: data.message || "If your account exists and is deactivated, a reactivation email has been sent."
     };
   } catch (error) {
     console.error("Recovery request error:", error);

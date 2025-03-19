@@ -132,13 +132,13 @@ const AppContent = () => {
           <Route path="/onboarding" element={<publicRoutes.Onboarding />} />
           {/* Account deactivation and recovery routes */}
           <Route path="/account-deactivated" element={<publicRoutes.AccountDeactivated />} />
-          <Route path="/recover-account" element={<publicRoutes.ReactivateAccount />} />
+          <Route path="/reactivate-account" element={<publicRoutes.ReactivateAccount />} />
           <Route path="/download" element={<publicRoutes.DownloadApp/>} />
 
           {/* Add redirect from /reactivate-account to /recover-account */}
           <Route
             path="/reactivate-account"
-            element={<Navigate to={(location) => `/recover-account${location.search}`} replace />}
+            element={<Navigate to={(location) => `/reactivate-account${location.search}`} replace />}
           />
 
 

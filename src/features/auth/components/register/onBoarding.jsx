@@ -133,7 +133,7 @@ const Onboarding = () => {
 
             // Create a request to your backend to upload this default avatar to Cloudinary
             const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
-            const uploadResponse = await fetch(`${API_URL}/uploads/avatar/base64`, {
+            const uploadResponse = await fetch(`${API_URL}/upload/avatar/base64`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
