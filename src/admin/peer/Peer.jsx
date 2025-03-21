@@ -75,128 +75,240 @@ const PeerToPeerAdminPrototype = () => {
   // Use the custom hook for form state management
   const { formValues, setFormValue, resetForm, handleSubmit } = usePeerForm();
   
-  // Fetch data from MongoDB via API - now without year filtering
-  const fetchData = useCallback(async () => {
-    setIsLoading(true);
-    setError(null);
+  // Fetch data from MongoDB via API with retry logic
+const fetchData = useCallback(async (retryCount = 0) => {
+  setIsLoading(true);
+  setError(null);
+  
+  try {
+    console.log('Fetching data for all available years');
     
-    try {
-      console.log('Fetching data for all available years');
+    // Make a request to retrieve data from MongoDB without year range parameters
+    const response = await api.get('/api/peertopeer/records');
+    
+    console.log('MongoDB data response:', response.data);
+    
+    if (response.data.status === 'success') {
+      const records = response.data.records || [];
+      console.log(`Received ${records.length} records from MongoDB`);
       
-      // Make a request to retrieve data from MongoDB without year range parameters
-      const response = await api.get('/api/peertopeer/records');
-      
-      console.log('MongoDB data response:', response.data);
-      
-      if (response.data.status === 'success') {
-        const records = response.data.records || [];
-        console.log(`Received ${records.length} records from MongoDB`);
-        
-        // Log a sample of the data to see its structure
-        if (records.length > 0) {
-          console.log('Sample record:', records[0]);
-          
-          // Process the MongoDB data for table display
-          const processedData = processMongoDataForTable(records);
-          console.log('Processed data:', processedData);
-          setTableData(processedData);
-        } else {
-          setError('No data available in the database');
-        }
+      if (records.length > 0) {
+        // Process the MongoDB data for table display
+        const processedData = processMongoDataForTable(records);
+        console.log('Processed data:', processedData);
+        setTableData(processedData);
       } else {
-        setError(`Error: ${response.data.message || 'Unknown error'}`);
+        setError('No data available in the database');
       }
-    } catch (err) {
-      console.error('Error fetching peer-to-peer data:', err);
-      setError(`Error fetching data: ${err.message}`);
-    } finally {
-      setIsLoading(false);
+    } else {
+      setError(`Error: ${response.data.message || 'Unknown error'}`);
     }
-  }, []);
-  
-  // Process MongoDB data for table display - improved to handle different data structures
-
-  const processMongoDataForTable = (records) => {
-    // Sort records by year
-    const sortedRecords = records.sort((a, b) => a.Year - b.Year);
-  
-    // Process each record to extract the required fields
-    const processedData = sortedRecords.map(record => {
-      // Helper function to safely parse and clean numeric values
-      const parseAndClean = (value) => {
-        if (value === null || value === undefined) return 0; // Handle null/undefined
-        if (typeof value === 'number') return value; // If it's already a number, return it
-        if (typeof value === 'string') {
-          // Remove commas and parse as float
-          const cleanedValue = value.replace(/,/g, '');
-          return parseFloat(cleanedValue) || 0; // Fallback to 0 if parsing fails
-        }
-        return 0; // Fallback for other types
-      };
+  } catch (err) {
+    console.error('Error fetching peer-to-peer data:', err);
     
-      return {
-        _id: record._id,
-        year: record.Year,
-        cebuTotal: parseAndClean(record['Cebu Total Power Generation (GWh)']),
-        negrosTotal: parseAndClean(record['Negros Total Power Generation (GWh)']),
-        panayTotal: parseAndClean(record['Panay Total Power Generation (GWh)']),
-        leyteSamarTotal: parseAndClean(record['Leyte-Samar Total Power Generation (GWh)']),
-        boholTotal: parseAndClean(record['Bohol Total Power Generation (GWh)']),
-        visayasTotal: parseAndClean(record['Visayas Total Power Generation (GWh)']),
-        visayasConsumption: parseAndClean(record['Visayas Total Power Consumption (GWh)']),
-        solarCost: parseAndClean(record['Solar Cost (PHP/W)']),
-        meralcoRate: parseAndClean(record['MERALCO Rate (PHP/kWh)']),
-        allData: [record] // Store the original record for reference
-      };
-    });
+    // Retry logic - only retry for network/timeout errors up to 2 times
+    if ((err.code === 'ECONNABORTED' || err.code === 'ERR_NETWORK') && retryCount < 2) {
+      console.log(`Retrying fetch attempt ${retryCount + 1}...`);
+      setTimeout(() => {
+        fetchData(retryCount + 1);
+      }, 2000); // Wait 2 seconds before retry
+      return;
+    }
+    
+    // Show user-friendly error message based on error type
+    if (err.code === 'ECONNABORTED') {
+      setError(`Request timed out. The server is taking too long to respond. Please check if your backend server is running correctly.`);
+    } else if (err.code === 'ERR_NETWORK') {
+      setError(`Network error. Unable to connect to the server. Please make sure your Django server is running at http://127.0.0.1:8000`);
+    } else {
+      setError(`Error fetching data: ${err.message}`);
+    }
+  } finally {
+    setIsLoading(false);
+  }
+}, []);
   
-    console.log('Processed data:', processedData);
-    return processedData;
-  };
+  // Improved function to process MongoDB data for table display
+const processMongoDataForTable = (records) => {
+  // Extract unique years from records
+  const years = [...new Set(records.map(record => record.Year || record.year))].sort();
+  
+  // Create a consolidated record for each year
+  return years.map(year => {
+    // Get all records for this year
+    const yearRecords = records.filter(r => (r.Year || r.year) === year);
+    
+    // Create base record object
+    const consolidatedRecord = {
+      _id: yearRecords[0]._id, // Use first record's ID for reference
+      year: year,
+      cebuTotal: 0,
+      negrosTotal: 0,
+      panayTotal: 0,
+      leyteSamarTotal: 0,
+      boholTotal: 0,
+      visayasTotal: 0,
+      visayasConsumption: 0,
+      solarCost: 0,
+      meralcoRate: 0,
+      allRecords: yearRecords // Store all related records for this year
+    };
+    
+    // Extract specific values from the records
+    yearRecords.forEach(record => {
+      // Helper function to safely get numeric values
+      const getNumericValue = (value) => {
+        if (value === null || value === undefined) return 0;
+        if (typeof value === 'number') return value;
+        if (typeof value === 'string') {
+          const parsed = parseFloat(value.replace(/,/g, ''));
+          return isNaN(parsed) ? 0 : parsed;
+        }
+        return 0;
+      };
+      
+      // Update consolidated record based on data in individual record
+      Object.keys(record).forEach(key => {
+        // Handle Cebu data
+        if (key === 'Cebu Total Power Generation (GWh)') {
+          consolidatedRecord.cebuTotal = getNumericValue(record[key]);
+        }
+        // Handle Negros data
+        else if (key === 'Negros Total Power Generation (GWh)') {
+          consolidatedRecord.negrosTotal = getNumericValue(record[key]);
+        }
+        // Handle Panay data
+        else if (key === 'Panay Total Power Generation (GWh)') {
+          consolidatedRecord.panayTotal = getNumericValue(record[key]);
+        }
+        // Handle Leyte-Samar data
+        else if (key === 'Leyte-Samar Total Power Generation (GWh)') {
+          consolidatedRecord.leyteSamarTotal = getNumericValue(record[key]);
+        }
+        // Handle Bohol data
+        else if (key === 'Bohol Total Power Generation (GWh)') {
+          consolidatedRecord.boholTotal = getNumericValue(record[key]);
+        }
+        // Handle Visayas data
+        else if (key === 'Visayas Total Power Generation (GWh)') {
+          consolidatedRecord.visayasTotal = getNumericValue(record[key]);
+        }
+        else if (key === 'Visayas Total Power Consumption (GWh)') {
+          consolidatedRecord.visayasConsumption = getNumericValue(record[key]);
+        }
+        // Handle recommendation parameters
+        else if (key === 'Solar Cost (PHP/W)') {
+          consolidatedRecord.solarCost = getNumericValue(record[key]);
+        }
+        else if (key === 'MERALCO Rate (PHP/kWh)') {
+          consolidatedRecord.meralcoRate = getNumericValue(record[key]);
+        }
+      });
+    });
+    
+    return consolidatedRecord;
+  });
+};
   
   // Fetch data when component mounts
   useEffect(() => {
     fetchData();
   }, [fetchData]);
   
-  // Functions for modal and form
-  const openModal = (record = {}) => {
-    setSelectedRecord(record);
-    setIsEditing(!!record._id);
+  // Improved openModal function to correctly populate form values
+const openModal = (record = {}) => {
+  console.log('Opening modal with record:', record);
+  setSelectedRecord(record);
+  setIsEditing(!!record._id);
+  
+  // Reset form before populating
+  resetForm();
+  
+  if (record._id) {
+    // Set the year
+    setSelectedYear(record.year);
+    setFormValue('year', record.year);
     
-    // Populate the form with the selected record's data
-    if (record._id && record.allData) {
-      // Reset form before populating
-      resetForm();
-      
-      // Set the year
-      setSelectedYear(record.year);
-      setFormValue('year', record.year);
-      
-      // Populate form with data from all records of this year
-      record.allData.forEach(item => {
-        const place = item.Place;
-        const energyType = item['Energy Type'];
-        const value = item['Predicted Value'] || item.value || 0;
-        
-        if (place && energyType) {
-          const formKey = `${place} ${energyType}`;
-          setFormValue(formKey, value);
-        } else if (energyType === 'Visayas Total Power Generation (GWh)') {
-          setFormValue('Visayas Total Power Generation (GWh)', value);
-        } else if (energyType === 'Visayas Total Power Consumption (GWh)') {
-          setFormValue('Visayas Total Power Consumption (GWh)', value);
-        } else if (energyType === 'Solar Cost (PHP/W)') {
-          setFormValue('Solar Cost (PHP/W)', value);
-        } else if (energyType === 'MERALCO Rate (PHP/kWh)') {
-          setFormValue('MERALCO Rate (PHP/kWh)', value);
-        }
-      });
-    }
+    // Access all related records for this year
+    const yearRecords = record.allRecords || [];
+    console.log('Year records for form population:', yearRecords);
     
-    setIsModalOpen(true);
-  };
-
+    // Helper function to populate a form field from records
+    const populateField = (fieldName, value) => {
+      if (value !== undefined && value !== null) {
+        console.log(`Setting form value: ${fieldName} = ${value}`);
+        setFormValue(fieldName, value);
+      }
+    };
+    
+    // Populate form with values from the records
+    yearRecords.forEach(rec => {
+      // Cebu values
+      populateField("Cebu Total Power Generation (GWh)", rec["Cebu Total Power Generation (GWh)"]);
+      populateField("Cebu Total Non-Renewable Energy (GWh)", rec["Cebu Total Non-Renewable Energy (GWh)"]);
+      populateField("Cebu Total Renewable Energy (GWh)", rec["Cebu Total Renewable Energy (GWh)"]);
+      populateField("Cebu Geothermal (GWh)", rec["Cebu Geothermal (GWh)"]);
+      populateField("Cebu Hydro (GWh)", rec["Cebu Hydro (GWh)"]);
+      populateField("Cebu Biomass (GWh)", rec["Cebu Biomass (GWh)"]);
+      populateField("Cebu Solar (GWh)", rec["Cebu Solar (GWh)"]);
+      populateField("Cebu Wind (GWh)", rec["Cebu Wind (GWh)"]);
+      
+      // Negros values
+      populateField("Negros Total Power Generation (GWh)", rec["Negros Total Power Generation (GWh)"]);
+      populateField("Negros Total Non-Renewable Energy (GWh)", rec["Negros Total Non-Renewable Energy (GWh)"]);
+      populateField("Negros Total Renewable Energy (GWh)", rec["Negros Total Renewable Energy (GWh)"]);
+      populateField("Negros Geothermal (GWh)", rec["Negros Geothermal (GWh)"]);
+      populateField("Negros Hydro (GWh)", rec["Negros Hydro (GWh)"]);
+      populateField("Negros Biomass (GWh)", rec["Negros Biomass (GWh)"]);
+      populateField("Negros Solar (GWh)", rec["Negros Solar (GWh)"]);
+      populateField("Negros Wind (GWh)", rec["Negros Wind (GWh)"]);
+      
+      // Panay values
+      populateField("Panay Total Power Generation (GWh)", rec["Panay Total Power Generation (GWh)"]);
+      populateField("Panay Total Non-Renewable Energy (GWh)", rec["Panay Total Non-Renewable Energy (GWh)"]);
+      populateField("Panay Total Renewable Energy (GWh)", rec["Panay Total Renewable Energy (GWh)"]);
+      populateField("Panay Geothermal (GWh)", rec["Panay Geothermal (GWh)"]);
+      populateField("Panay Hydro (GWh)", rec["Panay Hydro (GWh)"]);
+      populateField("Panay Biomass (GWh)", rec["Panay Biomass (GWh)"]);
+      populateField("Panay Solar (GWh)", rec["Panay Solar (GWh)"]);
+      populateField("Panay Wind (GWh)", rec["Panay Wind (GWh)"]);
+      
+      // Leyte-Samar values
+      populateField("Leyte-Samar Total Power Generation (GWh)", rec["Leyte-Samar Total Power Generation (GWh)"]);
+      populateField("Leyte-Samar Total Non-Renewable (GWh)", rec["Leyte-Samar Total Non-Renewable (GWh)"]);
+      populateField("Leyte-Samar Total Renewable (GWh)", rec["Leyte-Samar Total Renewable (GWh)"]);
+      populateField("Leyte-Samar Geothermal (GWh)", rec["Leyte-Samar Geothermal (GWh)"]);
+      populateField("Leyte-Samar Hydro (GWh)", rec["Leyte-Samar Hydro (GWh)"]);
+      populateField("Leyte-Samar Biomass (GWh)", rec["Leyte-Samar Biomass (GWh)"]);
+      populateField("Leyte-Samar Solar (GWh)", rec["Leyte-Samar Solar (GWh)"]);
+      populateField("Leyte-Samar Wind (GWh)", rec["Leyte-Samar Wind (GWh)"]);
+      
+      // Bohol values
+      populateField("Bohol Total Power Generation (GWh)", rec["Bohol Total Power Generation (GWh)"]);
+      populateField("Bohol Total Non-Renewable (GWh)", rec["Bohol Total Non-Renewable (GWh)"]);
+      populateField("Bohol Total Renewable (GWh)", rec["Bohol Total Renewable (GWh)"]);
+      populateField("Bohol Geothermal (GWh)", rec["Bohol Geothermal (GWh)"]);
+      populateField("Bohol Hydro (GWh)", rec["Bohol Hydro (GWh)"]);
+      populateField("Bohol Biomass (GWh)", rec["Bohol Biomass (GWh)"]);
+      populateField("Bohol Solar (GWh)", rec["Bohol Solar (GWh)"]);
+      populateField("Bohol Wind (GWh)", rec["Bohol Wind (GWh)"]);
+      
+      // Visayas values
+      populateField("Visayas Total Power Generation (GWh)", rec["Visayas Total Power Generation (GWh)"]);
+      populateField("Visayas Total Power Consumption (GWh)", rec["Visayas Total Power Consumption (GWh)"]);
+      
+      // Recommendation parameters
+      populateField("Solar Cost (PHP/W)", rec["Solar Cost (PHP/W)"]);
+      populateField("MERALCO Rate (PHP/kWh)", rec["MERALCO Rate (PHP/kWh)"]);
+    });
+    
+    // Log populated form values for debugging
+    console.log('Populated form values:', formValues);
+  }
+  
+  setIsModalOpen(true);
+};
+  
   // Handle delete functionality
   const handleDeleteRecord = useCallback(async (recordId) => {
     if (!window.confirm('Are you sure you want to delete this record?')) return;
@@ -255,39 +367,87 @@ const PeerToPeerAdminPrototype = () => {
     setFormValue(field, event.target.value);
   }, [setFormValue]);
 
-  const handleSaveRecord = useCallback(async () => {
-    setIsLoading(true);
+  // Updated handleSaveRecord function to correctly handle MongoDB records
+const handleSaveRecord = useCallback(async () => {
+  setIsLoading(true);
+  
+  try {
+    // Build the payload with current form values
+    const payload = {
+      Year: selectedYear,
+      ...formValues
+    };
     
-    try {
-      const result = await handleSubmit(isEditing, selectedRecord._id);
-      
-      if (result.success) {
-        setNotification({
-          open: true,
-          message: isEditing ? 'Record updated successfully!' : 'Record created successfully!',
-          type: 'success'
-        });
-        setIsModalOpen(false);
-        // Refresh data after successful save
-        fetchData();
-      } else {
-        setNotification({
-          open: true,
-          message: `Error: ${result.message}`,
-          type: 'error'
-        });
-      }
-    } catch (err) {
-      console.error('Error in handleSaveRecord:', err);
+    console.log('Saving record with payload:', payload);
+    
+    let response;
+    if (isEditing && selectedRecord._id) {
+      // Update existing record
+      response = await api.put(`/api/peertopeer/records/${selectedRecord._id}`, payload);
+    } else {
+      // Create new record
+      response = await api.post('/api/peertopeer/records', payload);
+    }
+    
+    if (response.data.status === 'success') {
       setNotification({
         open: true,
-        message: `Error: ${err.message}`,
+        message: isEditing ? 'Record updated successfully!' : 'Record created successfully!',
+        type: 'success'
+      });
+      setIsModalOpen(false);
+      // Refresh data after successful save
+      fetchData();
+    } else {
+      setNotification({
+        open: true,
+        message: `Error: ${response.data.message || 'Unknown error'}`,
         type: 'error'
       });
-    } finally {
-      setIsLoading(false);
     }
-  }, [formValues, isEditing, selectedRecord._id, handleSubmit, fetchData]);
+  } catch (err) {
+    console.error('Error in handleSaveRecord:', err);
+    setNotification({
+      open: true,
+      message: `Error: ${err.message}`,
+      type: 'error'
+    });
+  } finally {
+    setIsLoading(false);
+  }
+}, [formValues, isEditing, selectedRecord._id, selectedYear, fetchData]);
+
+// Show fallback UI when there's a connection error
+const renderConnectionError = () => (
+  <div className="bg-red-50 border border-red-200 rounded-md p-6 text-center">
+    <div className="text-red-500 text-4xl mb-4">
+      <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <circle cx="12" cy="12" r="10" />
+        <path d="M12 8v4M12 16h.01" />
+      </svg>
+    </div>
+    <h2 className="text-xl font-semibold mb-2">Connection Error</h2>
+    <p className="text-gray-600 mb-4">{error}</p>
+    <div className="flex justify-center">
+      <Button
+        variant="primary"
+        onClick={() => fetchData()}
+        disabled={isLoading}
+      >
+        {isLoading ? 'Trying Again...' : 'Retry Connection'}
+      </Button>
+    </div>
+    <div className="mt-4 text-gray-500 text-sm">
+      <p>Troubleshooting Steps:</p>
+      <ol className="list-decimal text-left inline-block mt-2">
+        <li>Ensure your Django server is running</li>
+        <li>Check for any errors in Django console</li>
+        <li>Verify your database connection settings</li>
+        <li>Check if MongoDB is accessible</li>
+      </ol>
+    </div>
+  </div>
+);
 
   return (
     <div className="p-6 max-w-7xl mx-auto">
@@ -344,6 +504,8 @@ const PeerToPeerAdminPrototype = () => {
             <div className="flex items-center justify-center p-8">
               <CircularProgress />
             </div>
+          ) : error && (error.includes('Network error') || error.includes('timed out')) ? (
+            renderConnectionError()
           ) : error ? (
             <div className="text-red-500 text-center p-8">
               {error}
