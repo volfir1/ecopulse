@@ -284,7 +284,7 @@ const Register = () => {
                     disabled={isLoading}
                     className="w-full h-10 flex items-center justify-center gap-2 border border-gray-300 rounded-lg text-gray-700 font-medium hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm"
                   >
-                    <img src="/public/google.svg" alt="Google" className="w-4 h-4" />
+                    <img src="/google.svg" alt="Google" className="w-4 h-4" />
                     <span>Sign up with Google</span>
                   </button>
 

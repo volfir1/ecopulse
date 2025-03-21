@@ -29,6 +29,7 @@ import { useScrollEffect } from './hook';
 import SolarPanel3DScene from './SOLAR/SolarPanel3dScene';
 import WindTurbine3DScene from './WIND/WindTurbine3dScene';
 import HydroPower3DScene from './HYDRO/Hydro3dScene';
+import { Download } from 'lucide-react';
 // Enhanced Navbar with scroll effect and animations
 export const Navbar = ({ logo }) => {
   const { isScrolled } = useScrollEffect();
@@ -49,58 +50,60 @@ export const Navbar = ({ logo }) => {
     >
       <Container maxWidth="lg">
         <Stack direction="row" justifyContent="space-between" alignItems="center">
-          <Link to="/" style={{ textDecoration: 'none' }}>
-            <Stack direction="row" alignItems="center" spacing={2}>
-              <Box
-                component="img"
-                src={logo}
-                alt="EcoPulse Logo"
-                sx={{
-                  height: isScrolled ? 35 : 40,
-                  transition: 'height 0.3s ease',
-                }}
-              />
-              <Typography
-                variant="h5"
-                sx={{
-                  color: isScrolled ? theme.palette.primary.main : 'white',
-                  fontWeight: 600,
-                  textShadow: isScrolled ? 'none' : '0 2px 4px rgba(0,0,0,0.2)',
+          <Stack direction="row" alignItems="center" spacing={1}>
+            <Link to="/" style={{ textDecoration: 'none' }}>
+              <Stack direction="row" alignItems="center" spacing={2}>
+                <Box
+                  component="img"
+                  src={logo}
+                  alt="EcoPulse Logo"
+                  sx={{
+                    height: isScrolled ? 35 : 40,
+                    transition: 'height 0.3s ease',
+                  }}
+                />
+                <Typography
+                  variant="h5"
+                  sx={{
+                    color: isScrolled ? theme.palette.primary.main : 'white',
+                    fontWeight: 600,
+                    textShadow: isScrolled ? 'none' : '0 2px 4px rgba(0,0,0,0.2)',
+                    transition: 'all 0.3s ease',
+                  }}
+                >
+                  EcoPulse
+                </Typography>
+              </Stack>
+            </Link>
+            
+            {/* Download Link */}
+            <Link to="/download" style={{ textDecoration: 'none' }}>
+              <Box 
+                sx={{ 
+                  display: 'flex',
+                  alignItems: 'center',
+                  px: 2,
+                  py: 0.7,
+                  borderRadius: 6,
+                  ml: 2,
+                  bgcolor: isScrolled ? 'rgba(0, 0, 0, 0.05)' : 'rgba(255, 255, 255, 0.15)',
+                  color: isScrolled ? theme.palette.text.primary : 'white',
+                  fontSize: '0.85rem',
+                  fontWeight: 500,
                   transition: 'all 0.3s ease',
+                  '&:hover': {
+                    bgcolor: isScrolled ? 'rgba(0, 0, 0, 0.08)' : 'rgba(255, 255, 255, 0.25)',
+                    transform: 'translateY(-2px)',
+                  }
                 }}
               >
-                EcoPulse
-              </Typography>
-            </Stack>
-          </Link>
+                <Download size={16} style={{ marginRight: '6px' }} />
+                Download App
+              </Box>
+            </Link>
+          </Stack>
 
           <Stack direction="row" spacing={3}>
-            {/* <Button
-              sx={{
-                color: isScrolled ? theme.palette.text.primary : 'white',
-                textShadow: isScrolled ? 'none' : '0 1px 3px rgba(0,0,0,0.2)',
-                transition: 'all 0.3s ease',
-                '&:hover': {
-                  transform: 'translateY(-2px)',
-                  color: isScrolled ? theme.palette.primary.main : 'white',
-                }
-              }}
-            >
-              About
-            </Button> */}
-            {/* <Button
-              sx={{
-                color: isScrolled ? theme.palette.text.primary : 'white',
-                textShadow: isScrolled ? 'none' : '0 1px 3px rgba(0,0,0,0.2)',
-                transition: 'all 0.3s ease',
-                '&:hover': {
-                  transform: 'translateY(-2px)',
-                  color: isScrolled ? theme.palette.primary.main : 'white',
-                }
-              }}
-            >
-              Contact
-            </Button> */}
             <Button
               component={Link}
               to="/login"
@@ -1222,7 +1225,7 @@ export const TeamMemberCard = ({ member }) => {
               target="_blank"
               rel="noopener noreferrer"
             >
-              <Linkedin size={20} />
+             
             </IconButton>
             <IconButton
               size="small"
@@ -1235,24 +1238,199 @@ export const TeamMemberCard = ({ member }) => {
                 transition: 'transform 0.2s ease'
               }}
             >
-              <Mail size={20} />
+              
             </IconButton>
-            <IconButton
-              size="small"
-              sx={{
-                color: theme.palette.text.primary,
-                '&:hover': {
-                  bgcolor: 'rgba(0, 0, 0, 0.1)',
-                  transform: 'translateY(-3px)'
-                },
-                transition: 'transform 0.2s ease'
-              }}
-            >
-              <ExternalLink size={20} />
-            </IconButton>
+           
           </Stack>
         </Stack>
       </CardContent>
+    </Card>
+  );
+};
+
+export const AdvisorAcknowledgment = ({ advisor }) => {
+  const [isHovered, setIsHovered] = useState(false);
+
+  return (
+    <Card
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
+      sx={{
+        borderRadius: 3,
+        overflow: 'hidden',
+        transition: 'all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1)',
+        transform: isHovered ?
+          'translateY(-12px) scale(1.02) perspective(800px) rotateY(2deg)' :
+          'translateY(0) scale(1) perspective(800px) rotateY(0deg)',
+        boxShadow: isHovered ? get3DEffect(4) : get3DEffect(1),
+        position: 'relative',
+        bgcolor: theme.palette.background.paper,
+        '&::before': {
+          content: '""',
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          width: '5px',
+          height: '100%',
+          background: theme.palette.primary.main,
+          opacity: isHovered ? 1 : 0.8,
+          transition: 'opacity 0.3s ease',
+        }
+      }}
+    >
+      <Stack direction={{ xs: 'column', md: 'row' }} spacing={0}>
+        {/* Image container with overlay */}
+        <Box
+          sx={{
+            width: { xs: '100%', md: '40%' },
+            position: 'relative',
+            overflow: 'hidden',
+            '&::after': {
+              content: '""',
+              position: 'absolute',
+              right: 0,
+              top: 0,
+              width: '30%',
+              height: '100%',
+              background: `linear-gradient(to left, ${theme.palette.background.paper}, transparent)`,
+              opacity: isHovered ? 0.5 : 0.7,
+              transition: 'opacity 0.3s ease',
+              display: { xs: 'none', md: 'block' }
+            }
+          }}
+        >
+          <Box
+            component="img"
+            src={advisor.image}
+            alt={advisor.name}
+            sx={{
+              width: '100%',
+              height: { xs: 300, md: '100%' },
+              objectFit: 'cover',
+              transition: 'transform 0.6s ease',
+              transform: isHovered ? 'scale(1.05)' : 'scale(1)',
+            }}
+          />
+
+          {/* Floating Role Badge */}
+          <Box
+            sx={{
+              position: 'absolute',
+              bottom: isHovered ? 20 : 10,
+              left: isHovered ? 20 : 10,
+              bgcolor: theme.palette.primary.main,
+              color: 'white',
+              py: 1,
+              px: 2,
+              borderRadius: 5,
+              fontWeight: 500,
+              boxShadow: '0 4px 10px rgba(0,0,0,0.2)',
+              transition: 'all 0.3s ease',
+              zIndex: 2,
+            }}
+          >
+            {advisor.role}
+          </Box>
+        </Box>
+
+        {/* Content */}
+        <CardContent 
+          sx={{ 
+            p: 4, 
+            width: { xs: '100%', md: '60%' },
+            display: 'flex',
+            flexDirection: 'column',
+            justifyContent: 'center'
+          }}
+        >
+          <Stack spacing={3}>
+            <Box>
+              <Typography
+                variant="h5"
+                sx={{
+                  fontWeight: 700,
+                  transition: 'color 0.3s ease',
+                  color: theme.palette.primary.main,
+                  mb: 1
+                }}
+              >
+                Special Acknowledgment
+              </Typography>
+              
+              <Typography
+                variant="h3"
+                sx={{
+                  fontWeight: 600,
+                  transition: 'color 0.3s ease',
+                  color: isHovered ? theme.palette.primary.main : theme.palette.text.primary
+                }}
+              >
+                {advisor.name}
+              </Typography>
+            </Box>
+
+            <Divider sx={{
+              borderColor: isHovered ? theme.palette.primary.main + '40' : 'rgba(0,0,0,0.1)',
+              transition: 'all 0.3s ease'
+            }} />
+
+            <Typography
+              variant="body1"
+              sx={{
+                color: theme.palette.text.secondary,
+                lineHeight: 1.8,
+                fontSize: '1.1rem'
+              }}
+            >
+              {advisor.acknowledgment}
+            </Typography>
+
+            <Typography
+              variant="body2"
+              sx={{
+                fontStyle: 'italic',
+                color: theme.palette.text.secondary,
+                mt: 2
+              }}
+            >
+              {advisor.quote}
+            </Typography>
+
+            {/* Social links */}
+            <Stack
+              direction="row"
+              spacing={1.5}
+              sx={{
+                transition: 'all 0.3s ease',
+                transform: isHovered ? 'translateY(0)' : 'translateY(5px)',
+                opacity: isHovered ? 1 : 0.7,
+                mt: 2
+              }}
+            >
+              {advisor.socialLinks && advisor.socialLinks.map((link, index) => (
+                <IconButton
+                  key={index}
+                  size="small"
+                  sx={{
+                    color: link.color || theme.palette.primary.main,
+                    '&:hover': {
+                      bgcolor: `${link.hoverColor || theme.palette.primary.main}15`,
+                      transform: 'translateY(-3px)'
+                    },
+                    transition: 'transform 0.2s ease'
+                  }}
+                  component="a"
+                  href={link.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  {link.icon}
+                </IconButton>
+              ))}
+            </Stack>
+          </Stack>
+        </CardContent>
+      </Stack>
     </Card>
   );
 };

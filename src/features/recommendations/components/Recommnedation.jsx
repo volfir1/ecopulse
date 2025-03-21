@@ -75,7 +75,7 @@ const EnergyRecommendations = () => {
             </div>
           </div>
           
-          <Button
+          {/* <Button
             variant="outlined"
             className="text-white border-white hover:bg-green-800"
             onClick={handleDownloadPDF}
@@ -83,7 +83,7 @@ const EnergyRecommendations = () => {
           >
             <AppIcon name={isLoading ? "loading" : "save"} size={18} className="mr-2" />
             Download PDF
-          </Button>
+          </Button> */}
         </div>
       </div>
 

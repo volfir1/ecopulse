@@ -15,8 +15,8 @@ export const useGeothermalAnalytics = () => {
   const [generationData, setGenerationData] = useState([]);
   const [currentProjection, setCurrentProjection] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [selectedStartYear, setSelectedStartYear] = useState(new Date().getFullYear() - 4);
-  const [selectedEndYear, setSelectedEndYear] = useState(new Date().getFullYear() + 1);
+  const [selectedStartYear, setSelectedStartYear] = useState(new Date().getFullYear());
+  const [selectedEndYear, setSelectedEndYear] = useState(new Date().getFullYear() + 5);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
   
   // Ref for chart element
@@ -28,13 +28,20 @@ export const useGeothermalAnalytics = () => {
 
 
   // Fetch data based on selected year range
+// Fetch data based on selected year range
 const fetchData = useCallback(async (startYear, endYear) => {
   setLoading(true);
   try {
     const response = await api.get(`/api/predictions/hydro/?start_year=${startYear}&end_year=${endYear}`);
     
     // Clean the response by replacing "NaN" with "null"
-    const cleanedResponse = cleanResponse(response.data);
+    // First convert response.data to a string if it's not already one
+    const dataString = typeof response.data === 'string' 
+      ? response.data 
+      : JSON.stringify(response.data);
+    
+    // Now clean the string
+    const cleanedResponse = cleanResponse(dataString);
 
     // Parse the cleaned JSON string
     const responseData = JSON.parse(cleanedResponse);
@@ -66,7 +73,6 @@ const fetchData = useCallback(async (startYear, endYear) => {
     setLoading(false);
   }
 }, [enqueueSnackbar]);
-
   // Fetch data on component mount and when year range or refresh trigger changes
   useEffect(() => {
     fetchData(selectedStartYear, selectedEndYear);

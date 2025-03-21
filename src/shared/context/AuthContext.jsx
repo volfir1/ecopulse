@@ -76,6 +76,18 @@ export const AuthProvider = ({ children }) => {
   const [error, setError] = useState(null);
   const [authCheckInProgress, setAuthCheckInProgress] = useState(false);
   const authCheckTimerRef = useRef(null);
+  // For the error in original code
+  const [setAuthError] = useState(null);
+  const [setIsAutoDeactivated] = useState(false);
+  const [setRecoveryEmail] = useState('');
+  const [setDeactivationInfo] = useState(null);
+  // If toast is used in this component but not defined, define it
+  const toast = {
+    info: (msg) => console.log('INFO:', msg),
+    error: (msg) => console.error('ERROR:', msg),
+    success: (msg) => console.log('SUCCESS:', msg),
+    warning: (msg) => console.warn('WARNING:', msg)
+  };
 
   // ADD THE NEW useEffect RIGHT HERE, after all state variables
   useEffect(() => {
@@ -295,7 +307,7 @@ export const AuthProvider = ({ children }) => {
     setError(null);
     
     try {
-      console.log('Calling authService.login');
+      console.log('Calling authService.login for', email);
       const result = await authService.login(email, password);
       console.log('Login result in AuthContext:', result);
       
@@ -310,26 +322,25 @@ export const AuthProvider = ({ children }) => {
           message: errorMessage 
         };
       }
-
-      // More robust verification check
-      console.log('Checking verification status:', {
+  
+      // FIX: Create an explicit verification check with default to true if not specified
+      const isUserVerified = result.requireVerification !== true;
+      
+      console.log('Verification check in AuthContext:', {
+        user: result.user.email,
         isVerified: result.user.isVerified,
-        verificationStatus: result.user.verificationStatus
+        requireVerification: result.requireVerification,
+        determinedStatus: isUserVerified
       });
       
-      const isUserVerified = 
-        result.user.isVerified === true || 
-        result.user.verificationStatus === 'verified' ||
-        result.alreadyVerified === true;
-      
       if (isUserVerified) {
-        // Create a normalized user object with consistent verification status
+        // User is verified - create a normalized user object
         const verifiedUser = {
           ...result.user,
-          isVerified: true
+          isVerified: true  // Force isVerified to be true
         };
         
-        console.log('User is verified, updating state');
+        console.log('Setting verified user in context:', verifiedUser);
         
         // Update state
         setUser(verifiedUser);
@@ -339,8 +350,6 @@ export const AuthProvider = ({ children }) => {
         localStorage.setItem('user', JSON.stringify(verifiedUser));
         if (result.user.accessToken) {
           localStorage.setItem('authToken', result.user.accessToken);
-        } else if (result.token) {
-          localStorage.setItem('authToken', result.token);
         }
         
         // Return consistent result
@@ -349,8 +358,8 @@ export const AuthProvider = ({ children }) => {
           user: verifiedUser 
         };
       } else {
-        // User is not verified - special return format for handling in loginHook
-        console.log('User is not verified, returning requireVerification flag');
+        // Explicitly handle verification requirement
+        console.log('User requires verification, returning requireVerification flag');
         return { 
           success: true, 
           user: result.user,
@@ -410,7 +419,7 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  // Improved googleSignIn function with proper verification checking
+  // Improved googleSignIn function with proper verification checking and fixed error handling
   const googleSignIn = async () => {
     if (CONFIG.SKIP_AUTH && process.env.NODE_ENV === 'development') {
       console.log('Development mode: Google sign-in bypassed');
@@ -426,7 +435,7 @@ export const AuthProvider = ({ children }) => {
       setUser(mockUser);
       setIsAuthenticated(true);
       localStorage.setItem('user', JSON.stringify(mockUser));
-      localStorage.setItem('authToken', 'dev-mock-token'); // Add mock token
+      localStorage.setItem('authToken', 'dev-mock-token');
       
       redirectToUserDashboard(mockUser);
       
@@ -435,56 +444,127 @@ export const AuthProvider = ({ children }) => {
     
     setIsLoading(true);
     setError(null);
-    
+  
     try {
       console.log('Starting Google sign-in process in AuthContext');
       const result = await authService.googleSignIn();
       console.log('Google sign-in result in AuthContext:', result);
-      
-      if (result.success) {
-        // Check if user is verified first
-        if (result.user && result.user.isVerified) {
-          // User is verified - store user data and redirect based on role
-          console.log('User is verified, setting user data:', result.user);
-          setUser(result.user);
-          setIsAuthenticated(true);
-          localStorage.setItem('user', JSON.stringify(result.user));
-          
-          // Store token if available
-          if (result.user.accessToken) {
-            localStorage.setItem('authToken', result.user.accessToken);
-          } else if (result.token) {
-            localStorage.setItem('authToken', result.token);
-          }
-          
-          // Explicitly redirect based on role
-          redirectToUserDashboard(result.user);
-          return result;
-        } else if (result.requireVerification) {
-          // User needs verification - redirect to verification page
-          console.log('User requires verification, navigating to verification page');
-          
-          navigate('/verify-email', { 
-            state: { 
-              userId: result.userId, 
-              email: result.user?.email || '',
-              provider: 'google',
-              isNewRegistration: true,
-              returnTo: '/dashboard'
-            } 
+  
+      // Handle case where we get a simple error message with no structured data
+      if (!result) {
+        throw new Error('Invalid response from Google sign-in service');
+      }
+  
+      // Handle auto-deactivated accounts
+      if (result.isAutoDeactivated) {
+        console.log('Account is auto-deactivated:', result);
+        
+        if (typeof setDeactivationInfo === 'function') {
+          setDeactivationInfo({
+            email: result.email,
+            deactivatedAt: result.deactivatedAt,
+            tokenExpired: result.tokenExpired
           });
-          
-          return result;
         }
+  
+        // Set deactivation state
+        if (typeof setIsAutoDeactivated === 'function') {
+          setIsAutoDeactivated(true);
+        }
+        
+        if (typeof setRecoveryEmail === 'function') {
+          setRecoveryEmail(result.email);
+        }
+        
+        // Show notification
+        toast.info("Your account has been automatically deactivated due to inactivity. A reactivation link has been sent to your email.");
+        
+        navigate('/login', {
+          state: {
+            email: result.email,
+            isAutoDeactivated: true,
+            message: "Your account has been automatically deactivated. Reactivation link sent to your email."
+          },
+          replace: true
+        });
+        
+        return {
+          success: false,
+          isAutoDeactivated: true,
+          message: "Account deactivated. Please check your email for reactivation instructions."
+        };
+      }
+  
+      // Handle verification requirement - check both direct property and nested in user
+      const userEmail = result.email || (result.user && result.user.email);
+      
+      // Handle account verification requirement
+      if (result.requireVerification) {
+        console.log('Account requires verification:', result);
+        navigate('/verify-email', {
+          state: {
+            userId: result.userId,
+            email: userEmail || '',
+            provider: 'google',
+            isNewRegistration: true,
+            returnTo: '/dashboard'
+          }
+        });
+        return result;
+      }
+  
+      // Normal successful login
+      if (result.success && result.user) {
+        const verifiedUser = {
+          ...result.user,
+          isVerified: true
+        };
+  
+        setUser(verifiedUser);
+        setIsAuthenticated(true);
+        localStorage.setItem('user', JSON.stringify(verifiedUser));
+        
+        if (result.user.accessToken) {
+          localStorage.setItem('authToken', result.user.accessToken);
+        }
+  
+        toast.success('Google sign-in successful');
+        redirectToUserDashboard(verifiedUser);
+        return { success: true, user: verifiedUser };
+      }
+  
+      // Handle unusual response format - inspect response structure and be more lenient
+      // This handles cases where the server response might have different structure
+      if (result.message) {
+        throw new Error(result.message);
+      } else {
+        throw new Error('Google sign-in failed with an unexpected response format');
+      }
+  
+    } catch (error) {
+      console.error('Google sign-in error:', error);
+      
+      if (error.code === 'auth/popup-closed-by-user') {
+        toast.info('Sign-in was cancelled');
+        if (typeof setAuthError === 'function') {
+          setAuthError('Sign-in was cancelled. Please try again.');
+        }
+      } else if (error.code === 'auth/popup-blocked') {
+        toast.error('Sign-in popup was blocked. Please try again or use redirect sign-in.');
+        if (typeof setAuthError === 'function') {
+          setAuthError('Browser blocked the popup. Please enable popups or use redirect sign-in.');
+        }
+      } else {
+        // Direct error handling here instead of calling handleAuthError
+        console.error('Auth error:', error);
+        const errorMessage = error?.message || 'Authentication failed';
+        if (typeof setAuthError === 'function') {
+          setAuthError(errorMessage);
+        }
+        toast.error(errorMessage);
       }
       
-      // If we get here, something unexpected happened
-      console.warn('Unexpected result from Google sign-in:', result);
-      return result;
-    } catch (err) {
-      console.error('Google sign-in error in AuthContext:', err);
-      setError(err.message);
-      throw err;
+      throw error;
     } finally {
       setIsLoading(false);
     }
@@ -499,19 +579,19 @@ export const AuthProvider = ({ children }) => {
       const result = await authService.verifyEmail(userId, verificationCode);
       
       if (result.success && result.user) {
+        // Update user in context
         setUser(result.user);
         setIsAuthenticated(true);
+        
+        // Store user in localStorage
         localStorage.setItem('user', JSON.stringify(result.user));
         
-        // Store token if available
+        // Important: Store auth token in localStorage
         if (result.user.accessToken) {
           localStorage.setItem('authToken', result.user.accessToken);
         } else if (result.token) {
           localStorage.setItem('authToken', result.token);
         }
-        
-        // Redirect based on role after successful verification
-        redirectToUserDashboard(result.user);
       }
       
       return result;

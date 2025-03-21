@@ -14,7 +14,7 @@ const HelpAndSupport = () => {
       <div className="bg-gradient-to-r from-green-600 to-yellow-500 text-white">
         <div className="container mx-auto px-6 py-16">
           <h1 className="text-4xl font-bold text-center mb-4">How can we help you?</h1>
-          <div className="max-w-2xl mx-auto relative">
+          {/* <div className="max-w-2xl mx-auto relative">
             <input
               type="text"
               className="w-full p-4 pr-12 rounded-lg border-2 border-transparent focus:border-green-300 focus:ring-2 focus:ring-green-200 text-gray-900"
@@ -23,7 +23,7 @@ const HelpAndSupport = () => {
               onChange={(e) => setSearchQuery(e.target.value)}
             />
             <Search className="absolute right-4 top-4 text-gray-400" size={20} />
-          </div>
+          </div> */}
         </div>
       </div>
 

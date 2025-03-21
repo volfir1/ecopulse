@@ -36,7 +36,7 @@ const VerifyEmail = () => {
     }
     
     setIsSubmitting(true);
-
+  
     try {
       console.log('Verification attempt:', {
         userId,
@@ -52,11 +52,16 @@ const VerifyEmail = () => {
       if (response?.success) {
         toast.success('Email verified successfully!');
         
+        // Short delay to ensure authentication state is updated
         setTimeout(() => {
-          navigate('/login', { 
+          // Redirect to onboarding page with state
+          navigate('/onboarding', { 
             replace: true,
             state: { 
-              message: 'Email verified successfully! You can now log in.' 
+              verified: true,
+              email: email,
+              userId: userId,
+              message: 'Email verified successfully! Complete your profile to get started.'
             }
           });
         }, 1500);

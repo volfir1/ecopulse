@@ -8,6 +8,13 @@ export const USER_NAVIGATION = [
   },
   {
     kind: 'item',
+    segment: 'dashboard',
+    title: 'Dashboard',
+    icon: <AppIcon name="energyshare" />,
+    path: '/dashboard',
+  },
+  {
+    kind: 'item',
     segment: 'modules',
     title: 'Modules',
     icon: <AppIcon name="modules" />,
@@ -103,8 +110,8 @@ export const USER_NAVIGATION = [
 export const ADMIN_NAVIGATION = [
   {
     kind: 'header',
-    segment: 'main-apps',
-    title: 'Main App',
+    segment: 'admin-section',
+    title: 'Administration',
   },
   {
     kind: 'item',
@@ -113,14 +120,29 @@ export const ADMIN_NAVIGATION = [
     icon: <AppIcon name="shield" />,
     path: '/admin/dashboard',
   },
+  // {
+  //   kind: 'item',
+  //   segment: 'admin-monitoring',
+  //   title: 'Admin Monitoring',
+  //   icon: <AppIcon name="monitor" />,
+  //   path: '/admin/monitor',
+  // },
   {
-    kind: 'divider', // Added divider here
-    segment: 'admin-divider',
+    kind: 'item',
+    segment: 'manage-users',
+    title: 'Manage Users',
+    icon: <AppIcon name="profile" />,
+    path: '/admin/users',
   },
   {
+    kind: 'divider',
+    segment: 'admin-divider',
+  },
+  
+  {
     kind: 'header',
-    segment: 'main-menu',
-    title: 'Main Menu',
+    segment: 'energy-modules',
+    title: 'Energy Modules',
   },
   {
     kind: 'item',
@@ -173,6 +195,16 @@ export const ADMIN_NAVIGATION = [
     ],
   },
   {
+    kind: 'divider',
+    segment: 'modules-divider',
+  },
+  
+  {
+    kind: 'header',
+    segment: 'support-services',
+    title: 'Support Services',
+  },
+  {
     kind: 'item',
     segment: 'peer-to-peer',
     title: 'Peer to Peer',
@@ -185,13 +217,6 @@ export const ADMIN_NAVIGATION = [
     title: 'Recommendations',
     icon: <AppIcon name="check" />,
     path: '/admin/recommendation',
-  },
-  {
-    kind: 'item',
-    segment: 'manage-users',
-    title: 'Manage Users',
-    icon: <AppIcon name="profile" />,
-    path: '/admin/users',
   },
   {
     kind: 'item',

@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+// src/pages/UserManagement/UserControl.jsx
+import React, { useState, useEffect } from 'react';
 import { 
   Box, 
   Typography, 
@@ -19,9 +20,12 @@ export default function UserControl() {
     loading, 
     selectedUser, 
     setSelectedUser, 
-    handleSoftDeleteUser, 
     handleRestoreUser, 
-    updateUserRole  
+    handleSendRecoveryLink,
+    handleSendPasswordResetLink,
+    updateUserRole,
+    handleDeactivateUser,
+    refreshData // Make sure refreshData is pulled from the hook
   } = useUserManagement();
   
   const [snackbar, setSnackbar] = useState({
@@ -30,6 +34,13 @@ export default function UserControl() {
     severity: 'success'
   });
 
+  // Add useEffect to log data status for debugging
+  useEffect(() => {
+    console.log('UserControl data:', data);
+    console.log('UsersList available:', data?.usersList?.length || 0);
+    console.log('DeletedUsers available:', data?.deletedUsers?.length || 0);
+  }, [data]);
+
   const handleTabChange = (event, newValue) => {
     setTabIndex(newValue);
   };
@@ -37,19 +48,18 @@ export default function UserControl() {
   const handleEditUser = (user) => {
     console.log('Edit user:', user);
     setSelectedUser(user);
-    // Implement edit functionality 
   };
 
-  // Wrapped handlers with snackbar notifications
   const handleSoftDelete = async (userId) => {
     try {
-      const result = await handleSoftDeleteUser(userId);
+      const result = await handleDeactivateUser(userId);
       if (result.success) {
         setSnackbar({
           open: true,
           message: 'User has been successfully deactivated',
           severity: 'success'
         });
+       
       } else {
         setSnackbar({
           open: true,
@@ -58,13 +68,14 @@ export default function UserControl() {
         });
       }
     } catch (error) {
+      console.error('Error in deactivating user:', error);
       setSnackbar({
         open: true,
         message: 'An error occurred while deactivating the user',
         severity: 'error'
       });
     }
-  };
+  };;
 
   const handleRestore = async (userId) => {
     try {
@@ -75,6 +86,7 @@ export default function UserControl() {
           message: 'User has been successfully restored',
           severity: 'success'
         });
+        refreshData(); // Refresh the data after successful restoration
       } else {
         setSnackbar({
           open: true,
@@ -83,9 +95,62 @@ export default function UserControl() {
         });
       }
     } catch (error) {
+      console.error('Error in restoring user:', error);
       setSnackbar({
         open: true,
         message: 'An error occurred while restoring the user',
+        severity: 'error'
+      });
+    }
+  };
+
+  const handleSendRecovery = async (email) => {
+    try {
+      const result = await handleSendRecoveryLink(email);
+      if (result.success) {
+        setSnackbar({
+          open: true,
+          message: 'Reactivation link has been sent to the user',
+          severity: 'success'
+        });
+      } else {
+        setSnackbar({
+          open: true,
+          message: result.error?.message || 'Failed to send reactivation link',
+          severity: 'error'
+        });
+      }
+    } catch (error) {
+      console.error('Error in sending recovery link:', error);
+      setSnackbar({
+        open: true,
+        message: 'An error occurred while sending reactivation link',
+        severity: 'error'
+      });
+    }
+  };
+
+  const handleSendPasswordReset = async (email) => {
+    try {
+      const result = await handleSendPasswordResetLink(email);
+      if (result.success) {
+        setSnackbar({
+          open: true,
+          message: 'Password reset link has been sent to the user',
+          severity: 'success'
+        });
+      } else {
+        setSnackbar({
+          open: true,
+          message: result.error?.message || 'Failed to send password reset link',
+          severity: 'error'
+        });
+      }
+    } catch (error) {
+      console.error('Error in sending password reset:', error);
+      setSnackbar({
+        open: true,
+        message: 'An error occurred while sending password reset link',
         severity: 'error'
       });
     }
@@ -95,6 +160,9 @@ export default function UserControl() {
     setSnackbar({ ...snackbar, open: false });
   };
 
+  // Make sure we're checking data existence properly
+  const isDataEmpty = !data || !data.usersList || data.usersList.length === 0;
+
   if (loading) {
     return (
       <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '300px' }}>
@@ -103,11 +171,35 @@ export default function UserControl() {
     );
   }
 
+  // Ensure the data structure includes default empty arrays if data is missing
+  const safeData = {
+    ...data,
+    usersList: data?.usersList || [],
+    deletedUsers: data?.deletedUsers || [],
+    statistics: {
+      ...(data?.statistics || {}),
+      totalUsers: data?.statistics?.totalUsers || '0',
+      activeUsers: data?.statistics?.activeUsers || '0',
+      newUsers: data?.statistics?.newUsers || '0',
+      verifiedUsers: data?.statistics?.verifiedUsers || '0',
+      deletedUsers: data?.statistics?.deletedUsers || '0',
+      inactiveUsers: parseInt(data?.statistics?.totalUsers || 0) - parseInt(data?.statistics?.activeUsers || 0)
+    },
+    activityData: data?.activityData || []
+  };
+
   return (
     <Box sx={{ p: 3, maxWidth: '100%' }}>
       <Typography variant="h5" component="h1" fontWeight="medium" sx={{ mb: 2 }}>
         User Management
       </Typography>
+      
+      {/* Display data status for debugging */}
+      {isDataEmpty && (
+        <Alert severity="warning" sx={{ mb: 2 }}>
+          No user data available. This could be a data fetching issue or empty database.
+        </Alert>
+      )}
       
       {/* Tabs */}
       <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
@@ -140,16 +232,18 @@ export default function UserControl() {
       
       {/* Tab Panels */}
       {tabIndex === 0 && (
-        <UserDashboard data={data} />
+        <UserDashboard data={safeData} />
       )}
       
       {tabIndex === 1 && (
         <UsersList 
-          users={data.usersList} 
-          deletedUsers={data.deletedUsers}
+          users={safeData.usersList} 
+          deletedUsers={safeData.deletedUsers}
           handleEdit={handleEditUser} 
           handleSoftDelete={handleSoftDelete}
           handleRestore={handleRestore}
+          handleSendRecovery={handleSendRecovery} 
+          handleSendPasswordReset={handleSendPasswordReset} 
           updateUserRole={updateUserRole}
         />
       )}
@@ -167,7 +261,7 @@ export default function UserControl() {
           variant="filled"
           sx={{ width: '100%' }}
         >
-          {snackbar.message}
+          {snackbar.message}  
         </Alert>
       </Snackbar>
     </Box>

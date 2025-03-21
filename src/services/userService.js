@@ -1,249 +1,268 @@
+// src/services/userService.js
+import axios from 'axios';
+
+const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
+
+const getAuthToken = () => {
+  const token = localStorage.getItem('authToken');
+  console.log('Auth token retrieved:', token ? `${token.substring(0, 15)}...` : 'No token found');
+  return token;
+};
+
+// Helper function to handle API errors consistently
+const handleApiError = (error, functionName) => {
+  console.error(`API error in ${functionName}:`, error);
+  
+  if (error.response) {
+    // The request was made and the server responded with a status code
+    // that falls out of the range of 2xx
+    console.error('Error response:', error.response.data);
+    console.error('Error status:', error.response.status);
+    
+    return {
+      success: false,
+      message: error.response.data?.message || `Server error (${error.response.status})`,
+      error: error.response.data
+    };
+  } else if (error.request) {
+    // The request was made but no response was received
+    console.error('No response received:', error.request);
+    return {
+      success: false,
+      message: 'No response from server. Please check your network connection.',
+      error: { type: 'network', details: error.request }
+    };
+  } else {
+    // Something happened in setting up the request that triggered an Error
+    console.error('Request setup error:', error.message);
+    return {
+      success: false,
+      message: error.message || 'An unexpected error occurred',
+      error: { type: 'setup', details: error.message }
+    };
+  }
+};
+
 export const userService = {
   // Get all users (admin function)
   getAllUsers: async () => {
     try {
-      const response = await fetch("http://localhost:5000/api/auth/users", {
-        method: "GET",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        credentials: "include"
-      });
-
-      const data = await response.json();
-      if (!response.ok) {
-        throw new Error(data.message || "Failed to fetch users");
-      }
-
-      return data;
-    } catch (error) {
-      console.error("Error fetching users:", error);
-      throw error;
-    }
-  },
-
-  // Get the current logged in user's profile
-  getCurrentUser: async () => {
-    try {
-      const response = await fetch("http://localhost:5000/api/auth/verify", {
-        method: "GET",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        credentials: "include"
-      });
-
-      console.log('Raw API Response:', response);
-      console.log('Response status:', response.status);
-      const data = await response.json();
-      console.log('Parsed API Response:', data);
-      console.log('User object in response:', data.user);
+      console.log('Fetching all users...');
+      const token = getAuthToken();
       
-      // Add console.log to debug the response
-      console.log('API Response:', data);
-
-      if (!response.ok) {
-        throw new Error(data.message || "Failed to fetch user profile");
+      if (!token) {
+        console.warn('No auth token available for getAllUsers');
+        return { success: false, users: [] };
       }
-
-      // Return the data in the expected format
-      return {
-        success: true,
-        user: {
-          id: data.user._id, // MongoDB typically uses _id
-          firstName: data.user.firstName,
-          lastName: data.user.lastName,
-          email: data.user.email,
-          phone: data.user.phone || '',
-          role: data.user.role
+      
+      const response = await axios.get(`${API_URL}/auth/users`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
         }
-      };
-    } catch (error) {
-      console.error("Error fetching user profile:", error);
-      throw error;
-    }
-  },
-
-  // Get a specific user by ID
-  getUserById: async (userId) => {
-    try {
-      const response = await fetch(`http://localhost:5000/api/users/${userId}`, {
-        method: "GET",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        credentials: "include"
       });
-
-      const data = await response.json();
-      if (!response.ok) {
-        throw new Error(data.message || "Failed to fetch user");
+      
+      // Debug the response
+      console.log('API response status:', response.status);
+      
+      // Safely access the users array
+      if (response.data && response.data.data && Array.isArray(response.data.data.users)) {
+        const allUsers = response.data.data.users;
+        console.log(`Found ${allUsers.length} total users`);
+        
+        // Filter out deactivated users client-side
+        const activeUsers = allUsers.filter(user => !user.isDeactivated && !user.isAutoDeactivated);
+        console.log(`After filtering: ${activeUsers.length} active users`);
+        
+        return { success: true, users: activeUsers };
+      } else if (response.data && Array.isArray(response.data.users)) {
+        // Alternative data structure
+        const allUsers = response.data.users;
+        console.log(`Found ${allUsers.length} total users (alternate structure)`);
+        
+        // Filter out deactivated users client-side
+        const activeUsers = allUsers.filter(user => !user.isDeactivated && !user.isAutoDeactivated);
+        console.log(`After filtering: ${activeUsers.length} active users`);
+        
+        return { success: true, users: activeUsers };
+      } else {
+        console.warn('Unexpected data structure in getAllUsers:', response.data);
+        return { success: true, users: [] };
       }
-
-      return data;
     } catch (error) {
-      console.error(`Error fetching user with ID ${userId}:`, error);
-      throw error;
+      return handleApiError(error, 'getAllUsers');
     }
   },
 
-  // Update user profile
-  updateUserProfile: async (userData) => {
-    try {
-      const response = await fetch(`http://localhost:5000/api/users/${userData.id}`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        credentials: "include",
-        body: JSON.stringify({
-          firstName: userData.firstName,
-          lastName: userData.lastName,
-          email: userData.email,
-          phone: userData.phone
-        })
-      });
-
-      const data = await response.json();
-      if (!response.ok) {
-        throw new Error(data.message || "Failed to update profile");
-      }
-
-      return data;
-    } catch (error) {
-      console.error("Error updating profile:", error);
-      throw error;
-    }
-  },
-
-  // Change password
-  changePassword: async (userId, passwordData) => {
-    try {
-      const response = await fetch(`http://localhost:5000/api/users/${userId}/password`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        credentials: "include",
-        body: JSON.stringify({
-          currentPassword: passwordData.currentPassword,
-          newPassword: passwordData.newPassword
-        })
-      });
-
-      const data = await response.json();
-      if (!response.ok) {
-        throw new Error(data.message || "Failed to change password");
-      }
-
-      return data;
-    } catch (error) {
-      console.error("Error changing password:", error);
-      throw error;
-    }
-  },
-  
-  updateUserRole: async (userId, role) => {
-    try {
-      const response = await fetch(`http://localhost:5000/api/auth/users/${userId}/role`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        credentials: "include",
-        body: JSON.stringify({ role })
-      });
-
-      const data = await response.json();
-      if (!response.ok) {
-        throw new Error(data.message || "Failed to update user role");
-      }
-
-      return {
-        success: true,
-        message: data.message || 'Role updated successfully',
-        user: data.user
-      };
-    } catch (error) {
-      console.error("Error updating user role:", error);
-      throw error;
-    }
-  },
-
-  // Soft delete a user (deactivate)
-  softDeleteUser: async (userId) => {
-    try {
-      const response = await fetch(`http://localhost:5000/api/users/${userId}`, {
-        method: "DELETE", // Using DELETE method for soft delete
-        headers: {
-          "Content-Type": "application/json"
-        },
-        credentials: "include"
-      });
-
-      const data = await response.json();
-      if (!response.ok) {
-        throw new Error(data.message || "Failed to deactivate user");
-      }
-
-      return {
-        success: true,
-        message: data.message || "User has been successfully deactivated"
-      };
-    } catch (error) {
-      console.error("Error deactivating user:", error);
-      throw error;
-    }
-  },
-
-  // Restore a soft-deleted user
-  restoreUser: async (userId) => {
-    try {
-      const response = await fetch(`http://localhost:5000/api/users/${userId}/restore`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        credentials: "include"
-      });
-
-      const data = await response.json();
-      if (!response.ok) {
-        throw new Error(data.message || "Failed to restore user");
-      }
-
-      return {
-        success: true,
-        message: data.message || "User has been successfully restored",
-        user: data.user
-      };
-    } catch (error) {
-      console.error("Error restoring user:", error);
-      throw error;
-    }
-  },
-
-  // Get all users including deleted ones (admin only)
+  // Get all users including deleted ones (admin function)
   getAllUsersWithDeleted: async () => {
     try {
-      const response = await fetch("http://localhost:5000/api/users/users/all", {
-        method: "GET",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        credentials: "include"
-      });
-
-      const data = await response.json();
-      if (!response.ok) {
-        throw new Error(data.message || "Failed to fetch all users");
+      console.log('Fetching all users including deleted ones...');
+      const token = getAuthToken();
+      
+      if (!token) {
+        console.warn('No auth token available for getAllUsersWithDeleted');
+        return { success: false, users: [] };
       }
-
-      return data;
+      
+      // More comprehensive parameters to ensure we get all user types
+      const response = await axios.get(
+        `${API_URL}/auth/users`, {
+          params: {
+            includeDeleted: true,
+            includeAutoDeactivated: true,
+            includeInactive: true,
+            all: true
+          },
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        }
+      );
+      
+      // Debug the response structure
+      console.log('API response status for getAllUsersWithDeleted:', response.status);
+      if (response.data) {
+        console.log('Response data structure:', Object.keys(response.data));
+        if (response.data.data) {
+          console.log('Response data.data structure:', Object.keys(response.data.data));
+        }
+      }
+      
+      // Handle different data structures with more robust checks
+      let users = [];
+      
+      if (response.data && response.data.data && Array.isArray(response.data.data.users)) {
+        users = response.data.data.users;
+      } else if (response.data && Array.isArray(response.data.users)) {
+        users = response.data.users;
+      } else if (response.data && Array.isArray(response.data)) {
+        users = response.data;
+      } else if (response.data && response.data.data && Array.isArray(response.data.data)) {
+        users = response.data.data;
+      } else {
+        console.warn('Unexpected data structure in getAllUsersWithDeleted:', response.data);
+        users = [];
+      }
+      
+      console.log(`Found ${users.length} total users (including deleted/deactivated)`);
+      
+      // Log a sample user if available
+      if (users.length > 0) {
+        console.log('Sample user from API:', JSON.stringify(users[0], null, 2));
+      }
+      
+      return { success: true, users };
     } catch (error) {
-      console.error("Error fetching all users:", error);
-      throw error;
+      return handleApiError(error, 'getAllUsersWithDeleted');
     }
+  },
+
+  // Deactivate a user (admin function)
+  deactivateUser: async (userId) => {
+    try {
+      console.log(`Attempting to deactivate user ${userId}...`);
+      const token = getAuthToken();
+      
+      if (!token) {
+        console.warn('No auth token available for deactivateUser');
+        return { success: false, message: 'Not authenticated' };
+      }
+      
+      const response = await axios.post(
+        `${API_URL}/auth/admin/deactivate-user`,
+        { userId },
+        {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        }
+      );
+      
+      console.log('Deactivation response:', response.data);
+      
+      // Return standard response format
+      return {
+        success: true,
+        message: response.data.message || 'User successfully deactivated',
+        ...response.data
+      };
+    } catch (error) {
+      return handleApiError(error, 'deactivateUser');
+    }
+  },
+
+  // Restore a deactivated user (admin function)
+  restoreUser: async (userId) => {
+    try {
+      console.log(`Attempting to restore user ${userId}...`);
+      const token = getAuthToken();
+      
+      if (!token) {
+        console.warn('No auth token available for restoreUser');
+        return { success: false, message: 'Not authenticated' };
+      }
+      
+      const response = await axios.post(
+        `${API_URL}/auth/reactivate-account`,
+        { userId },
+        {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        }
+      );
+      
+      console.log('Restoration response:', response.data);
+      
+      // Return standard response format
+      return {
+        success: true,
+        message: response.data.message || 'User successfully restored',
+        ...response.data
+      };
+    } catch (error) {
+      return handleApiError(error, 'restoreUser');
+    }
+  },
+
+  // Update user role (admin function)
+  updateUserRole: async (userId, newRole) => {
+    try {
+      console.log(`Updating user ${userId} role to ${newRole}...`);
+      const token = getAuthToken();
+      
+      if (!token) {
+        console.warn('No auth token available for updateUserRole');
+        return { success: false, message: 'Not authenticated' };
+      }
+      
+      const response = await axios.put(
+        `${API_URL}/auth/users/${userId}/role`,
+        { role: newRole },
+        {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        }
+      );
+      
+      console.log('Role update response:', response.data);
+      
+      // Return standard response format
+      return {
+        success: true,
+        message: response.data.message || `User role updated to ${newRole}`,
+        ...response.data
+      };
+    } catch (error) {
+      return handleApiError(error, 'updateUserRole');
+    }
+  },
+
+  // Legacy method for compatibility
+  softDeleteUser: async (userId) => {
+    console.warn('softDeleteUser is deprecated, use deactivateUser instead');
+    return userService.deactivateUser(userId);
   }
 };
 

@@ -1,87 +1,96 @@
 // Mock data for user management
+// src/hooks/data.js
 export const userManagementData = {
-  statistics: {
-    totalUsers: '9',
-    activeUsers: '4',
-    newUsers: '9',
-    verifiedUsers: '0'
-  },
   usersList: [
     {
-      id: 1,
-      name: 'John leonard',
-      email: 'leonard@gmail.com',
-      role: 'user',
-      status: 'inactive',
-      lastActive: '2/26/2025'
+      id: "user1",
+      name: "John Smith",
+      email: "john.smith@example.com",
+      role: "admin",
+      status: "active",
+      lastActive: new Date().toISOString(),
+      isDeactivated: false,
+      createdAt: new Date(new Date().setDate(new Date().getDate() - 120)).toISOString()
     },
     {
-      id: 2,
-      name: 'user 1',
-      email: 'user@gmail.com',
-      role: 'user',
-      status: 'active',
-      lastActive: '2/26/2025'
+      id: "user2",
+      name: "Jane Doe",
+      email: "jane.doe@example.com",
+      role: "user",
+      status: "active",
+      lastActive: new Date().toISOString(),
+      isDeactivated: false,
+      createdAt: new Date(new Date().setDate(new Date().getDate() - 60)).toISOString()
     },
     {
-      id: 3,
-      name: 'Lester Sible',
-      email: 'lesterpulansible@gmail.com',
-      role: 'admin',
-      status: 'active',
-      lastActive: '2/26/2025'
+      id: "user3",
+      name: "Robert Johnson",
+      email: "robert.johnson@example.com",
+      role: "user",
+      status: "unverified",
+      lastActive: null,
+      isDeactivated: false,
+      createdAt: new Date(new Date().setDate(new Date().getDate() - 10)).toISOString()
     },
     {
-      id: 4,
-      name: 'name1 name2',
-      email: 'name@gmail.com',
-      role: 'user',
-      status: 'inactive',
-      lastActive: '2/25/2025'
+      id: "user4",
+      name: "Emily Brown",
+      email: "emily.brown@example.com",
+      role: "user",
+      status: "active",
+      lastActive: new Date(new Date().setDate(new Date().getDate() - 5)).toISOString(),
+      isDeactivated: false,
+      createdAt: new Date(new Date().setDate(new Date().getDate() - 45)).toISOString()
     },
     {
-      id: 5,
-      name: 'John a',
-      email: 'admin@123.com',
-      role: 'admin',
-      status: 'active',
-      lastActive: '2/26/2025'
-    },
-    {
-      id: 6,
-      name: 'John Martins',
-      email: 'john1@gmail.com',
-      role: 'user',
-      status: 'inactive',
-      lastActive: '2/25/2025'
-    },
-    {
-      id: 7,
-      name: 'John Martin',
-      email: 'john@gmail.com',
-      role: 'admin',
-      status: 'active',
-      lastActive: '2/26/2025'
-    },
-    {
-      id: 8,
-      name: 'Lester Sible',
-      email: 'admin@gmail.com',
-      role: 'admin',
-      status: 'inactive',
-      lastActive: '2/25/2025'
-    },
-
+      id: "user5",
+      name: "Michael Wilson",
+      email: "michael.wilson@example.com",
+      role: "admin",
+      status: "inactive",
+      lastActive: new Date(new Date().setDate(new Date().getDate() - 32)).toISOString(),
+      isDeactivated: false,
+      createdAt: new Date(new Date().setDate(new Date().getDate() - 150)).toISOString()
+    }
   ],
+  deletedUsers: [
+    {
+      id: "user6",
+      name: "Sarah Miller",
+      email: "sarah.miller@example.com",
+      role: "user",
+      status: "deactivated",
+      lastActive: new Date(new Date().setDate(new Date().getDate() - 90)).toISOString(),
+      isDeactivated: true,
+      createdAt: new Date(new Date().setDate(new Date().getDate() - 180)).toISOString(),
+      deactivatedAt: new Date(new Date().setDate(new Date().getDate() - 15)).toISOString()
+    },
+    {
+      id: "user7",
+      name: "David Taylor",
+      email: "david.taylor@example.com",
+      role: "user",
+      status: "deactivated",
+      lastActive: new Date(new Date().setDate(new Date().getDate() - 120)).toISOString(),
+      isDeactivated: true,
+      createdAt: new Date(new Date().setDate(new Date().getDate() - 200)).toISOString(),
+      deactivatedAt: new Date(new Date().setDate(new Date().getDate() - 30)).toISOString()
+    }
+  ],
+  statistics: {
+    totalUsers: "5",
+    activeUsers: "3",
+    newUsers: "1",
+    verifiedUsers: "4",
+    deletedUsers: "2"
+  },
   activityData: [
-    { date: 'Feb 19', totalVisits: 7, activeUsers: 4, newUsers: 2 },
-    { date: 'Feb 20', totalVisits: 5, activeUsers: 3, newUsers: 1 },
-    { date: 'Feb 21', totalVisits: 6, activeUsers: 4, newUsers: 0 },
-    { date: 'Feb 22', totalVisits: 6, activeUsers: 3, newUsers: 2 },
-    { date: 'Feb 23', totalVisits: 8, activeUsers: 4, newUsers: 1 },
-    { date: 'Feb 24', totalVisits: 10, activeUsers: 4, newUsers: 3 },
-    { date: 'Feb 25', totalVisits: 4, activeUsers: 3, newUsers: 0 }
-  ],
-  roles: ['user', 'admin'],
-  statuses: ['active', 'inactive']
+    { date: "Mar 13", totalVisits: 7, activeUsers: 4, newUsers: 2 },
+    { date: "Mar 14", totalVisits: 5, activeUsers: 3, newUsers: 1 },
+    { date: "Mar 15", totalVisits: 6, activeUsers: 4, newUsers: 0 },
+    { date: "Mar 16", totalVisits: 6, activeUsers: 3, newUsers: 2 },
+    { date: "Mar 17", totalVisits: 8, activeUsers: 4, newUsers: 1 },
+    { date: "Mar 18", totalVisits: 10, activeUsers: 4, newUsers: 3 },
+    { date: "Mar 19", totalVisits: 4, activeUsers: 3, newUsers: 0 }
+  ]
 };

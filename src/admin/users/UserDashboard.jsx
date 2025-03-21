@@ -40,11 +40,14 @@ import {
   RestoreFromTrash,
   DeleteForever,
   Block,
-  CheckCircle
+  CheckCircle,
+  LockReset,  // NEW: Icon for password reset
+  MailOutline  // NEW: Icon for sending recovery email
 } from '@mui/icons-material';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend, ResponsiveContainer } from 'recharts';
 
 import PropTypes from 'prop-types';
+
 // Stat Card Component
 export const StatCard = ({ title, value, icon, color }) => {
   return (
@@ -84,6 +87,9 @@ export const UserDashboard = ({ data }) => {
     verifiedUsers: '0',
     deletedUsers: '0'
   };
+
+  // Calculate inactive users by including deleted users
+  const inactiveUsersCount = parseInt(stats.totalUsers) - parseInt(stats.activeUsers);
 
   // Format activity data for chart
   const activityData = data.activityData && data.activityData.length > 0
@@ -140,8 +146,8 @@ export const UserDashboard = ({ data }) => {
         </Box>
         <Box sx={{ flex: '1 1 200px' }}>
           <StatCard 
-            title="Deleted Users" 
-            value={stats.deletedUsers} 
+            title="Inactive Users" 
+            value={inactiveUsersCount.toString()} 
             icon={<Block fontSize="medium" sx={{ color: "white" }} />}
             color="#f44336"
           />
@@ -199,13 +205,15 @@ export const UserDashboard = ({ data }) => {
   );
 };
 
-// Users List Component
+// Updated UsersList Component
 export const UsersList = ({ 
   users, 
   deletedUsers, 
   handleEdit, 
   handleSoftDelete, 
-  handleRestore, 
+  handleRestore,
+  handleSendRecovery, 
+  handleSendPasswordReset, 
   updateUserRole 
 }) => {
   const [anchorEl, setAnchorEl] = useState(null);
@@ -300,8 +308,8 @@ export const UsersList = ({
     }
   };
   
-  // Handle soft delete confirmation
-  const openSoftDeleteConfirm = (userId, userName) => {
+  // Handle deactivate (soft delete) confirmation
+  const openDeactivateConfirm = (userId, userName) => {
     setConfirmDialog({
       open: true,
       title: 'Confirm User Deactivation',
@@ -319,6 +327,28 @@ export const UsersList = ({
       message: `Are you sure you want to restore the user "${userName}"?`,
       confirmText: 'Restore',
       action: () => handleRestore(userId)
+    });
+  };
+
+  // Handle send recovery link confirmation
+  const openSendRecoveryConfirm = (email, userName) => {
+    setConfirmDialog({
+      open: true,
+      title: 'Send Recovery Link',
+      message: `Are you sure you want to send a recovery link to "${userName}" (${email})?`,
+      confirmText: 'Send Recovery Link',
+      action: () => handleSendRecovery(email)
+    });
+  };
+
+  // Handle send password reset link confirmation
+  const openSendPasswordResetConfirm = (email, userName) => {
+    setConfirmDialog({
+      open: true,
+      title: 'Send Password Reset Link',
+      message: `Are you sure you want to send a password reset link to "${userName}" (${email})?`,
+      confirmText: 'Send Reset Link',
+      action: () => handleSendPasswordReset(email)
     });
   };
   
@@ -385,7 +415,7 @@ export const UsersList = ({
         )}
       </Box>
       
-      {/* Tabs for active/deleted users */}
+      {/* Tabs for active/deactivated users */}
       <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 2 }}>
         <Tabs 
           value={tabValue} 
@@ -407,8 +437,8 @@ export const UsersList = ({
             }} 
           />
           <Tab 
-            label="Deleted Users" 
-            icon={<DeleteForever />}
+            label="Deactivated Users" 
+            icon={<Block />}
             iconPosition="start"
             sx={{ 
               fontWeight: tabValue === 1 ? 'bold' : 'normal',
@@ -428,7 +458,7 @@ export const UsersList = ({
               <TableCell>Role</TableCell>
               <TableCell>Status</TableCell>
               {tabValue === 1 && (
-                <TableCell>Deleted At</TableCell>
+                <TableCell>Deactivated At</TableCell>
               )}
               <TableCell>{tabValue === 0 ? 'Last Active' : 'Created At'}</TableCell>
               <TableCell align="right">Actions</TableCell>
@@ -463,14 +493,14 @@ export const UsersList = ({
                     label={user.status}
                     color={
                       user.status === 'active' ? 'success' : 
-                      user.status === 'deleted' ? 'error' : 
+                      user.status === 'deleted' || user.status === 'deactivated' ? 'error' : 
                       'warning'
                     }
                     size="small"
                     sx={{ 
                       bgcolor: 
                         user.status === 'active' ? '#4caf50' : 
-                        user.status === 'deleted' ? '#d32f2f' :
+                        user.status === 'deleted' || user.status === 'deactivated' ? '#d32f2f' :
                         '#ff9800',
                       color: 'white',
                       fontWeight: 500
@@ -478,17 +508,28 @@ export const UsersList = ({
                   />
                 </TableCell>
                 {tabValue === 1 && (
-                  <TableCell>{formatDate(user.deletedAt)}</TableCell>
+                  <TableCell>{formatDate(user.deletedAt || user.deactivatedAt)}</TableCell>
                 )}
                 <TableCell>{formatDate(tabValue === 0 ? user.lastActive : user.createdAt)}</TableCell>
                 <TableCell align="right">
                   {tabValue === 0 ? (
                     // Actions for active users
                     <>
+                      {/* Password Reset Button - Only for active users */}
+                      <Tooltip title="Send Password Reset Link">
+                        <IconButton 
+                          size="small" 
+                          onClick={() => openSendPasswordResetConfirm(user.email, user.name)}
+                          color="primary"
+                          sx={{ mr: 1 }}
+                        >
+                          <LockReset fontSize="small" />
+                        </IconButton>
+                      </Tooltip>
                       <Tooltip title="Deactivate User">
                         <IconButton 
                           size="small" 
-                          onClick={() => openSoftDeleteConfirm(user.id, user.name)}
+                          onClick={() => openDeactivateConfirm(user.id, user.name)}
                           color="error"
                           sx={{ mr: 1 }}
                         >
@@ -505,17 +546,40 @@ export const UsersList = ({
                       </Tooltip>
                     </>
                   ) : (
-                    // Actions for deleted users
-                    <Tooltip title="Restore User">
-                      <IconButton 
-                        size="small" 
-                        onClick={() => openRestoreConfirm(user.id, user.name)}
-                        color="primary"
-                        sx={{ mr: 1 }}
-                      >
-                        <RestoreFromTrash fontSize="small" />
-                      </IconButton>
-                    </Tooltip>
+                    // Actions for deactivated users
+                    <>
+                      {/* Send Recovery Link Button - Only for deactivated users */}
+                      <Tooltip title="Send Reactivation Link">
+                        <IconButton 
+                          size="small" 
+                          onClick={() => openSendRecoveryConfirm(user.email, user.name)}
+                          color="warning"
+                          sx={{ mr: 1 }}
+                        >
+                          <MailOutline fontSize="small" />
+                        </IconButton>
+                      </Tooltip>
+                      <Tooltip title="Restore User">
+                        <IconButton 
+                          size="small" 
+                          onClick={() => openRestoreConfirm(user.id, user.name)}
+                          color="primary"
+                          sx={{ mr: 1 }}
+                        >
+                          <RestoreFromTrash fontSize="small" />
+                        </IconButton>
+                      </Tooltip>
+                      {/* Password Reset Button also available for deactivated users */}
+                      <Tooltip title="Send Password Reset Link">
+                        <IconButton 
+                          size="small" 
+                          onClick={() => openSendPasswordResetConfirm(user.email, user.name)}
+                          color="primary"
+                        >
+                          <LockReset fontSize="small" />
+                        </IconButton>
+                      </Tooltip>
+                    </>
                   )}
                 </TableCell>
               </TableRow>
@@ -527,7 +591,7 @@ export const UsersList = ({
                   <Typography variant="body1" color="textSecondary">
                     {tabValue === 0 
                       ? "No active users found" 
-                      : "No deleted users found"}
+                      : "No deactivated users found"}
                   </Typography>
                 </TableCell>
               </TableRow>
@@ -542,6 +606,7 @@ export const UsersList = ({
         open={Boolean(anchorEl)}
         onClose={handleMenuClose}
       >
+        {/* Make Admin option - Preserved as requested */}
         {menuUser && menuUser.role !== 'admin' && (
           <MenuItem onClick={() => handleRoleChangeRequest('admin')}>
             <AdminPanelSettings fontSize="small" sx={{ mr: 1 }} />
@@ -552,6 +617,26 @@ export const UsersList = ({
           <MenuItem onClick={() => handleRoleChangeRequest('user')}>
             <People fontSize="small" sx={{ mr: 1 }} />
             Remove Admin Privileges
+          </MenuItem>
+        )}
+        {/* Password Reset option - Preserved as requested */}
+        {menuUser && (
+          <MenuItem onClick={() => {
+            handleMenuClose();
+            openSendPasswordResetConfirm(menuUser.email, menuUser.name);
+          }}>
+            <LockReset fontSize="small" sx={{ mr: 1 }} />
+            Send Password Reset
+          </MenuItem>
+        )}
+        {/* Deactivate user option */}
+        {menuUser && (
+          <MenuItem onClick={() => {
+            handleMenuClose();
+            openDeactivateConfirm(menuUser.id, menuUser.name);
+          }}>
+            <Delete fontSize="small" sx={{ mr: 1 }} color="error" />
+            Deactivate User
           </MenuItem>
         )}
       </Menu>
@@ -594,7 +679,7 @@ export const UsersList = ({
         </DialogActions>
       </Dialog>
       
-      {/* Action Confirmation Dialog (Delete/Restore) */}
+      {/* Action Confirmation Dialog (Deactivate/Restore/Recovery/Reset) */}
       <Dialog open={confirmDialog.open} onClose={() => setConfirmDialog({...confirmDialog, open: false})}>
         <DialogTitle>{confirmDialog.title}</DialogTitle>
         <DialogContent>
@@ -608,7 +693,11 @@ export const UsersList = ({
           </Button>
           <Button 
             variant="contained" 
-            color={confirmDialog.confirmText === 'Deactivate' ? 'error' : 'primary'}
+            color={
+              confirmDialog.confirmText === 'Deactivate' ? 'error' : 
+              confirmDialog.confirmText === 'Send Recovery Link' ? 'warning' :
+              'primary'
+            }
             onClick={handleConfirmAction}
           >
             {confirmDialog.confirmText}
@@ -618,7 +707,6 @@ export const UsersList = ({
     </Box>
   );
 };
-
 // Add PropTypes validation
 UsersList.propTypes = {
   users: PropTypes.arrayOf(PropTypes.shape({
@@ -641,5 +729,7 @@ UsersList.propTypes = {
   handleEdit: PropTypes.func,
   handleSoftDelete: PropTypes.func.isRequired,
   handleRestore: PropTypes.func.isRequired,
+  handleSendRecovery: PropTypes.func.isRequired, // NEW: Added prop validation
+  handleSendPasswordReset: PropTypes.func.isRequired, // NEW: Added prop validation
   updateUserRole: PropTypes.func.isRequired
 };

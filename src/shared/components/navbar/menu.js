@@ -79,15 +79,15 @@ export default function NavMenu({ anchorEl, open, onClose }) {
       
       {/* Profile option */}
       <MenuItem 
-        onClick={() => handleNavigate(isAdmin ? '/admin/profile' : '/profile')}
-        sx={{ 
-          py: 1,
-          px: 2,
-          gap: 1.5
-        }}
-      >
-        <Avatar /> My Profile
-      </MenuItem>
+  onClick={() => handleNavigate(isAdmin ? '/admin/profile' : '/profile')}
+  sx={{ 
+    py: 1,
+    px: 2,
+    gap: 1.5
+  }}
+>
+  <Avatar src={user?.avatar} /> My Profile
+</MenuItem>
       
       {/* Admin Dashboard option - only visible for admins */}
       {isAdmin && (
