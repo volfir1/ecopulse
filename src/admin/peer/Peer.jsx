@@ -197,12 +197,12 @@ const processMongoDataForTable = (records) => {
           consolidatedRecord.visayasConsumption = getNumericValue(record[key]);
         }
         // Handle recommendation parameters
-        else if (key === 'Solar Cost (PHP/W)') {
-          consolidatedRecord.solarCost = getNumericValue(record[key]);
-        }
-        else if (key === 'MERALCO Rate (PHP/kWh)') {
-          consolidatedRecord.meralcoRate = getNumericValue(record[key]);
-        }
+        // else if (key === 'Solar Cost (PHP/W)') {
+        //   consolidatedRecord.solarCost = getNumericValue(record[key]);
+        // }
+        // else if (key === 'MERALCO Rate (PHP/kWh)') {
+        //   consolidatedRecord.meralcoRate = getNumericValue(record[key]);
+        // }
       });
     });
     
@@ -297,9 +297,9 @@ const openModal = (record = {}) => {
       populateField("Visayas Total Power Generation (GWh)", rec["Visayas Total Power Generation (GWh)"]);
       populateField("Visayas Total Power Consumption (GWh)", rec["Visayas Total Power Consumption (GWh)"]);
       
-      // Recommendation parameters
-      populateField("Solar Cost (PHP/W)", rec["Solar Cost (PHP/W)"]);
-      populateField("MERALCO Rate (PHP/kWh)", rec["MERALCO Rate (PHP/kWh)"]);
+      // Remove recommendation parameters population
+      // populateField("Solar Cost (PHP/W)", rec["Solar Cost (PHP/W)"]);
+      // populateField("MERALCO Rate (PHP/kWh)", rec["MERALCO Rate (PHP/kWh)"]);
     });
     
     // Log populated form values for debugging
@@ -891,25 +891,6 @@ const renderConnectionError = () => (
                   label="Total Power Consumption (GWh)"
                   value={formValues["Visayas Total Power Consumption (GWh)"]}
                   onChange={(e) => handleInputChange("Visayas Total Power Consumption (GWh)", e)}
-                  placeholder="Enter value"
-                />
-              </div>
-            </div>
-            
-            {/* Recommendation Parameters */}
-            <div className="border p-4 rounded-md bg-blue-50">
-              <h3 className="text-lg font-medium mb-4">Recommendation Parameters</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <NumberBox
-                  label="Solar Cost (PHP/W)"
-                  value={formValues["Solar Cost (PHP/W)"]}
-                  onChange={(e) => handleInputChange("Solar Cost (PHP/W)", e)}
-                  placeholder="Enter value"
-                />
-                <NumberBox
-                  label="MERALCO Rate (PHP/kWh)"
-                  value={formValues["MERALCO Rate (PHP/kWh)"]}
-                  onChange={(e) => handleInputChange("MERALCO Rate (PHP/kWh)", e)}
                   placeholder="Enter value"
                 />
               </div>

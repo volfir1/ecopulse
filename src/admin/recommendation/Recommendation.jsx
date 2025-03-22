@@ -1,36 +1,26 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { 
   Dialog, 
   DialogTitle, 
   DialogContent, 
   DialogActions, 
   IconButton, 
-  Box, 
-  Tab, 
-  Tabs
+  Box,
+  CircularProgress,
+  Snackbar,
+  Alert
 } from '@mui/material';
-import { 
-  BarChart, 
-  Bar, 
-  LineChart, 
-  Line, 
-  XAxis, 
-  YAxis, 
-  CartesianGrid, 
-  Tooltip, 
-  Legend, 
-  ResponsiveContainer,
-  AreaChart,
-  Area
-} from 'recharts';
+import api from '../../features/modules/api';
 
 // Import dummy data
 import { 
-  recommendationDummyData, 
-  tableData, 
-  chartData, 
-  chartColors 
+  tableData
 } from './dummyData';
+
+// Add import for SingleYearPicker
+import {
+  SingleYearPicker,
+} from '@shared/index';
 
 // Prototype only - this would normally be imported
 const Button = ({ children, className, variant, onClick }) => (
@@ -54,7 +44,7 @@ const Card = ({ children, className }) => (
 );
 
 // Prototype NumberBox component
-const NumberBox = ({ label, value, placeholder, disabled }) => (
+const NumberBox = ({ label, value, placeholder, disabled, onChange }) => (
   <div className="mb-4">
     <label className="block text-sm font-medium text-gray-700 mb-1">
       {label}
@@ -66,6 +56,7 @@ const NumberBox = ({ label, value, placeholder, disabled }) => (
       value={value || ''}
       disabled={disabled}
       readOnly={disabled}
+      onChange={onChange} // Add onChange handler
     />
   </div>
 );
@@ -99,88 +90,257 @@ const TextBox = ({ label, value, placeholder, multiline, rows, disabled }) => (
 );
 
 const RecommendationAdminPrototype = () => {
-  // State for modal, tabs, and form data
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState(0);
-  const [selectedRecord, setSelectedRecord] = useState(recommendationDummyData[0]);
-  const [startYear, setStartYear] = useState(2020);
-  const [endYear, setEndYear] = useState(2023);
+  // Separate state for add and edit modals
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [selectedRecord, setSelectedRecord] = useState({});
+  // Add state for selected year 
+  const [addModalYear, setAddModalYear] = useState(new Date().getFullYear());
+  const [editModalYear, setEditModalYear] = useState(new Date().getFullYear());
+  // Add loading and notification states
+  const [isLoading, setIsLoading] = useState(false);
+  const [notification, setNotification] = useState({ open: false, message: '', type: 'info' });
   
-  // Mock functions
-  const openModal = (record = recommendationDummyData[0]) => {
-    setSelectedRecord(record);
-    setIsModalOpen(true);
-  };
-  
-  const closeModal = () => setIsModalOpen(false);
-  
-  const handleTabChange = (event, newValue) => {
-    setActiveTab(newValue);
-  };
+  // Add state for API data
+  const [apiData, setApiData] = useState([]);
+  const [isTableLoading, setIsTableLoading] = useState(false);
+  const [tableError, setTableError] = useState(null);
 
-  // Function to render the appropriate chart based on active tab
-  const renderChart = () => {
-    switch(activeTab) {
-      case 0: // ROI Analysis
-        return (
-          <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={chartData.roiAnalysis}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="name" />
-              <YAxis yAxisId="left" label={{ value: 'Years', angle: -90, position: 'insideLeft' }} />
-              <YAxis yAxisId="right" orientation="right" label={{ value: 'Cost (PHP/W)', angle: 90, position: 'insideRight' }} />
-              <Tooltip />
-              <Legend />
-              <Line yAxisId="left" type="monotone" dataKey="ROI" name="ROI (years)" stroke={chartColors.financial.ROI} strokeWidth={2} />
-              <Line yAxisId="left" type="monotone" dataKey="PaybackPeriod" name="Payback Period (years)" stroke={chartColors.financial.PaybackPeriod} strokeWidth={2} />
-              <Line yAxisId="right" type="monotone" dataKey="SolarCost" name="Solar Cost (PHP/W)" stroke={chartColors.financial.SolarCost} strokeWidth={2} />
-            </LineChart>
-          </ResponsiveContainer>
-        );
+  // Function to fetch recommendation data from API
+  const fetchRecommendationData = useCallback(async () => {
+    setIsTableLoading(true);
+    setTableError(null);
+    
+    try {
+      const response = await api.get('/api/add/recommendations');
+      
+      if (response.data.status === 'success') {
+        const records = response.data.records || [];
+        console.log('Fetched recommendation records:', records);
         
-      case 1: // Energy Savings
-        return (
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={chartData.energySavings}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="name" />
-              <YAxis label={{ value: 'Energy Savings (%)', angle: -90, position: 'insideLeft' }} />
-              <Tooltip />
-              <Legend />
-              <Bar dataKey="2020" name="2020" fill={chartColors.years["2020"]} />
-              <Bar dataKey="2021" name="2021" fill={chartColors.years["2021"]} />
-              <Bar dataKey="2022" name="2022" fill={chartColors.years["2022"]} />
-              <Bar dataKey="2023" name="2023" fill={chartColors.years["2023"]} />
-            </BarChart>
-          </ResponsiveContainer>
-        );
+        // Format the records for table display
+        const formattedRecords = records.map(record => ({
+          id: record._id,
+          year: record.Year,
+          solarCost: record["Solar Cost (PHP/W)"],
+          meralcoRate: record["MERALCO Rate (PHP/kWh)"]
+        }));
         
-      case 2: // Carbon Impact
-        return (
-          <ResponsiveContainer width="100%" height="100%">
-            <AreaChart data={chartData.carbonImpact}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="name" />
-              <YAxis label={{ value: 'Carbon Reduction (tons)', angle: -90, position: 'insideLeft' }} />
-              <Tooltip />
-              <Legend />
-              <Area type="monotone" dataKey="Carbon" fill={chartColors.environmental.Carbon} stroke={chartColors.environmental.Carbon} />
-            </AreaChart>
-          </ResponsiveContainer>
-        );
-        
-      default:
-        return null;
+        setApiData(formattedRecords);
+      } else {
+        setTableError(`Error: ${response.data.message || 'Unknown error'}`);
+      }
+    } catch (err) {
+      console.error('Error fetching recommendation data:', err);
+      setTableError(`Failed to load data: ${err.message}`);
+    } finally {
+      setIsTableLoading(false);
+    }
+  }, []);
+  
+  // Fetch data when component mounts
+  useEffect(() => {
+    fetchRecommendationData();
+  }, [fetchRecommendationData]);
+  
+  // Handler for year changes
+  const handleAddYearChange = (year) => {
+    setAddModalYear(year);
+    setSelectedRecord({
+      ...selectedRecord,
+      Year: year
+    });
+  };
+  
+  const handleEditYearChange = (year) => {
+    setEditModalYear(year);
+    setSelectedRecord({
+      ...selectedRecord,
+      Year: year
+    });
+  };
+  
+  // Separate functions for opening add and edit modals
+  const openAddModal = () => {
+    // Initialize with empty record or defaults
+    const defaultYear = new Date().getFullYear();
+    setAddModalYear(defaultYear);
+    setSelectedRecord({
+      Year: defaultYear,
+      "Solar Cost (PHP/W)": "",
+      "MERALCO Rate (PHP/kWh)": ""
+    });
+    setIsAddModalOpen(true);
+  };
+  
+  const openEditModal = (record) => {
+    setEditModalYear(record.Year);
+    setSelectedRecord(record);
+    setIsEditModalOpen(true);
+  };
+  
+  // Close functions
+  const closeAddModal = () => setIsAddModalOpen(false);
+  const closeEditModal = () => setIsEditModalOpen(false);
+
+  // Function to save recommendation data to database
+  const handleSaveRecommendation = async () => {
+    setIsLoading(true);
+    
+    try {
+      // Prepare the data payload with just the required fields
+      // Convert string values to numbers using parseFloat
+      const payload = {
+        Year: addModalYear,
+        "Solar Cost (PHP/W)": parseFloat(selectedRecord["Solar Cost (PHP/W)"]) || 0,
+        "MERALCO Rate (PHP/kWh)": parseFloat(selectedRecord["MERALCO Rate (PHP/kWh)"]) || 0
+      };
+      
+      console.log('Saving recommendation with payload:', payload);
+      
+      // Make API request to backend
+      const response = await api.post('/api/add/recommendations', payload);
+      
+      if (response.data.status === 'success') {
+        setNotification({
+          open: true,
+          message: 'Recommendation created successfully!',
+          type: 'success'
+        });
+        closeAddModal();
+        // Refresh data after successful save
+        fetchRecommendationData();
+      } else {
+        setNotification({
+          open: true,
+          message: `Error: ${response.data.message || 'Unknown error'}`,
+          type: 'error'
+        });
+      }
+    } catch (err) {
+      console.error('Error saving recommendation:', err);
+      let errorMessage = 'Failed to save recommendation';
+      
+      if (err.code === 'ECONNABORTED') {
+        errorMessage = 'Request timed out - the server took too long to respond';
+      } else if (err.code === 'ERR_NETWORK') {
+        errorMessage = 'Network error - please check if the backend server is running';
+      } else if (err.response) {
+        errorMessage = err.response.data.message || err.message;
+      }
+      
+      setNotification({
+        open: true,
+        message: `Error: ${errorMessage}`,
+        type: 'error'
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+  
+  // Add update function for editing records
+  const handleUpdateRecommendation = async () => {
+    setIsLoading(true);
+    
+    try {
+      // Prepare the data payload with just the required fields
+      // Convert string values to numbers using parseFloat
+      const payload = {
+        Year: editModalYear,
+        "Solar Cost (PHP/W)": parseFloat(selectedRecord["Solar Cost (PHP/W)"]) || 0,
+        "MERALCO Rate (PHP/kWh)": parseFloat(selectedRecord["MERALCO Rate (PHP/kWh)"]) || 0
+      };
+      
+      console.log('Updating recommendation with payload:', payload);
+      
+      // Make API request to backend
+      const response = await api.put(`/api/add/recommendations/${selectedRecord.id}`, payload);
+      
+      if (response.data.status === 'success') {
+        setNotification({
+          open: true,
+          message: 'Recommendation updated successfully!',
+          type: 'success'
+        });
+        closeEditModal();
+        // Refresh data after successful update
+        fetchRecommendationData();
+      } else {
+        setNotification({
+          open: true,
+          message: `Error: ${response.data.message || 'Unknown error'}`,
+          type: 'error'
+        });
+      }
+    } catch (err) {
+      console.error('Error updating recommendation:', err);
+      let errorMessage = 'Failed to update recommendation';
+      
+      if (err.code === 'ECONNABORTED') {
+        errorMessage = 'Request timed out - the server took too long to respond';
+      } else if (err.code === 'ERR_NETWORK') {
+        errorMessage = 'Network error - please check if the backend server is running';
+      } else if (err.response) {
+        errorMessage = err.response.data.message || err.message;
+      }
+      
+      setNotification({
+        open: true,
+        message: `Error: ${errorMessage}`,
+        type: 'error'
+      });
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  // Filter data based on year range
-  const filteredData = tableData.filter(item => 
-    item.year >= startYear && item.year <= endYear
-  );
+  // Add functionality to delete a record
+  const handleDeleteRecord = async (recordId) => {
+    if (!window.confirm('Are you sure you want to delete this record?')) return;
+    
+    setIsLoading(true);
+    try {
+      const response = await api.delete(`/api/add/recommendations/${recordId}`);
+      
+      if (response.data.status === 'success') {
+        setNotification({
+          open: true,
+          message: 'Recommendation deleted successfully!',
+          type: 'success'
+        });
+        fetchRecommendationData();
+      } else {
+        setNotification({
+          open: true,
+          message: `Error: ${response.data.message || 'Unknown error'}`,
+          type: 'error'
+        });
+      }
+    } catch (err) {
+      console.error('Error deleting recommendation:', err);
+      setNotification({
+        open: true,
+        message: `Error: ${err.message}`,
+        type: 'error'
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
-  // Get current recommendation for summary section
-  const currentYearData = recommendationDummyData.find(item => item.Year === 2022);
+  // Handle notification close
+  const handleNotificationClose = () => {
+    setNotification(prev => ({ ...prev, open: false }));
+  };
+
+  // Add handleInputChange function
+  const handleInputChange = (field, e) => {
+    setSelectedRecord(prev => ({
+      ...prev,
+      [field]: e.target.value
+    }));
+  };
 
   return (
     <div className="p-6 max-w-7xl mx-auto">
@@ -202,7 +362,7 @@ const RecommendationAdminPrototype = () => {
         <Button
           variant="primary"
           className="flex items-center gap-2"
-          onClick={() => openModal()}
+          onClick={openAddModal}
         >
           <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <line x1="12" y1="5" x2="12" y2="19"></line>
@@ -212,193 +372,10 @@ const RecommendationAdminPrototype = () => {
         </Button>
       </div>
 
-      {/* Year Range Filter Card */}
-      <Card className="mb-6 p-4">
-        <div className="flex justify-between items-center">
-          <div className="text-gray-700 font-medium">
-            Filter Recommendations By Year Range
-          </div>
-          <div className="flex items-center gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Start Year</label>
-              <select 
-                className="border rounded-md p-2"
-                value={startYear}
-                onChange={(e) => setStartYear(parseInt(e.target.value))}
-              >
-                <option value={2020}>2020</option>
-                <option value={2021}>2021</option>
-                <option value={2022}>2022</option>
-                <option value={2023}>2023</option>
-              </select>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">End Year</label>
-              <select 
-                className="border rounded-md p-2"
-                value={endYear}
-                onChange={(e) => setEndYear(parseInt(e.target.value))}
-              >
-                <option value={2020}>2020</option>
-                <option value={2021}>2021</option>
-                <option value={2022}>2022</option>
-                <option value={2023}>2023</option>
-              </select>
-            </div>
-          </div>
-        </div>
-      </Card>
-
-      {/* Charts Section */}
-      <Card className="mb-6 overflow-hidden">
-        <div className="p-4 border-b border-gray-200">
-          <Tabs value={activeTab} onChange={handleTabChange} aria-label="chart tabs">
-            <Tab label="ROI Analysis" />
-            <Tab label="Energy Savings" />
-            <Tab label="Carbon Impact" />
-          </Tabs>
-        </div>
-        <div className="p-6 h-96">
-          {renderChart()}
-        </div>
-        <div className="flex justify-end p-4 border-t border-gray-200">
-          <Button
-            variant="secondary"
-            className="flex items-center gap-2 mr-2"
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-              <polyline points="7 10 12 15 17 10"></polyline>
-              <line x1="12" y1="15" x2="12" y2="3"></line>
-            </svg>
-            Download Chart
-          </Button>
-          <Button
-            variant="primary"
-            className="flex items-center gap-2"
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-              <polyline points="14 2 14 8 20 8"></polyline>
-              <line x1="16" y1="13" x2="8" y2="13"></line>
-              <line x1="16" y1="17" x2="8" y2="17"></line>
-              <polyline points="10 9 9 9 8 9"></polyline>
-            </svg>
-            Export to PDF
-          </Button>
-        </div>
-      </Card>
-
-      {/* Recommendations Summary Card */}
-      <Card className="mb-6">
-        <div className="p-4 border-b border-gray-200">
-          <h2 className="text-lg font-medium">Current Recommendation Summary</h2>
-        </div>
-        <div className="p-6">
-          <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-4">
-            <h3 className="text-lg font-medium text-green-800 mb-2">Recommendation for {currentYearData.Year}</h3>
-            <p className="text-gray-700">{currentYearData["Recommendation Summary"]}</p>
-          </div>
-          
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-            <div className="bg-gray-50 p-4 rounded-md">
-              <h4 className="font-medium text-gray-700 mb-2">Return on Investment</h4>
-              <div className="flex items-end">
-                <span className="text-2xl font-bold text-green-600">{currentYearData["Estimated ROI (years)"]}</span>
-                <span className="ml-1 text-gray-600">years</span>
-              </div>
-            </div>
-            <div className="bg-gray-50 p-4 rounded-md">
-              <h4 className="font-medium text-gray-700 mb-2">Energy Savings</h4>
-              <div className="flex items-end">
-                <span className="text-2xl font-bold text-green-600">{currentYearData["Energy Savings (%)"]}</span>
-                <span className="ml-1 text-gray-600">%</span>
-              </div>
-            </div>
-            <div className="bg-gray-50 p-4 rounded-md">
-              <h4 className="font-medium text-gray-700 mb-2">Carbon Reduction</h4>
-              <div className="flex items-end">
-                <span className="text-2xl font-bold text-green-600">{currentYearData["Carbon Reduction (tons)"]}</span>
-                <span className="ml-1 text-gray-600">tons</span>
-              </div>
-            </div>
-          </div>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="border rounded-md p-4">
-              <h4 className="font-medium text-gray-700 mb-3">Technical Details</h4>
-              <ul className="space-y-2">
-                <li className="flex justify-between">
-                  <span className="text-gray-600">Recommended Panel Type:</span>
-                  <span className="font-medium">{currentYearData["Recommended Panel Type"]}</span>
-                </li>
-                <li className="flex justify-between">
-                  <span className="text-gray-600">Optimal Panel Size:</span>
-                  <span className="font-medium">{currentYearData["Optimal Panel Size (kW)"]} kW</span>
-                </li>
-                <li className="flex justify-between">
-                  <span className="text-gray-600">Solar Cost:</span>
-                  <span className="font-medium">{currentYearData["Solar Cost (PHP/W)"]} PHP/W</span>
-                </li>
-                <li className="flex justify-between">
-                  <span className="text-gray-600">MERALCO Rate:</span>
-                  <span className="font-medium">{currentYearData["MERALCO Rate (PHP/kWh)"]} PHP/kWh</span>
-                </li>
-                <li className="flex justify-between">
-                  <span className="text-gray-600">Energy Storage Required:</span>
-                  <span className="font-medium">{currentYearData["Energy Storage Required (kWh)"]} kWh</span>
-                </li>
-                <li className="flex justify-between">
-                  <span className="text-gray-600">Expected Lifespan:</span>
-                  <span className="font-medium">{currentYearData["Expected Lifespan (years)"]} years</span>
-                </li>
-                <li className="flex justify-between">
-                  <span className="text-gray-600">Performance Ratio:</span>
-                  <span className="font-medium">{currentYearData["Performance Ratio (%)"]}%</span>
-                </li>
-              </ul>
-            </div>
-            <div className="border rounded-md p-4">
-              <h4 className="font-medium text-gray-700 mb-3">Financial Overview</h4>
-              <ul className="space-y-2">
-                <li className="flex justify-between">
-                  <span className="text-gray-600">Installation Cost:</span>
-                  <span className="font-medium">{currentYearData["Installation Cost (PHP)"].toLocaleString()} PHP</span>
-                </li>
-                <li className="flex justify-between">
-                  <span className="text-gray-600">Annual Savings:</span>
-                  <span className="font-medium">{currentYearData["Annual Savings (PHP)"].toLocaleString()} PHP</span>
-                </li>
-                <li className="flex justify-between">
-                  <span className="text-gray-600">Maintenance Cost:</span>
-                  <span className="font-medium">{currentYearData["Maintenance Cost (PHP/year)"].toLocaleString()} PHP/year</span>
-                </li>
-                <li className="flex justify-between">
-                  <span className="text-gray-600">Payback Period:</span>
-                  <span className="font-medium">{currentYearData["Payback Period (years)"]} years</span>
-                </li>
-                <li className="flex justify-between">
-                  <span className="text-gray-600">Grid Integration Cost:</span>
-                  <span className="font-medium">{currentYearData["Grid Integration Cost (PHP)"].toLocaleString()} PHP</span>
-                </li>
-                <li className="flex justify-between">
-                  <span className="text-gray-600">Incentives Available:</span>
-                  <span className="font-medium">{currentYearData["Incentives Available (PHP)"].toLocaleString()} PHP</span>
-                </li>
-                <li className="flex justify-between">
-                  <span className="text-gray-600">Recommended Regions:</span>
-                  <span className="font-medium">{currentYearData["Recommended Regions"]}</span>
-                </li>
-              </ul>
-            </div>
-          </div>
-        </div>
-      </Card>
-
       {/* Data Table */}
       <Card className="mb-6">
         <div className="p-4 border-b border-gray-200">
-          <h2 className="text-lg font-medium">Recommendation History ({startYear} - {endYear})</h2>
+          <h2 className="text-lg font-medium">Recommendation History</h2>
           <div className="flex items-center justify-between mt-2">
             <div className="flex items-center">
               <input type="text" placeholder="Search records..." className="border rounded-md p-2 mr-2" />
@@ -407,8 +384,13 @@ const RecommendationAdminPrototype = () => {
               </Button>
             </div>
             <div className="flex items-center">
-              <Button variant="secondary" className="mr-2">
-                Refresh
+              <Button 
+                variant="secondary" 
+                className="mr-2"
+                onClick={fetchRecommendationData}
+                disabled={isTableLoading}
+              >
+                {isTableLoading ? 'Loading...' : 'Refresh'}
               </Button>
               <Button variant="primary">
                 Export
@@ -417,49 +399,65 @@ const RecommendationAdminPrototype = () => {
           </div>
         </div>
         <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Year</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Solar Cost (PHP/W)</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">MERALCO Rate (PHP/kWh)</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ROI (Years)</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Recommended Regions</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Energy Savings</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Best Energy Type</th>
-                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {filteredData.map((row) => (
-                <tr key={row.id} className="hover:bg-green-50">
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{row.year}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{row.solarCost}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{row.meralcoRate}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{row.estimatedROI}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{row.recommendedRegions}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{row.energySavings}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{row.bestEnergyType}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                    <button 
-                      className="text-green-600 hover:text-green-900 mr-3"
-                      onClick={() => {
-                        const record = recommendationDummyData.find(item => item.Year === row.year);
-                        openModal(record);
-                      }}
-                    >
-                      Edit
-                    </button>
-                    <button className="text-red-600 hover:text-red-900">Delete</button>
-                  </td>
+          {isTableLoading ? (
+            <div className="flex justify-center items-center p-6">
+              <CircularProgress size={40} />
+            </div>
+          ) : tableError ? (
+            <div className="text-center p-6 text-red-500">
+              {tableError}
+            </div>
+          ) : apiData.length === 0 ? (
+            <div className="text-center p-6 text-gray-500">
+              No recommendation records found. Add a new recommendation to get started.
+            </div>
+          ) : (
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Year</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Solar Cost (PHP/W)</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">MERALCO Rate (PHP/kWh)</th>
+                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {apiData.map((row) => (
+                  <tr key={row.id} className="hover:bg-green-50">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{row.year}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{row.solarCost}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{row.meralcoRate}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                      <button 
+                        className="text-green-600 hover:text-green-900 mr-3"
+                        onClick={() => {
+                          const record = {
+                            ...row,
+                            Year: row.year,
+                            "Solar Cost (PHP/W)": row.solarCost,
+                            "MERALCO Rate (PHP/kWh)": row.meralcoRate
+                          };
+                          openEditModal(record);
+                        }}
+                      >
+                        Edit
+                      </button>
+                      <button 
+                        className="text-red-600 hover:text-red-900"
+                        onClick={() => handleDeleteRecord(row.id)}
+                      >
+                        Delete
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
         </div>
         <div className="px-6 py-4 flex items-center justify-between border-t border-gray-200">
           <div className="text-sm text-gray-500">
-            Showing <span className="font-medium">1</span> to <span className="font-medium">{filteredData.length}</span> of <span className="font-medium">{filteredData.length}</span> records
+            Showing <span className="font-medium">1</span> to <span className="font-medium">{apiData.length}</span> of <span className="font-medium">{apiData.length}</span> records
           </div>
           <div className="flex items-center">
             <Button variant="secondary" className="mr-2" disabled>
@@ -472,11 +470,11 @@ const RecommendationAdminPrototype = () => {
         </div>
       </Card>
 
-      {/* Add/Edit Modal */}
-      <Dialog open={isModalOpen} onClose={closeModal} maxWidth="md" fullWidth>
+      {/* Add Modal - Simplified with just Year and Input Parameters */}
+      <Dialog open={isAddModalOpen} onClose={closeAddModal} maxWidth="sm" fullWidth>
         <DialogTitle className="flex justify-between items-center">
-          <span className="text-lg font-medium">{selectedRecord.id ? 'Edit Recommendation' : 'Add New Recommendation'}</span>
-          <IconButton onClick={closeModal} size="small">
+          <span className="text-lg font-medium">Add New Recommendation</span>
+          <IconButton onClick={closeAddModal} size="small">
             <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <line x1="18" y1="6" x2="6" y2="18"></line>
               <line x1="6" y1="6" x2="18" y2="18"></line>
@@ -485,17 +483,15 @@ const RecommendationAdminPrototype = () => {
         </DialogTitle>
         <DialogContent>
           <Box className="p-4 space-y-6">
+            {/* Replace Year picker with SingleYearPicker */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Year
               </label>
-              <select className="border rounded-md p-2 w-full" value={selectedRecord.Year}>
-                <option value={2020}>2020</option>
-                <option value={2021}>2021</option>
-                <option value={2022}>2022</option>
-                <option value={2023}>2023</option>
-                <option value={2024}>2024</option>
-              </select>
+              <SingleYearPicker
+                initialYear={addModalYear}
+                onYearChange={handleAddYearChange}
+              />
             </div>
             
             {/* Input Parameters */}
@@ -506,119 +502,13 @@ const RecommendationAdminPrototype = () => {
                   label="Solar Cost (PHP/W)"
                   value={selectedRecord["Solar Cost (PHP/W)"]}
                   placeholder="Enter value"
+                  onChange={(e) => handleInputChange("Solar Cost (PHP/W)", e)}
                 />
                 <NumberBox
                   label="MERALCO Rate (PHP/kWh)"
                   value={selectedRecord["MERALCO Rate (PHP/kWh)"]}
                   placeholder="Enter value"
-                />
-              </div>
-            </div>
-            
-            {/* Recommendation Summary */}
-            <div className="border p-4 rounded-md">
-              <h3 className="text-lg font-medium mb-4">Recommendation Summary</h3>
-              <TextBox
-                label="Summary"
-                value={selectedRecord["Recommendation Summary"]}
-                placeholder="Enter recommendation summary"
-                multiline
-                rows={4}
-              />
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-                <TextBox
-                  label="Recommended Panel Type"
-                  value={selectedRecord["Recommended Panel Type"]}
-                  placeholder="Enter panel type"
-                />
-                <TextBox
-                  label="Recommended Regions"
-                  value={selectedRecord["Recommended Regions"]}
-                  placeholder="Enter regions"
-                />
-                <TextBox
-                  label="Best Energy Type"
-                  value={selectedRecord["Best Energy Type"]}
-                  placeholder="Enter energy types"
-                />
-                <NumberBox
-                  label="Estimated ROI (years)"
-                  value={selectedRecord["Estimated ROI (years)"]}
-                  placeholder="Enter value"
-                />
-              </div>
-            </div>
-            
-            {/* Environmental Impact */}
-            <div className="border p-4 rounded-md">
-              <h3 className="text-lg font-medium mb-4">Environmental Impact</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <NumberBox
-                  label="Carbon Reduction (tons)"
-                  value={selectedRecord["Carbon Reduction (tons)"]}
-                  placeholder="Enter value"
-                />
-                <NumberBox
-                  label="Energy Savings (%)"
-                  value={selectedRecord["Energy Savings (%)"]}
-                  placeholder="Enter value"
-                />
-              </div>
-            </div>
-            
-            {/* Technical Specifications */}
-            <div className="border p-4 rounded-md">
-              <h3 className="text-lg font-medium mb-4">Technical Specifications</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <NumberBox
-                  label="Optimal Panel Size (kW)"
-                  value={selectedRecord["Optimal Panel Size (kW)"]}
-                  placeholder="Enter value"
-                />
-                <NumberBox
-                  label="Installation Cost (PHP)"
-                  value={selectedRecord["Installation Cost (PHP)"]}
-                  placeholder="Enter value"
-                />
-                <NumberBox
-                  label="Annual Savings (PHP)"
-                  value={selectedRecord["Annual Savings (PHP)"]}
-                  placeholder="Enter value"
-                />
-                <NumberBox
-                  label="Maintenance Cost (PHP/year)"
-                  value={selectedRecord["Maintenance Cost (PHP/year)"]}
-                  placeholder="Enter value"
-                />
-                <NumberBox
-                  label="Grid Integration Cost (PHP)"
-                  value={selectedRecord["Grid Integration Cost (PHP)"]}
-                  placeholder="Enter value"
-                />
-                <NumberBox
-                  label="Payback Period (years)"
-                  value={selectedRecord["Payback Period (years)"]}
-                  placeholder="Enter value"
-                />
-                <NumberBox
-                  label="Energy Storage Required (kWh)"
-                  value={selectedRecord["Energy Storage Required (kWh)"]}
-                  placeholder="Enter value"
-                />
-                <NumberBox
-                  label="Expected Lifespan (years)"
-                  value={selectedRecord["Expected Lifespan (years)"]}
-                  placeholder="Enter value"
-                />
-                <NumberBox
-                  label="Performance Ratio (%)"
-                  value={selectedRecord["Performance Ratio (%)"]}
-                  placeholder="Enter value"
-                />
-                <NumberBox
-                  label="Incentives Available (PHP)"
-                  value={selectedRecord["Incentives Available (PHP)"]}
-                  placeholder="Enter value"
+                  onChange={(e) => handleInputChange("MERALCO Rate (PHP/kWh)", e)}
                 />
               </div>
             </div>
@@ -627,19 +517,102 @@ const RecommendationAdminPrototype = () => {
         <DialogActions className="p-4">
           <Button
             variant="secondary"
-            onClick={closeModal}
+            onClick={closeAddModal}
             className="mr-2"
+            disabled={isLoading}
           >
             Cancel
           </Button>
           <Button
             variant="primary"
-            onClick={closeModal}
+            onClick={handleSaveRecommendation}
+            disabled={isLoading || !selectedRecord["Solar Cost (PHP/W)"] || !selectedRecord["MERALCO Rate (PHP/kWh)"]}
           >
-            {selectedRecord.id ? 'Update' : 'Save'}
+            {isLoading ? (
+              <div className="flex items-center">
+                <CircularProgress size={16} color="inherit" className="mr-2" />
+                Saving...
+              </div>
+            ) : 'Save'}
           </Button>
         </DialogActions>
       </Dialog>
+
+      {/* Edit Modal - Simplified to match Add Modal */}
+      <Dialog open={isEditModalOpen} onClose={closeEditModal} maxWidth="sm" fullWidth>
+        <DialogTitle className="flex justify-between items-center">
+          <span className="text-lg font-medium">Edit Recommendation</span>
+          <IconButton onClick={closeEditModal} size="small">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <line x1="18" y1="6" x2="6" y2="18"></line>
+              <line x1="6" y1="6" x2="18" y2="18"></line>
+            </svg>
+          </IconButton>
+        </DialogTitle>
+        <DialogContent>
+          <Box className="p-4 space-y-6">
+            {/* Year picker (disabled for edit mode) */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Year
+              </label>
+              <SingleYearPicker
+                initialYear={editModalYear}
+                onYearChange={handleEditYearChange}
+                disabled={true} // Disable year picker for editing existing records
+              />
+            </div>
+            
+            {/* Input Parameters */}
+            <div className="border p-4 rounded-md bg-gray-50">
+              <h3 className="text-lg font-medium mb-4">Input Parameters</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <NumberBox
+                  label="Solar Cost (PHP/W)"
+                  value={selectedRecord["Solar Cost (PHP/W)"]}
+                  placeholder="Enter value"
+                  onChange={(e) => handleInputChange("Solar Cost (PHP/W)", e)}
+                />
+                <NumberBox
+                  label="MERALCO Rate (PHP/kWh)"
+                  value={selectedRecord["MERALCO Rate (PHP/kWh)"]}
+                  placeholder="Enter value"
+                  onChange={(e) => handleInputChange("MERALCO Rate (PHP/kWh)", e)}
+                />
+              </div>
+            </div>
+          </Box>
+        </DialogContent>
+        <DialogActions className="p-4">
+          <Button
+            variant="secondary"
+            onClick={closeEditModal}
+            className="mr-2"
+            disabled={isLoading}
+          >
+            Cancel
+          </Button>
+          <Button
+            variant="primary"
+            onClick={handleUpdateRecommendation}
+            disabled={isLoading || !selectedRecord["Solar Cost (PHP/W)"] || !selectedRecord["MERALCO Rate (PHP/kWh)"]}
+          >
+            {isLoading ? (
+              <div className="flex items-center">
+                <CircularProgress size={16} color="inherit" className="mr-2" />
+                Updating...
+              </div>
+            ) : 'Update'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Notification */}
+      <Snackbar open={notification.open} autoHideDuration={6000} onClose={handleNotificationClose}>
+        <Alert onClose={handleNotificationClose} severity={notification.type} sx={{ width: '100%' }}>
+          {notification.message}
+        </Alert>
+      </Snackbar>
     </div>
   );
 };
