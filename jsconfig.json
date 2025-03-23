@@ -16,6 +16,6 @@
       "@store/*": ["./store/*"],
       "@utils/*": ["./utils/*"]
     },
-    "types": []  // disables automatic type inclusion
+    "types": []
   }
 }
