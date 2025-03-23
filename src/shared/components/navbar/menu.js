@@ -11,6 +11,32 @@ export default function NavMenu({ anchorEl, open, onClose }) {
   
   // Check if user is admin
   const isAdmin = hasRole('admin');
+  
+  // Get the appropriate avatar URL - prioritize avatarUrl, fallback to avatar
+  const getAvatarUrl = () => {
+    if (user?.avatarUrl) {
+      return user.avatarUrl;
+    }
+    
+    if (user?.avatar) {
+      // If avatar looks like a URL, use it directly
+      if (user.avatar.includes('http') || user.avatar.includes('cloudinary')) {
+        return user.avatar;
+      }
+      
+      // If it's a default avatar reference (e.g., "avatar-5")
+      if (user.avatar.startsWith('avatar-')) {
+        const avatarNumber = user.avatar.replace('avatar-', '');
+        return `/avatars/${avatarNumber}.svg`;
+      }
+      
+      // Otherwise, use as is
+      return user.avatar;
+    }
+    
+    // Fallback to placeholder
+    return "/api/placeholder/32/32";
+  };
 
   const handleNavigate = (path) => {
     onClose();
@@ -79,15 +105,15 @@ export default function NavMenu({ anchorEl, open, onClose }) {
       
       {/* Profile option */}
       <MenuItem 
-  onClick={() => handleNavigate(isAdmin ? '/admin/profile' : '/profile')}
-  sx={{ 
-    py: 1,
-    px: 2,
-    gap: 1.5
-  }}
->
-  <Avatar src={user?.avatar} /> My Profile
-</MenuItem>
+        onClick={() => handleNavigate(isAdmin ? '/admin/profile' : '/profile')}
+        sx={{ 
+          py: 1,
+          px: 2,
+          gap: 1.5
+        }}
+      >
+        <Avatar src={getAvatarUrl()} /> My Profile
+      </MenuItem>
       
       {/* Admin Dashboard option - only visible for admins */}
       {isAdmin && (

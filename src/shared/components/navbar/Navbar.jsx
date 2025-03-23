@@ -32,6 +32,32 @@ export default function Navbar() {
 
   const isAdmin = currentUser?.role === 'admin';
 
+  // Get the appropriate avatar URL - prioritize avatarUrl, fallback to avatar
+  const getAvatarUrl = () => {
+    if (currentUser?.avatarUrl) {
+      return currentUser.avatarUrl;
+    }
+    
+    if (currentUser?.avatar) {
+      // If avatar looks like a URL, use it directly
+      if (currentUser.avatar.includes('http') || currentUser.avatar.includes('cloudinary')) {
+        return currentUser.avatar;
+      }
+      
+      // If it's a default avatar reference (e.g., "avatar-5")
+      if (currentUser.avatar.startsWith('avatar-')) {
+        const avatarNumber = currentUser.avatar.replace('avatar-', '');
+        return `/avatars/${avatarNumber}.svg`;
+      }
+      
+      // Otherwise, use as is
+      return currentUser.avatar;
+    }
+    
+    // Fallback to placeholder
+    return "/api/placeholder/24/24";
+  };
+
   const handleMenuClick = (event) => {
     setAnchorEl(event.currentTarget);
   };
@@ -147,7 +173,7 @@ export default function Navbar() {
               >
                 <Avatar
                   alt={currentUser?.firstName || 'User'}
-                  src={currentUser?.avatar || "/api/placeholder/24/24"}
+                  src={getAvatarUrl()}
                   sx={{
                     width: 24,
                     height: 24
