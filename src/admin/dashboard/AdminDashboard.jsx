@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Typography,
   Box,
@@ -54,12 +54,13 @@ import {
   Info
 } from 'lucide-react';
 import dayjs from 'dayjs';
-
+import{ debounce }from '@mui/material';
 import { Button } from '@shared/index';
 import useEnergyDashboard from './hook';
 import { formatNumber, formatPercentage, getChangeColor, formatDate } from './util';
 import { performanceMetrics } from './data';
 import {useYearPicker, YearPicker} from '@shared/index';
+
 // Custom TabPanel component
 function TabPanel(props) {
   const { children, value, index, ...other } = props;
@@ -104,6 +105,8 @@ const EnergyDashboard = () => {
     }
   });
   
+ 
+
   // State for year range
   const [yearRange, setYearRange] = useState({
     startYear: startYear.year(),
@@ -119,6 +122,20 @@ const EnergyDashboard = () => {
     chartRefs
   } = useEnergyDashboard(yearRange);
   
+
+  const debounceRefresh = useCallback(
+    debounce((range)=>{
+      refreshData(range)
+    },500),
+    [refreshData]
+  )
+  //UseEffect to trigger refresh for the year picker
+  useEffect(()=>{
+    if (yearRange.startYear && yearRange.endYear){
+      refreshData(yearRange)
+    }
+  },[yearRange,refreshData])
+
   // Update using mock data flag
   useEffect(() => {
     // Set flag to true if we have API errors
@@ -162,14 +179,7 @@ const EnergyDashboard = () => {
             onEndYearChange={handleEndYearChange}
             usingMockData={usingMockData}
           />
-          <Button
-            variant="contained"
-            color="primary"
-            startIcon={<RefreshCw size={18} />}
-            onClick={handleRefreshWithYearRange}
-          >
-            Refresh Data
-          </Button>
+          
         </Box>
       </Box>
 
@@ -178,6 +188,15 @@ const EnergyDashboard = () => {
         <Tabs value={tabValue} onChange={handleTabChange} aria-label="energy dashboard tabs">
           <Tab label="Overview" icon={<Activity size={16} />} iconPosition="start" />
           <Tab label="Energy" icon={<TrendingUp size={16} />} iconPosition="start" />
+          <Button
+            variant="contained"
+            color="primary"
+            startIcon={<RefreshCw size={18} />}
+            onClick={handleRefreshWithYearRange}
+            sx={{ fontSize: '0.7rem', padding: '0px 10px', minWidth: '150px', height: '2.5rem', marginTop: '1rem', borderRadius: '30px' }}
+          >
+            Refresh Data
+          </Button>
         </Tabs>
       </Box>
 
@@ -384,20 +403,7 @@ const EnergyDashboard = () => {
           <Typography variant="h5">
             Energy Management
           </Typography>
-          <Box className="flex gap-2">
-            <Button
-              variant="outlined"
-              startIcon={<Download size={18} />}
-            >
-              Export Data
-            </Button>
-            <Button
-              variant="contained"
-              startIcon={<TrendingUp size={18} />}
-            >
-              Generate Report
-            </Button>
-          </Box>
+         
         </Box>
         
         <Grid container spacing={3} className="mb-6">
@@ -482,277 +488,10 @@ const EnergyDashboard = () => {
           </Box>
         </Paper>
         
-        <Paper className="p-4 border rounded-lg">
-          <Typography variant="h6" className="mb-3 font-semibold">
-            Energy Sources
-          </Typography>
-          <TableContainer>
-            <Table>
-              <TableHead>
-                <TableRow>
-                  <TableCell>Source</TableCell>
-                  <TableCell>Location</TableCell>
-                  <TableCell>Status</TableCell>
-                  <TableCell>Output (GWh)</TableCell>
-                  <TableCell>Efficiency</TableCell>
-                  <TableCell align="right">Actions</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {energySummary.sources && energySummary.sources.length > 0 ? (
-                  energySummary.sources.map((source) => (
-                    <TableRow key={source.id} hover>
-                      <TableCell>
-                        <Box className="flex items-center">
-                          {source.type === 'Solar' && <Sun size={16} className="text-yellow-500 mr-2" />}
-                          {source.type === 'Wind' && <Wind size={16} className="text-slate-500 mr-2" />}
-                          {source.type === 'Hydro' && <Droplets size={16} className="text-blue-500 mr-2" />}
-                          <Typography variant="body2" className="font-medium">
-                            {source.name}
-                          </Typography>
-                        </Box>
-                      </TableCell>
-                      <TableCell>{source.location}</TableCell>
-                      <TableCell>
-                        <Chip 
-                          label={source.status} 
-                          size="small"
-                          color={
-                            source.status === 'Active' ? 'success' :
-                            source.status === 'Maintenance' ? 'warning' :
-                            source.status === 'Offline' ? 'error' : 'default'
-                          }
-                        />
-                      </TableCell>
-                      <TableCell>{source.output.toFixed(1)} GWh</TableCell>
-                      <TableCell>
-                        <Box className="flex items-center">
-                          <Box sx={{ width: 100, mr: 1 }}>
-                            <LinearProgress 
-                              variant="determinate" 
-                              value={source.efficiency} 
-                              sx={{ 
-                                height: 6, 
-                                borderRadius: 3, 
-                                bgcolor: '#f3f4f6',
-                                '& .MuiLinearProgress-bar': { 
-                                  bgcolor: 
-                                    source.efficiency >= 80 ? '#10b981' :
-                                    source.efficiency >= 60 ? '#f59e0b' : '#ef4444'
-                                } 
-                              }}
-                            />
-                          </Box>
-                          <Typography variant="body2">
-                            {source.efficiency}%
-                          </Typography>
-                        </Box>
-                      </TableCell>
-                      <TableCell align="right">
-                        <Box className="flex justify-end">
-                          <Tooltip title="View Details">
-                            <IconButton size="small">
-                              <Eye size={18} />
-                            </IconButton>
-                          </Tooltip>
-                          <Tooltip title="Settings">
-                            <IconButton size="small">
-                              <Settings size={18} />
-                            </IconButton>
-                          </Tooltip>
-                          <Tooltip title="Access Control">
-                            <IconButton size="small">
-                              <Key size={18} />
-                            </IconButton>
-                          </Tooltip>
-                        </Box>
-                      </TableCell>
-                    </TableRow>
-                  ))
-                ) : (
-                  <TableRow>
-                    <TableCell colSpan={6} align="center">
-                      <Typography variant="body2" color="textSecondary" className="py-4">
-                        No energy sources found
-                      </Typography>
-                    </TableCell>
-                  </TableRow>
-                )}
-              </TableBody>
-            </Table>
-          </TableContainer>
-        </Paper>
         
-        {/* Energy Consumption by Region */}
-        <Paper className="p-4 border rounded-lg mt-6">
-          <Typography variant="h6" className="mb-3 font-semibold">
-            Energy Consumption by Region
-          </Typography>
-          <Box className="h-80">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart
-                data={energySummary.regionData || [
-                  { region: "Northern", consumption: 850 },
-                  { region: "Central", consumption: 1200 },
-                  { region: "Eastern", consumption: 780 },
-                  { region: "Western", consumption: 940 },
-                  { region: "Southern", consumption: 680 }
-                ]}
-                margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
-                barSize={40}
-              >
-                <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                <XAxis dataKey="region" />
-                <YAxis unit=" GWh" />
-                <RechartsTooltip formatter={(value) => [`${value} GWh`, 'Consumption']} />
-                <Legend />
-                <Bar 
-                  dataKey="consumption" 
-                  name="Energy Consumption" 
-                  fill="#6366f1" 
-                  radius={[4, 4, 0, 0]} 
-                />
-              </BarChart>
-            </ResponsiveContainer>
-          </Box>
-        </Paper>
-        
-        {/* Energy Efficiency Metrics */}
-        <Grid container spacing={3} className="mt-6">
-          <Grid item xs={12} md={6}>
-            <Paper className="p-4 border rounded-lg">
-              <Typography variant="h6" className="mb-3 font-semibold">
-                Efficiency Metrics
-              </Typography>
-              <Box className="space-y-4">
-                {(energySummary.efficiencyMetrics || [
-                  { name: "Solar Panel Efficiency", value: 92 },
-                  { name: "Wind Turbine Efficiency", value: 88 },
-                  { name: "Hydro Generator Efficiency", value: 95 },
-                  { name: "Biomass Conversion Efficiency", value: 74 },
-                  { name: "Geothermal Plant Efficiency", value: 85 }
-                ]).map((metric, index) => (
-                  <Box key={index}>
-                    <Box className="flex justify-between mb-1">
-                      <Typography variant="body2">{metric.name}</Typography>
-                      <Typography variant="body2" className="font-semibold">
-                        {metric.value}%
-                      </Typography>
-                    </Box>
-                    <LinearProgress 
-                      variant="determinate" 
-                      value={metric.value} 
-                      sx={{ 
-                        height: 8, 
-                        borderRadius: 4, 
-                        bgcolor: '#f3f4f6',
-                        '& .MuiLinearProgress-bar': { 
-                          bgcolor: 
-                            metric.value >= 80 ? '#10b981' :
-                            metric.value >= 60 ? '#f59e0b' : '#ef4444'
-                        } 
-                      }}
-                    />
-                  </Box>
-                ))}
-              </Box>
-            </Paper>
-          </Grid>
-          
-          <Grid item xs={12} md={6}>
-            <Paper className="p-4 border rounded-lg">
-              <Typography variant="h6" className="mb-3 font-semibold">
-                Upcoming Maintenance
-              </Typography>
-              <Box className="space-y-3">
-                {(energySummary.maintenance || [
-                  { 
-                    sourceName: "Northern Solar Array", 
-                    type: "Solar", 
-                    priority: "High", 
-                    description: "Panel cleaning and calibration", 
-                    scheduledDate: "2025-03-25", 
-                    duration: "2 days" 
-                  },
-                  { 
-                    sourceName: "Central Wind Farm", 
-                    type: "Wind", 
-                    priority: "Medium", 
-                    description: "Turbine blade inspection", 
-                    scheduledDate: "2025-03-28", 
-                    duration: "3 days" 
-                  },
-                  { 
-                    sourceName: "Eastern Hydro Plant", 
-                    type: "Hydro", 
-                    priority: "Low", 
-                    description: "Routine generator maintenance", 
-                    scheduledDate: "2025-04-05", 
-                    duration: "1 day" 
-                  }
-                ]).map((item, index) => (
-                  <Box 
-                    key={index} 
-                    className="p-3 border rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors"
-                  >
-                    <Box className="flex justify-between mb-1">
-                      <Typography variant="subtitle2" className="font-semibold">
-                        {item.sourceName} ({item.type})
-                      </Typography>
-                      <Chip 
-                        label={item.priority} 
-                        size="small"
-                        color={
-                          item.priority === 'High' ? 'error' :
-                          item.priority === 'Medium' ? 'warning' : 'info'
-                        }
-                      />
-                    </Box>
-                    <Typography variant="body2" color="textSecondary">
-                      {item.description}
-                    </Typography>
-                    <Box className="flex justify-between mt-1">
-                      <Typography variant="caption" color="textSecondary">
-                        Scheduled: {formatDate(item.scheduledDate)}
-                      </Typography>
-                      <Typography variant="caption" color="textSecondary">
-                        Duration: {item.duration}
-                      </Typography>
-                    </Box>
-                  </Box>
-                ))}
-              </Box>
-            </Paper>
-          </Grid>
-        </Grid>
       </TabPanel>
       
-      {/* Footer */}
-      <Box className="mt-8 pt-4 border-t">
-        <Grid container spacing={2}>
-          <Grid item xs={12} md={6}>
-            <Typography variant="body2" color="textSecondary">
-              © 2025 Energy Management System. All rights reserved.
-            </Typography>
-          </Grid>
-          <Grid item xs={12} md={6}>
-            <Box className="flex justify-end gap-4">
-              <MuiButton 
-                size="small" 
-                startIcon={<Settings size={16} />}
-              >
-                Settings
-              </MuiButton>
-              <MuiButton 
-                size="small" 
-                startIcon={<Download size={16} />}
-              >
-                Export Data
-              </MuiButton>
-            </Box>
-          </Grid>
-        </Grid>
-      </Box>
+     
     </Box>
   );
 };

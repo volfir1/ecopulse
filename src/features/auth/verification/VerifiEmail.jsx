@@ -25,7 +25,16 @@ const VerifyEmail = () => {
   const email = stateData.email || urlEmail || '';
   const provider = stateData.provider || 'email';
 
-  // Verification handler with simplified logic
+  // Countdown effect
+  useEffect(() => {
+    let timer;
+    if (countdown > 0) {
+      timer = setTimeout(() => setCountdown(prev => prev - 1), 1000);
+    }
+    return () => clearTimeout(timer);
+  }, [countdown]);
+
+  // Verification handler with improved auth storage
   const handleVerification = async (e) => {
     if (e) e.preventDefault();
     
@@ -50,11 +59,36 @@ const VerifyEmail = () => {
       const response = await verifyEmail(userId, verificationCode);
       
       if (response?.success) {
+        // Double-check localStorage has token before navigation
+        const hasToken = localStorage.getItem('authToken');
+        const hasUser = localStorage.getItem('user');
+        
+        console.log('Pre-navigation check:', { hasToken, hasUser });
+        
+        // If we still don't have a token, try to save it again as a fallback
+        // Your backend includes accessToken in the user object
+        if (!hasToken && response.user?.accessToken) {
+          localStorage.setItem('authToken', response.user.accessToken);
+          console.log('Saved token in component as fallback');
+        }
+        
+        // If we don't have user data, save it as fallback
+        if (!hasUser && response.user) {
+          localStorage.setItem('user', JSON.stringify(response.user));
+          console.log('Saved user in component as fallback');
+        }
+        
         toast.success('Email verified successfully!');
         
-        // Short delay to ensure authentication state is updated
+        // Increased delay to ensure localStorage is updated
         setTimeout(() => {
-          // Redirect to onboarding page with state
+          // Final check before navigation
+          if (!localStorage.getItem('authToken') || !localStorage.getItem('user')) {
+            console.warn('Still missing auth data before navigation!');
+          }
+          
+          // IMPORTANT: Redirect to onboarding page with state
+          console.log('Redirecting to onboarding page...');
           navigate('/onboarding', { 
             replace: true,
             state: { 
@@ -64,7 +98,7 @@ const VerifyEmail = () => {
               message: 'Email verified successfully! Complete your profile to get started.'
             }
           });
-        }, 1500);
+        }, 2000);
       } else {
         throw new Error('Verification failed');
       }
@@ -139,15 +173,21 @@ const VerifyEmail = () => {
           variant="contained"
           type="submit"
           sx={{ mt: 3 }}
+          disabled={isSubmitting}
         >
-          {isSubmitting ? 'Verifying...' : 'Verify Email'}
+          {isSubmitting ? (
+            <>
+              <CircularProgress size={24} sx={{ mr: 1, color: 'white' }} />
+              Verifying...
+            </>
+          ) : 'Verify Email'}
         </Button>
 
         <Button
           fullWidth
           variant="text"
           onClick={handleResendCode}
-          disabled={countdown > 0}
+          disabled={countdown > 0 || isSubmitting}
           sx={{ mt: 2 }}
         >
           {countdown > 0 
@@ -160,6 +200,7 @@ const VerifyEmail = () => {
           variant="text"
           onClick={() => navigate('/login')}
           sx={{ mt: 1 }}
+          disabled={isSubmitting}
         >
           Return to Login
         </Button>

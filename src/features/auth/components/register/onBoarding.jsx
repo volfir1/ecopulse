@@ -4,6 +4,8 @@ import { User, ArrowRight, CheckCircle, Camera } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useSnackbar, useLoader, p, t } from '@shared/index';
 import { useAuth } from '@context/AuthContext';
+// Import the compression utilities
+import { compressImageFile, compressBase64Image } from '@utils/imageCompression';
 
 // Default avatar options
 const defaultAvatars = [
@@ -42,7 +44,6 @@ const Onboarding = () => {
     const fileInputRef = React.useRef(null);
 
     // Load any existing user data
-
     useEffect(() => {
         // Check if we have valid authentication
         const authToken = localStorage.getItem('authToken');
@@ -86,6 +87,11 @@ const Onboarding = () => {
     const fetchSvgAsBase64 = async (svgUrl) => {
         try {
             const response = await fetch(svgUrl);
+            
+            if (!response.ok) {
+                throw new Error(`Failed to fetch SVG: ${response.status}`);
+            }
+            
             const svgText = await response.text();
             return `data:image/svg+xml;base64,${btoa(svgText)}`;
         } catch (error) {
@@ -126,6 +132,14 @@ const Onboarding = () => {
 
             // Convert to base64
             const base64Data = `data:image/svg+xml;base64,${btoa(svgContent)}`;
+            
+            // Compress the base64 image using our utility
+            // For SVGs we can still compress if they're large, though they're usually small
+            const compressedBase64 = await compressBase64Image(base64Data, {
+                maxSizeMB: 2, // 2MB is a safe limit
+                maxWidthOrHeight: 800, // Reasonable size for avatars
+                quality: 0.9 // High quality for SVGs
+            });
 
             // Create a unique identifier using the user ID and timestamp
             const userId = user?.id || JSON.parse(localStorage.getItem('user'))?.id;
@@ -140,7 +154,7 @@ const Onboarding = () => {
                     'Authorization': `Bearer ${localStorage.getItem('authToken')}`
                 },
                 body: JSON.stringify({
-                    base64Image: base64Data,
+                    base64Image: compressedBase64, // Use compressed image
                     avatarId: avatarId,
                     uniqueId: uniqueId
                 })
@@ -163,7 +177,8 @@ const Onboarding = () => {
             throw error;
         }
     };
-    // Handle file selection
+    
+    // Handle file selection - Updated with compression
     const handleFileChange = async (e) => {
         const file = e.target.files?.[0];
         if (!file) return;
@@ -175,26 +190,33 @@ const Onboarding = () => {
             return;
         }
 
-        // Validate file size (max 2MB)
-        if (file.size > 2 * 1024 * 1024) {
-            toast.error('Image must be less than 2MB');
-            return;
-        }
-
         setIsUploading(true);
         setUploadProgress(10);
 
         try {
-            // Create form data for the upload
+            // Check file size and update the user about compression
+            if (file.size > 2 * 1024 * 1024) {
+                toast.info('Compressing image for optimal upload...', { autoClose: 2000 });
+            }
+            
+            setUploadProgress(20);
+            
+            // Compress the image regardless of size for consistency
+            const compressedFile = await compressImageFile(file, {
+                maxSizeMB: 2, // 2MB limit
+                maxWidthOrHeight: 800, // Good size for avatars
+                initialQuality: 0.8 // Start with good quality
+            });
+            
+            setUploadProgress(40);
+            
+            // Create form data with the compressed file
             const formData = new FormData();
-            formData.append('avatar', file);
-
-            // Increase progress to show activity
-            setUploadProgress(30);
+            formData.append('avatar', compressedFile);
 
             // Upload to our backend which will handle Cloudinary
             const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
-            const response = await fetch(`${API_URL}/uploads/avatar`, {
+            const response = await fetch(`${API_URL}/upload/avatar`, {
                 method: 'POST',
                 headers: {
                     'Authorization': `Bearer ${localStorage.getItem('authToken')}`
@@ -239,7 +261,13 @@ const Onboarding = () => {
             }
         } catch (error) {
             console.error('Error uploading avatar:', error);
-            toast.error(error.message || 'Failed to upload avatar');
+            
+            // More specific error message for payload size issues
+            if (error.message && error.message.includes('entity too large')) {
+                toast.error('Image is too large. Please try a smaller image or use one of our default avatars.');
+            } else {
+                toast.error(error.message || 'Failed to upload avatar');
+            }
         } finally {
             setIsUploading(false);
             // Reset the file input for future uploads
@@ -249,6 +277,50 @@ const Onboarding = () => {
         }
     };
 
+    // Alternative method for base64 upload directly
+    const uploadBase64Avatar = async (base64Data) => {
+        try {
+            if (!base64Data) {
+                throw new Error('No image data provided');
+            }
+
+            // Compress the base64 image
+            const compressedBase64 = await compressBase64Image(base64Data, {
+                maxSizeMB: 2,
+                maxWidthOrHeight: 800,
+                quality: 0.8
+            });
+
+            const userId = user?.id || JSON.parse(localStorage.getItem('user'))?.id;
+            const uniqueId = `${userId}_${Date.now()}`;
+            
+            // Upload the compressed base64 image
+            const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
+            const response = await fetch(`${API_URL}/upload/base64avatar`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${localStorage.getItem('authToken')}`
+                },
+                body: JSON.stringify({
+                    base64Image: compressedBase64,
+                    avatarId: 'custom_avatar',
+                    uniqueId: uniqueId
+                })
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.message || `Server error: ${response.status}`);
+            }
+
+            const data = await response.json();
+            return data.avatar;
+        } catch (error) {
+            console.error('Error uploading base64 avatar:', error);
+            throw error;
+        }
+    };
 
     const handleComplete = async () => {
         startLoading();
@@ -266,16 +338,42 @@ const Onboarding = () => {
                     avatarValue = await uploadDefaultAvatarToCloudinary(selectedAvatar);
                 } catch (avatarError) {
                     console.error('Failed to upload default avatar:', avatarError);
-                    // Fallback to the original selected avatar ID
+                    
+                    // More specific error handling for size issues
+                    if (avatarError.message && avatarError.message.includes('entity too large')) {
+                        toast.error('Avatar image is too large. Using a simplified version instead.');
+                        // Here you could use a known small version or a text-based avatar instead
+                    } else {
+                        // Fallback to the original selected avatar ID
+                        toast.warning('Using default avatar due to upload issue', { autoClose: 2000 });
+                    }
+                    
                     avatarValue = selectedAvatar;
-                    toast.warning('Using default avatar due to upload issue', { autoClose: 2000 });
                 }
             }
 
             console.log('Final avatar being saved:', avatarValue);
-
+            
+            // Get user ID - we need this for constructing a relative payload size
+            const userId = user?.id || JSON.parse(localStorage.getItem('user'))?.id;
+            
             // Call your API to update user profile with onboarding data
             const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
+            
+            // Log the payload size for debugging
+            const payloadSize = JSON.stringify({
+                gender: selectedGender,
+                avatar: avatarValue,
+                hasCompletedOnboarding: true
+            }).length;
+            
+            console.log('Onboarding update request:', {
+                userId: userId,
+                gender: selectedGender,
+                avatarLength: avatarValue.length,
+                hasCompletedOnboarding: true
+            });
+            
             const response = await fetch(`${API_URL}/users/onboarding`, {
                 method: 'POST',
                 headers: {
@@ -318,7 +416,13 @@ const Onboarding = () => {
             }, 800);
         } catch (error) {
             console.error('Profile update error:', error);
-            toast.error(error.message || 'Failed to update profile. Please try again.');
+            
+            // Special handling for payload too large errors
+            if (error.message && error.message.includes('entity too large')) {
+                toast.error('Profile update failed due to image size. Please try a smaller avatar image.');
+            } else {
+                toast.error(error.message || 'Failed to update profile. Please try again.');
+            }
         } finally {
             stopLoading();
         }
@@ -330,8 +434,10 @@ const Onboarding = () => {
         navigate(user?.role === 'admin' ? '/admin/dashboard' : '/dashboard');
     };
 
+    // Rest of the component remains the same...
     return (
         <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center p-6">
+            {/* Existing JSX code - no changes needed here */}
             <div className="w-full max-w-2xl bg-white rounded-2xl shadow-lg p-8">
                 <div className="text-center mb-8">
                     <div className="flex justify-center mb-4">

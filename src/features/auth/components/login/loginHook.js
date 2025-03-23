@@ -107,20 +107,64 @@ export const useLogin = () => {
     setIsAutoDeactivated(true);
     setRecoveryEmail(email);
     
-    toast.info("Your account has been automatically deactivated due to inactivity. A reactivation link has been sent to your email.");
+    // Show a pending notification
+    toast.info("Account deactivated due to inactivity. Sending reactivation email...");
     
     try {
-      console.log('Sending reactivation email...');
+      // Enhanced logging
+      console.log('Sending reactivation request to server...');
       const result = await authService.requestReactivation(email);
+      console.log('Reactivation request response:', result);
       
       if (result.success) {
-        navigateToLoginWithDeactivationInfo(email);
+        // Success case - navigate to login with clear message
+        toast.success("Reactivation email sent successfully. Please check your inbox.");
+        
+        // Navigate with clear state info
+        navigate('/login', { 
+          state: { 
+            email,
+            isAutoDeactivated: true,
+            emailSent: true, // Add clear indication that email was sent
+            message: "Your account has been automatically deactivated due to inactivity. A reactivation link has been sent to your email."
+          },
+          replace: true
+        });
       } else {
-        navigateToReactivation(email, true);
+        // Error case - navigate to reactivation page where user can retry
+        toast.error(result.message || "Problem sending reactivation email. Please try again.");
+        
+        navigate('/reactivate-account', { 
+          state: { 
+            email,
+            isAutoDeactivated: true,
+            emailSent: false,
+            hasError: true,
+            errorMessage: result.message,
+            message: "We encountered an issue sending the reactivation email. You can request a new one below."
+          },
+          replace: true
+        });
       }
     } catch (error) {
-      console.error('Error in auto-deactivated account flow:', error);
-      navigateToReactivation(email, true);
+      // Handle unexpected errors
+      console.error('Critical error in auto-deactivated account flow:', error);
+      
+      toast.error("An unexpected error occurred. Please try again.");
+      
+      navigate('/reactivate-account', { 
+        state: { 
+          email,
+          isAutoDeactivated: true,
+          hasError: true,
+          emailSent: false,
+          message: "We encountered a technical issue. Please try requesting a new reactivation email."
+        },
+        replace: true
+      });
+    } finally {
+      // Make sure loading state is reset
+      setIsLoading(false);
     }
   };
 

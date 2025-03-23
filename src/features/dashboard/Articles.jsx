@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { Clock, ExternalLink, X, RefreshCw, Bookmark, Share2 } from 'lucide-react';
+import React, { useState, useEffect, useCallback } from 'react';
+import { Clock, ExternalLink, X, RefreshCw, Bookmark, Share2, AlertCircle } from 'lucide-react';
 
 // Map energy categories to their colors
 const categoryColors = {
@@ -11,24 +11,97 @@ const categoryColors = {
   general: '#6366F1'
 };
 
-// RSS feed URLs for renewable energy news
+// Enhanced RSS feed selection with multiple options
 const RSS_FEEDS = [
   {
     url: 'https://www.renewableenergyworld.com/feed/',
-    name: 'Renewable Energy World'
+    name: 'Renewable Energy World',
+    reliable: true
   },
   {
     url: 'https://cleantechnica.com/feed/',
-    name: 'CleanTechnica'
+    name: 'CleanTechnica',
+    reliable: true
   },
   {
     url: 'https://www.solarpowerworldonline.com/feed/',
-    name: 'Solar Power World'
+    name: 'Solar Power World', 
+    reliable: true
+  },
+  // Additional high-quality feeds with good image support
+  {
+    url: 'https://renewablesnow.com/rss/',
+    name: 'Renewables Now',
+    reliable: true
+  },
+  {
+    url: 'https://feeds.feedburner.com/PvMagazine-GlobalPvSolarWebsite',
+    name: 'PV Magazine',
+    reliable: true
+  },
+  {
+    url: 'https://www.utilitydive.com/feeds/renewable-energy/',
+    name: 'Utility Dive',
+    reliable: true
   }
 ];
 
-// CORS proxy URL
-const CORS_PROXY = 'https://api.rss2json.com/v1/api.json?rss_url=';
+// Dedicated fallback images for each category
+const FALLBACK_IMAGES = {
+  solar: [
+    'https://images.unsplash.com/photo-1613665813446-82a78c468a1d?w=800&auto=format&fit=crop',
+    'https://images.unsplash.com/photo-1509391366360-2e959784a276?w=800&auto=format&fit=crop',
+    'https://images.pexels.com/photos/356036/pexels-photo-356036.jpeg?w=800&auto=format&fit=crop'
+  ],
+  wind: [
+    'https://images.unsplash.com/photo-1466611653911-95081537e5b7?w=800&auto=format&fit=crop',
+    'https://images.unsplash.com/photo-1548337138-e87d889cc369?w=800&auto=format&fit=crop',
+    'https://images.pexels.com/photos/414837/pexels-photo-414837.jpeg?w=800&auto=format&fit=crop'
+  ],
+  hydro: [
+    'https://images.unsplash.com/photo-1544964656-b557ba862fa3?w=800&auto=format&fit=crop',
+    'https://images.unsplash.com/photo-1623961993776-c23062bf31e8?w=800&auto=format&fit=crop',
+    'https://images.pexels.com/photos/2553401/pexels-photo-2553401.jpeg?w=800&auto=format&fit=crop'
+  ],
+  geothermal: [
+    'https://images.unsplash.com/photo-1527669538566-7300c2a0475a?w=800&auto=format&fit=crop',
+    'https://images.unsplash.com/photo-1675181656581-e47ee01224f5?w=800&auto=format&fit=crop',
+    'https://images.pexels.com/photos/4993225/pexels-photo-4993225.jpeg?w=800&auto=format&fit=crop'
+  ],
+  biomass: [
+    'https://images.unsplash.com/photo-1608042314453-ae338d80c427?w=800&auto=format&fit=crop',
+    'https://images.unsplash.com/photo-1518569656558-1f25fdc6d538?w=800&auto=format&fit=crop',
+    'https://images.pexels.com/photos/5546922/pexels-photo-5546922.jpeg?w=800&auto=format&fit=crop'
+  ],
+  general: [
+    'https://images.unsplash.com/photo-1473341304170-971dccb5ac1e?w=800&auto=format&fit=crop',
+    'https://images.unsplash.com/photo-1508514177221-188b1cf16e9d?w=800&auto=format&fit=crop',
+    'https://images.pexels.com/photos/9875441/pexels-photo-9875441.jpeg?w=800&auto=format&fit=crop'
+  ]
+};
+
+// Multiple CORS proxy options (with fallbacks)
+const CORS_PROXIES = [
+  'https://api.rss2json.com/v1/api.json?rss_url=',
+  'https://api.allorigins.win/raw?url=',
+  'https://corsproxy.io/?'
+];
+
+// Function to preload images
+const preloadImages = () => {
+  const allImages = [];
+  Object.values(FALLBACK_IMAGES).forEach(categoryImages => {
+    categoryImages.forEach(imageUrl => {
+      allImages.push(imageUrl);
+    });
+  });
+  
+  // Preload first 10 images
+  allImages.slice(0, 10).forEach(imageUrl => {
+    const img = new Image();
+    img.src = imageUrl;
+  });
+};
 
 const RenewableEnergyNews = () => {
   const [articles, setArticles] = useState([]);
@@ -38,6 +111,13 @@ const RenewableEnergyNews = () => {
   const [selectedArticle, setSelectedArticle] = useState(null);
   const [error, setError] = useState(null);
   const [lastUpdated, setLastUpdated] = useState(null);
+  const [imageLoadStats, setImageLoadStats] = useState({ success: 0, failed: 0 });
+  const [debugMode, setDebugMode] = useState(false);
+
+  // Preload fallback images when component mounts
+  useEffect(() => {
+    preloadImages();
+  }, []);
 
   useEffect(() => {
     // Check for cached articles first
@@ -60,24 +140,251 @@ const RenewableEnergyNews = () => {
     fetchRenewableNews();
   }, []);
 
+  // Function to get a random fallback image for a category
+  const getRandomFallbackImage = (category) => {
+    const images = FALLBACK_IMAGES[category] || FALLBACK_IMAGES.general;
+    return images[Math.floor(Math.random() * images.length)];
+  };
+
+  // Enhanced image validation - checks if an image URL is likely to be valid
+  const isValidImageUrl = (url) => {
+    if (!url) return false;
+    
+    // Filter out common invalid image patterns
+    const invalidPatterns = [
+      'spacer.gif', 'pixel.gif', 'blank.gif', 'tracker', 'track.',
+      'counter.', 'count.', '1x1.', 'logo_', 'favicon', 'icon-', 
+      '.svg', 'button', 'banner', 'header', 'footer'
+    ];
+    
+    const lowercaseUrl = url.toLowerCase();
+    
+    // Check for invalid patterns
+    if (invalidPatterns.some(pattern => lowercaseUrl.includes(pattern))) {
+      return false;
+    }
+    
+    // Check for valid image extensions
+    const validExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.webp'];
+    if (!validExtensions.some(ext => lowercaseUrl.endsWith(ext)) && 
+        !lowercaseUrl.includes('.jpg?') && 
+        !lowercaseUrl.includes('.jpeg?') && 
+        !lowercaseUrl.includes('.png?') && 
+        !lowercaseUrl.includes('.webp?')) {
+      // If it doesn't end with a valid extension, check if it's a content delivery URL
+      const cdnPatterns = ['cloudinary', 'cloudfront', 'imgix', 'unsplash', 'pexels', 'googleapis', 'wp-content'];
+      if (!cdnPatterns.some(cdn => lowercaseUrl.includes(cdn))) {
+        return false;
+      }
+    }
+    
+    // Check minimum length
+    if (url.length < 10) return false;
+    
+    return true;
+  };
+
+  // Improved image extraction that uses multiple techniques
+  const extractImageFromHtml = (html) => {
+    if (!html) return null;
+    
+    try {
+      // Create a DOM parser to properly extract images from HTML
+      const parser = new DOMParser();
+      const doc = parser.parseFromString(html, 'text/html');
+      
+      // First, look for og:image meta tags (best quality images for sharing)
+      const ogImage = doc.querySelector('meta[property="og:image"]');
+      if (ogImage && ogImage.getAttribute('content')) {
+        const ogImageUrl = ogImage.getAttribute('content');
+        if (isValidImageUrl(ogImageUrl)) {
+          return ogImageUrl;
+        }
+      }
+      
+      // Try to find all images
+      const images = Array.from(doc.querySelectorAll('img'));
+      
+      // Find largest images first (most likely to be content images)
+      const validImages = images
+        .filter(img => {
+          const src = img.getAttribute('src');
+          if (!isValidImageUrl(src)) return false;
+          
+          // Skip tiny images (likely icons, bullets, etc.)
+          const width = parseInt(img.getAttribute('width') || '0');
+          const height = parseInt(img.getAttribute('height') || '0');
+          
+          if ((width > 0 && width < 100) || (height > 0 && height < 100)) {
+            return false;
+          }
+          
+          return true;
+        })
+        .sort((a, b) => {
+          // Sort by size (prefer larger images)
+          const aWidth = parseInt(a.getAttribute('width') || '0');
+          const aHeight = parseInt(a.getAttribute('height') || '0');
+          const bWidth = parseInt(b.getAttribute('width') || '0');
+          const bHeight = parseInt(b.getAttribute('height') || '0');
+          
+          const aSize = aWidth * aHeight;
+          const bSize = bWidth * bHeight;
+          
+          return bSize - aSize;
+        });
+      
+      if (validImages.length > 0) {
+        // Get the src of the first valid (and largest) image
+        let imageSrc = validImages[0].getAttribute('src');
+        
+        // Ensure URL is absolute
+        if (imageSrc.startsWith('/')) {
+          // Try to use the feed domain to make it absolute
+          try {
+            const feedDomain = new URL(html.match(/<link>([^<]+)<\/link>/)?.[1] || '').origin;
+            imageSrc = feedDomain + imageSrc;
+          } catch (e) {
+            // If we can't extract the domain, try a default one
+            imageSrc = 'https://www.renewableenergyworld.com' + imageSrc;
+          }
+        }
+        
+        return imageSrc;
+      }
+    } catch (e) {
+      console.error('Error parsing HTML for images:', e);
+    }
+    
+    // Fallback to regex if DOM parsing fails
+    try {
+      const imgRegex = /<img[^>]+src="([^">]+)"[^>]*>/g;
+      const matches = [];
+      let match;
+      
+      while ((match = imgRegex.exec(html)) !== null) {
+        if (isValidImageUrl(match[1])) {
+          matches.push(match[1]);
+        }
+      }
+      
+      return matches.length > 0 ? matches[0] : null;
+    } catch (e) {
+      console.error('Error with regex image extraction:', e);
+      return null;
+    }
+  };
+
+  // Comprehensive method to extract the best image from an RSS item
+  const getBestImage = (item) => {
+    // Check for standard RSS image properties
+    if (item.enclosure?.link && isValidImageUrl(item.enclosure.link)) {
+      return item.enclosure.link;
+    }
+    
+    if (item.enclosure?.url && isValidImageUrl(item.enclosure.url)) {
+      return item.enclosure.url;
+    }
+    
+    if (item.thumbnail && isValidImageUrl(item.thumbnail)) {
+      return item.thumbnail;
+    }
+    
+    // Check for media extensions
+    if (item['media:content']?.url && isValidImageUrl(item['media:content'].url)) {
+      return item['media:content'].url;
+    }
+    
+    if (item['media:thumbnail']?.url && isValidImageUrl(item['media:thumbnail'].url)) {
+      return item['media:thumbnail'].url;
+    }
+    
+    // Check for image property
+    if (item.image) {
+      const imageSrc = typeof item.image === 'string' ? item.image : item.image.url || item.image.href;
+      if (isValidImageUrl(imageSrc)) return imageSrc;
+    }
+    
+    // Try to extract image from content or description
+    const contentImage = extractImageFromHtml(item.content);
+    if (contentImage) return contentImage;
+    
+    const descriptionImage = extractImageFromHtml(item.description);
+    if (descriptionImage) return descriptionImage;
+    
+    // If we still don't have an image, check if the title mentions a specific energy type
+    // and provide a relevant fallback image
+    const title = (item.title || '').toLowerCase();
+    
+    if (title.includes('solar') || title.includes('photovoltaic') || title.includes('pv ')) {
+      return getRandomFallbackImage('solar');
+    } else if (title.includes('wind') || title.includes('turbine')) {
+      return getRandomFallbackImage('wind');
+    } else if (title.includes('hydro') || title.includes('dam') || title.includes('water power')) {
+      return getRandomFallbackImage('hydro');
+    } else if (title.includes('geothermal') || title.includes('heat pump')) {
+      return getRandomFallbackImage('geothermal');
+    } else if (title.includes('biomass') || title.includes('biofuel') || title.includes('biogas')) {
+      return getRandomFallbackImage('biomass');
+    }
+    
+    // Return null as a last resort - the component will use a colored SVG placeholder
+    return null;
+  };
+
+  // Try multiple CORS proxies in sequence
+  const fetchWithCorsProxy = async (feedUrl, proxyIndex = 0) => {
+    if (proxyIndex >= CORS_PROXIES.length) {
+      throw new Error('All CORS proxies failed');
+    }
+    
+    try {
+      const proxyUrl = CORS_PROXIES[proxyIndex] + encodeURIComponent(feedUrl);
+      const response = await fetch(proxyUrl);
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      return data;
+    } catch (error) {
+      console.warn(`CORS proxy ${proxyIndex + 1} failed, trying next...`);
+      return fetchWithCorsProxy(feedUrl, proxyIndex + 1);
+    }
+  };
+
+  // Improved fetch function with better error handling
   const fetchRenewableNews = async () => {
     setLoading(true);
     setError(null);
+    setImageLoadStats({ success: 0, failed: 0 });
     
     try {
       let allArticles = [];
       
+      // Start with reliable feeds first
+      const reliableFeeds = RSS_FEEDS.filter(feed => feed.reliable);
+      const otherFeeds = RSS_FEEDS.filter(feed => !feed.reliable);
+      const prioritizedFeeds = [...reliableFeeds, ...otherFeeds];
+      
       // Try to fetch from each RSS feed
-      const feedPromises = RSS_FEEDS.map(feed => 
-        fetch(`${CORS_PROXY}${encodeURIComponent(feed.url)}`)
-          .then(response => response.json())
+      const feedPromises = prioritizedFeeds.map(feed => 
+        fetchWithCorsProxy(feed.url)
           .then(data => {
+            console.log(`Successfully fetched from ${feed.name}`);
+            
             if (data.status === 'ok' && data.items && data.items.length > 0) {
+              if (debugMode) {
+                console.log(`Sample item structure from ${feed.name}:`, 
+                  JSON.stringify(data.items[0], null, 2));
+              }
+              
               // Process the articles
-              return data.items.map((item, index) => {
+              return Promise.all(data.items.map(async (item, index) => {
                 // Clean up description (remove HTML)
                 const tempDiv = document.createElement('div');
-                tempDiv.innerHTML = item.description;
+                tempDiv.innerHTML = item.description || '';
                 const cleanDescription = tempDiv.textContent || tempDiv.innerText || '';
                 
                 // Determine category based on content
@@ -98,23 +405,60 @@ const RenewableEnergyNews = () => {
                   category = 'biomass';
                 }
                 
+                // Extract the best image from the item
+                let imageUrl = getBestImage(item);
+                
+                // If we have an image, test if it's loadable
+                if (imageUrl) {
+                  try {
+                    // Test if image loads (without adding to DOM)
+                    const imgLoadPromise = new Promise((resolve, reject) => {
+                      const img = new Image();
+                      img.onload = () => {
+                        setImageLoadStats(prev => ({ 
+                          ...prev, 
+                          success: prev.success + 1 
+                        }));
+                        resolve(true);
+                      };
+                      img.onerror = () => {
+                        setImageLoadStats(prev => ({ 
+                          ...prev, 
+                          failed: prev.failed + 1 
+                        }));
+                        reject(new Error('Image failed to load'));
+                      };
+                      img.src = imageUrl;
+                    });
+                    
+                    await imgLoadPromise;
+                  } catch (imgError) {
+                    console.log(`Image failed to load: ${imageUrl}`);
+                    // If the original image doesn't load, use a category-appropriate fallback
+                    imageUrl = getRandomFallbackImage(category);
+                  }
+                } else {
+                  // No image found, use a category-appropriate fallback
+                  imageUrl = getRandomFallbackImage(category);
+                }
+                
                 // Calculate read time (rough estimate based on word count)
                 const wordCount = cleanDescription.split(/\s+/).length;
                 const readTime = Math.max(1, Math.min(15, Math.ceil(wordCount / 200)));
                 
-                // Return formatted article
+                // Return the formatted article
                 return {
                   id: `${feed.name}-${index}`,
                   title: item.title,
                   description: cleanDescription.substring(0, 500) + (cleanDescription.length > 500 ? '...' : ''),
                   url: item.link,
-                  urlToImage: item.enclosure?.link || item.thumbnail || getBestImage(item),
+                  urlToImage: imageUrl,
                   publishedAt: item.pubDate,
                   source: { name: feed.name },
                   category,
                   readTime
                 };
-              });
+              }));
             }
             return [];
           })
@@ -150,6 +494,8 @@ const RenewableEnergyNews = () => {
           }
         });
         
+        console.log(`Successfully processed ${uniqueArticles.length} articles with ${imageLoadStats.success} valid images`);
+        
         // Update state
         setArticles(uniqueArticles);
         
@@ -175,47 +521,22 @@ const RenewableEnergyNews = () => {
     }
   };
 
-  // Helper function to extract the best image from an RSS item
-  const getBestImage = (item) => {
-    // Try common image locations in RSS items
-    if (item.enclosure?.link) return item.enclosure.link;
-    if (item.thumbnail) return item.thumbnail;
+  // Optimized SVG placeholder generator with better text handling
+  const generateColorPlaceholder = (text = 'Renewable Energy', category = 'general') => {
+    const colorHex = categoryColors[category]?.replace('#', '') || '6366F1';
+    const encodedText = encodeURIComponent(text);
     
-    // Try to find an image in the content
-    if (item.content) {
-      const imgMatch = item.content.match(/<img[^>]+src="([^">]+)"/);
-      if (imgMatch && imgMatch[1]) return imgMatch[1];
-    }
-    
-    // Try to find an image in the description
-    if (item.description) {
-      const imgMatch = item.description.match(/<img[^>]+src="([^">]+)"/);
-      if (imgMatch && imgMatch[1]) return imgMatch[1];
-    }
-    
-    // Return a static generated color placeholder instead of via.placeholder.com
-    const colors = ['F44336', '2196F3', '4CAF50', 'FFC107', '9C27B0', '3F51B5', '009688'];
-    const randomColor = colors[Math.floor(Math.random() * colors.length)];
-    return `data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='800' height='400' viewBox='0 0 800 400'%3E%3Crect width='800' height='400' fill='%23${randomColor}'/%3E%3Ctext x='400' y='200' font-family='Arial' font-size='32' text-anchor='middle' fill='white'%3ERenewable Energy%3C/text%3E%3C/svg%3E`;
+    return `data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='800' height='400' viewBox='0 0 800 400'%3E%3Crect width='800' height='400' fill='%23${colorHex}'/%3E%3Ctext x='400' y='200' font-family='Arial' font-size='32' text-anchor='middle' fill='white'%3E${encodedText}%3C/text%3E%3C/svg%3E`;
   };
 
-  // Fallback articles for when all fetches fail
+  // Fallback articles for when all fetches fail (improved with better images)
   const getFallbackArticles = () => {
-    // Create colored SVG placeholders for fallback images
-    const colorPlaceholders = [
-      `data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='800' height='400' viewBox='0 0 800 400'%3E%3Crect width='800' height='400' fill='%23FFB800'/%3E%3Ctext x='400' y='200' font-family='Arial' font-size='32' text-anchor='middle' fill='white'%3ESolar Energy%3C/text%3E%3C/svg%3E`,
-      `data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='800' height='400' viewBox='0 0 800 400'%3E%3Crect width='800' height='400' fill='%232E90E5'/%3E%3Ctext x='400' y='200' font-family='Arial' font-size='32' text-anchor='middle' fill='white'%3EWind Energy%3C/text%3E%3C/svg%3E`,
-      `data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='800' height='400' viewBox='0 0 800 400'%3E%3Crect width='800' height='400' fill='%2364748B'/%3E%3Ctext x='400' y='200' font-family='Arial' font-size='32' text-anchor='middle' fill='white'%3EHydropower%3C/text%3E%3C/svg%3E`,
-      `data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='800' height='400' viewBox='0 0 800 400'%3E%3Crect width='800' height='400' fill='%23FF6B6B'/%3E%3Ctext x='400' y='200' font-family='Arial' font-size='32' text-anchor='middle' fill='white'%3EGeothermal Energy%3C/text%3E%3C/svg%3E`,
-      `data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='800' height='400' viewBox='0 0 800 400'%3E%3Crect width='800' height='400' fill='%2316A34A'/%3E%3Ctext x='400' y='200' font-family='Arial' font-size='32' text-anchor='middle' fill='white'%3EBiomass Energy%3C/text%3E%3C/svg%3E`
-    ];
-    
     return [
       {
         id: 'fallback-1',
         title: 'Solar Power Innovations Driving Renewable Energy Growth',
         description: 'New advances in solar panel efficiency and battery storage are accelerating the transition to clean energy worldwide. Researchers have developed panels that can operate at higher efficiency rates even in low-light conditions, potentially extending solar viability to more regions.',
-        urlToImage: colorPlaceholders[0],
+        urlToImage: getRandomFallbackImage('solar'),
         publishedAt: new Date().toISOString(),
         source: { name: 'Renewable Energy World' },
         url: 'https://www.renewableenergyworld.com/',
@@ -226,7 +547,7 @@ const RenewableEnergyNews = () => {
         id: 'fallback-2',
         title: 'Offshore Wind Projects Expand as Costs Decline',
         description: 'Offshore wind is seeing unprecedented growth as technology improvements drive down costs. New floating turbine designs allow wind farms to be installed in deeper waters, opening up vast new areas for renewable energy development without visual impact on coastal communities.',
-        urlToImage: colorPlaceholders[1],
+        urlToImage: getRandomFallbackImage('wind'),
         publishedAt: new Date(Date.now() - 86400000).toISOString(),
         source: { name: 'CleanTechnica' },
         url: 'https://cleantechnica.com/',
@@ -237,7 +558,7 @@ const RenewableEnergyNews = () => {
         id: 'fallback-3',
         title: 'Hydropower Modernization Projects Boost Efficiency',
         description: 'Aging hydroelectric dams are getting high-tech upgrades that significantly increase their power output without increasing their environmental footprint. New turbine designs, digital controls, and improved flow management are breathing new life into infrastructure that in some cases is over 50 years old.',
-        urlToImage: colorPlaceholders[2],
+        urlToImage: getRandomFallbackImage('hydro'),
         publishedAt: new Date(Date.now() - 172800000).toISOString(),
         source: { name: 'Hydro Review' },
         url: 'https://www.hydroreview.com/',
@@ -248,7 +569,7 @@ const RenewableEnergyNews = () => {
         id: 'fallback-4',
         title: 'Geothermal Power Plants Set for Major Expansion',
         description: 'Geothermal energy is experiencing renewed interest as countries look to develop always-on renewable energy sources. Enhanced geothermal systems now allow power production in regions previously thought unsuitable for geothermal development, potentially making this stable clean energy source widely available.',
-        urlToImage: colorPlaceholders[3],
+        urlToImage: getRandomFallbackImage('geothermal'),
         publishedAt: new Date(Date.now() - 259200000).toISOString(),
         source: { name: 'Renewable Energy World' },
         url: 'https://www.renewableenergyworld.com/',
@@ -259,7 +580,7 @@ const RenewableEnergyNews = () => {
         id: 'fallback-5',
         title: 'Biomass Industry Makes Progress on Sustainability Standards',
         description: 'The biomass industry is introducing new sustainability certifications to address concerns about feedstock sourcing. These standards ensure that biomass energy production does not compete with food production or contribute to deforestation, focusing instead on agricultural waste and sustainable forestry practices.',
-        urlToImage: colorPlaceholders[4],
+        urlToImage: getRandomFallbackImage('biomass'),
         publishedAt: new Date(Date.now() - 345600000).toISOString(),
         source: { name: 'Bioenergy Insight' },
         url: 'https://www.bioenergy-news.com/',
@@ -310,7 +631,6 @@ const RenewableEnergyNews = () => {
   // Close article modal
   const closeArticleModal = () => {
     setModalOpen(false);
-    // Add a small delay to avoid visual glitches
     setTimeout(() => setSelectedArticle(null), 300);
   };
 
@@ -319,15 +639,47 @@ const RenewableEnergyNews = () => {
     fetchRenewableNews();
   };
 
-  // Generate a random color placeholder SVG
-  const generateColorPlaceholder = (text = 'Renewable Energy', colorHex = null) => {
-    if (!colorHex) {
-      const colors = ['F44336', '2196F3', '4CAF50', 'FFC107', '9C27B0', '3F51B5', '009688'];
-      colorHex = colors[Math.floor(Math.random() * colors.length)];
+  // Enhanced image error handler
+  const handleImageError = (e, article) => {
+    e.target.onerror = null; // Prevent infinite loop
+    
+    // Try to use a category-specific fallback image
+    const fallbackUrl = getRandomFallbackImage(article.category);
+    
+    if (fallbackUrl) {
+      e.target.src = fallbackUrl;
+    } else {
+      // If all else fails, use an SVG placeholder
+      const categoryText = article.category.charAt(0).toUpperCase() + article.category.slice(1) + ' Energy';
+      e.target.src = generateColorPlaceholder(categoryText, article.category);
     }
     
-    return `data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='800' height='400' viewBox='0 0 800 400'%3E%3Crect width='800' height='400' fill='%23${colorHex}'/%3E%3Ctext x='400' y='200' font-family='Arial' font-size='32' text-anchor='middle' fill='white'%3E${text}%3C/text%3E%3C/svg%3E`;
+    // Log the failure for debugging
+    console.log(`Image replacement applied for article: ${article.title.substring(0, 30)}...`);
   };
+
+  if (loading) {
+    return (
+      <div className="mt-8">
+        <div className="flex justify-between items-center mb-6">
+          <h2 className="text-xl font-semibold text-gray-800">Renewable Energy News</h2>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {[1, 2, 3, 4, 5, 6].map(i => (
+            <div key={i} className="animate-pulse rounded-lg overflow-hidden shadow-md bg-white">
+              <div className="h-40 bg-gray-200"></div>
+              <div className="p-4">
+                <div className="h-4 bg-gray-200 rounded w-1/4 mb-2"></div>
+                <div className="h-6 bg-gray-200 rounded w-3/4 mb-3"></div>
+                <div className="h-4 bg-gray-200 rounded w-full mb-3"></div>
+                <div className="h-4 bg-gray-200 rounded w-2/3"></div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="mt-8">
@@ -373,21 +725,7 @@ const RenewableEnergyNews = () => {
         </div>
       )}
 
-      {loading && articles.length === 0 ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {[1, 2, 3, 4, 5, 6].map(i => (
-            <div key={i} className="animate-pulse rounded-lg overflow-hidden shadow-md bg-white">
-              <div className="h-40 bg-gray-200"></div>
-              <div className="p-4">
-                <div className="h-4 bg-gray-200 rounded w-1/4 mb-2"></div>
-                <div className="h-6 bg-gray-200 rounded w-3/4 mb-3"></div>
-                <div className="h-4 bg-gray-200 rounded w-full mb-3"></div>
-                <div className="h-4 bg-gray-200 rounded w-2/3"></div>
-              </div>
-            </div>
-          ))}
-        </div>
-      ) : filteredArticles.length === 0 ? (
+      {filteredArticles.length === 0 ? (
         <div className="text-center py-8 text-gray-500">
           No articles found for this category. Try selecting a different category or refreshing the news.
         </div>
@@ -405,24 +743,18 @@ const RenewableEnergyNews = () => {
                     src={article.urlToImage} 
                     alt={article.title} 
                     className="w-full h-full object-cover"
-                    onError={(e) => {
-                      e.target.onerror = null;
-                      // Use inline SVG data URL instead of external placeholder service
-                      const categoryColors = {
-                        solar: 'FFB800',
-                        hydro: '2E90E5',
-                        wind: '64748B',
-                        biomass: '16A34A',
-                        geothermal: 'FF6B6B',
-                        general: '6366F1'
-                      };
-                      const colorHex = categoryColors[article.category] || '6366F1';
-                      e.target.src = generateColorPlaceholder(article.category.charAt(0).toUpperCase() + article.category.slice(1) + ' Energy', colorHex);
-                    }}
+                    onError={(e) => handleImageError(e, article)}
+                    loading="lazy"
                   />
                 ) : (
-                  <div className="w-full h-full flex items-center justify-center bg-gray-100">
-                    <span className="text-gray-400">{article.source.name}</span>
+                  <div 
+                    className="w-full h-full flex items-center justify-center text-center px-4"
+                    style={{ 
+                      backgroundColor: categoryColors[article.category] || categoryColors.general, 
+                      color: 'white' 
+                    }}
+                  >
+                    <span className="font-medium">{article.category.charAt(0).toUpperCase() + article.category.slice(1)} Energy</span>
                   </div>
                 )}
                 <div 
@@ -472,19 +804,7 @@ const RenewableEnergyNews = () => {
                     src={selectedArticle.urlToImage} 
                     alt={selectedArticle.title} 
                     className="w-full h-auto max-h-[400px] object-cover rounded"
-                    onError={(e) => {
-                      e.target.onerror = null;
-                      const categoryColors = {
-                        solar: 'FFB800',
-                        hydro: '2E90E5',
-                        wind: '64748B',
-                        biomass: '16A34A',
-                        geothermal: 'FF6B6B',
-                        general: '6366F1'
-                      };
-                      const colorHex = categoryColors[selectedArticle.category] || '6366F1';
-                      e.target.src = generateColorPlaceholder(selectedArticle.category.charAt(0).toUpperCase() + selectedArticle.category.slice(1) + ' Energy', colorHex);
-                    }}
+                    onError={(e) => handleImageError(e, selectedArticle)}
                   />
                 </div>
               )}
@@ -542,6 +862,16 @@ const RenewableEnergyNews = () => {
           <button className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50">
             Load More News <RefreshCw size={16} className="ml-2" />
           </button>
+        </div>
+      )}
+      
+      {/* Debug stats when in debug mode */}
+      {debugMode && (
+        <div className="mt-6 p-4 bg-gray-100 rounded-lg text-xs">
+          <h4 className="font-semibold">Debug Info:</h4>
+          <p>Images loaded successfully: {imageLoadStats.success}</p>
+          <p>Images failed to load: {imageLoadStats.failed}</p>
+          <p>Using fallback images: {imageLoadStats.failed > 0 ? 'Yes' : 'No'}</p>
         </div>
       )}
     </div>

@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Card, AppIcon, Loader, useSnackbar } from '@shared/index';
 import { useProfile } from './profileHook';
+import { useProfile as useProfileContext } from '@context/ProfileContext';
 import {
   Box,
   Grid,
@@ -19,8 +20,11 @@ import {
   useMediaQuery,
   useTheme
 } from '@mui/material';
-import { Camera, Upload, Check } from 'lucide-react';
-import userService from '@services/userService';
+import { Camera, Upload, Check, Edit, Save, CircleX } from 'lucide-react';
+import userService from '../../services/userService';
+import { useLoader } from '@shared/index';
+import { Formik, Form, Field, ErrorMessage } from 'formik';
+import * as Yup from 'yup';
 
 // Default avatar options
 const defaultAvatars = [
@@ -45,23 +49,32 @@ const genderOptions = [
 
 const UserProfile = () => {
   const theme = useTheme();
+  const { isLoading, startLoading, stopLoading } = useLoader();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const [activeTab, setActiveTab] = useState('profile');
   const fileInputRef = useRef(null);
   const toast = useSnackbar();
+  
+  // Get profile context functions for avatar updates
+  const { updateProfilePicture, updateDefaultAvatar } = useProfileContext();
+  
+  // Add edit mode state
+  const [isEditMode, setIsEditMode] = useState(false);
+  
+  // Add state to store original data for cancel functionality
+  const [originalFormData, setOriginalFormData] = useState({});
 
   const {
     user,
     formData,
     passwordData,
-    isLoading,
     handleInputChange,
     handlePasswordChange,
     handlePasswordSubmit,
     originalHandleProfileSubmit,
     isGoogleAccount,
-    uploadDefaultAvatar,
-    uploadAvatar,
+    uploadDefaultAvatar: legacyUploadDefaultAvatar,
+    uploadAvatar: legacyUploadAvatar,
     userAvatar
   } = useProfile();
 
@@ -89,6 +102,19 @@ const UserProfile = () => {
         setIsCustomAvatar(true);
       }
     }
+    
+    // Store original form data when user data loads
+    if (user) {
+      setOriginalFormData({
+        firstName: user.firstName || '',
+        lastName: user.lastName || '',
+        email: user.email || '',
+        phone: user.phone || '',
+        gender: user.gender || 'prefer-not-to-say',
+        role: user.role || 'user',
+        avatar: user.avatar
+      });
+    }
   }, [user]);
 
   const navigation = [
@@ -98,6 +124,8 @@ const UserProfile = () => {
 
   // Handle avatar selection
   const handleAvatarSelect = (avatarId) => {
+    if (!isEditMode) return; // Prevent selection when not in edit mode
+    
     setSelectedAvatar(avatarId);
     setIsCustomAvatar(false);
 
@@ -116,46 +144,110 @@ const UserProfile = () => {
     }
   };
 
+  // Handle entering edit mode
+  const enableEditMode = () => {
+    // Save the current state before editing begins
+    setOriginalFormData({...formData});
+    setIsEditMode(true);
+  };
+
+  // Handle canceling edit mode
+  const cancelEditMode = () => {
+    // Restore original values
+    Object.keys(originalFormData).forEach(key => {
+      handleInputChange({
+        target: {
+          name: key,
+          value: originalFormData[key]
+        }
+      });
+    });
+    
+    // If there was a selected avatar, restore it
+    if (originalFormData.avatar) {
+      const defaultAvatar = defaultAvatars.find(a => a.id === originalFormData.avatar);
+      if (defaultAvatar) {
+        setCurrentAvatar(defaultAvatar.src);
+        setSelectedAvatar(defaultAvatar.id);
+        setIsCustomAvatar(false);
+      } else {
+        setCurrentAvatar(`${originalFormData.avatar}?t=${Date.now()}`);
+        setIsCustomAvatar(true);
+        setSelectedAvatar(null);
+      }
+    }
+    
+    // Exit edit mode
+    setIsEditMode(false);
+  };
+
+  // Updated profile submission with better avatar handling
   const handleProfileSubmit = async (e) => {
     e.preventDefault();
+    
+    // Start the loader
+    startLoading();
 
-    if (selectedAvatar && !isCustomAvatar) {
-      // This is a default avatar selection, upload it first
-      try {
-        // Find the selected avatar
+    try {
+      // If a default avatar is selected, upload it first using the ProfileContext method
+      if (selectedAvatar && !isCustomAvatar) {
+        // Find the selected avatar from default avatars
         const selected = defaultAvatars.find(avatar => avatar.id === selectedAvatar);
 
         if (selected) {
-          // Upload the default avatar
-          const avatarUrl = await uploadDefaultAvatar(selectedAvatar, selected.src);
+          toast.info('Processing...', { autoClose: 2000 });
+          
+          // Upload the default avatar using the context method
+          const avatarResult = await updateDefaultAvatar(selectedAvatar, selected.src);
+          
+          if (!avatarResult.success) {
+            throw new Error(avatarResult.error || 'Failed to upload default avatar');
+          }
 
-          // Update formData with Cloudinary URL
+          // Update formData with the new avatar URL
           handleInputChange({
             target: {
               name: 'avatar',
-              value: avatarUrl
+              value: avatarResult.avatar
             }
           });
 
-          // Update displayed avatar (with cache busting)
+          // Update the displayed avatar with cache busting
           const cacheBuster = `?t=${Date.now()}`;
-          setCurrentAvatar(`${avatarUrl}${cacheBuster}`);
+          setCurrentAvatar(`${avatarResult.avatar}${cacheBuster}`);
         }
-      } catch (error) {
-        toast.error("Error uploading avatar: " + (error.message || "Unknown error"));
-        return; // Stop submission on error
       }
-    }
 
-    // Now proceed with normal profile update
-    await originalHandleProfileSubmit(e);
+      // Now proceed with normal profile update
+      const result = await originalHandleProfileSubmit(e);
+      
+      // If update was successful, refresh local data and then reload
+      if (result && result.success) {
+        setOriginalFormData({ ...formData });
+        setIsEditMode(false);
+        toast.success("Profile updated successfully!");
+        
+        // Delay to allow user to see the success message, then stop loader and refresh page
+        setTimeout(() => {
+          stopLoading();
+          window.location.reload();
+        }, 1500);
+      } else {
+        throw new Error(result?.message || 'Failed to update profile');
+      }
+    } catch (error) {
+      toast.error(error.message || "Error updating profile. Please try again.");
+      stopLoading();
+    }
   };
 
   // Handle custom avatar upload
   const handleUploadClick = () => {
+    if (!isEditMode) return; // Prevent upload when not in edit mode
     fileInputRef.current?.click();
   };
 
+  // Updated file change handler using ProfileContext
   const handleFileChange = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -167,26 +259,25 @@ const UserProfile = () => {
       return;
     }
 
-    // Validate file size (max 2MB)
-    if (file.size > 2 * 1024 * 1024) {
-      toast.error('Image must be less than 2MB');
-      return;
-    }
-
     setIsUploading(true);
     setUploadProgress(10);
 
     try {
-      const avatarUrl = await uploadAvatar(file, (progress) => {
+      // Use the ProfileContext method instead of the local uploadAvatar
+      const result = await updateProfilePicture(file, (progress) => {
         setUploadProgress(progress);
       });
+
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to upload avatar');
+      }
 
       setIsCustomAvatar(true);
       setSelectedAvatar(null); // Deselect any default avatar
 
       // Force cache-busting by adding a timestamp
       const cacheBuster = `?t=${Date.now()}`;
-      const urlWithCacheBuster = `${avatarUrl}${cacheBuster}`;
+      const urlWithCacheBuster = `${result.avatar}${cacheBuster}`;
 
       setCurrentAvatar(urlWithCacheBuster);
 
@@ -194,26 +285,16 @@ const UserProfile = () => {
       handleInputChange({
         target: {
           name: 'avatar',
-          value: avatarUrl
+          value: result.avatar
         }
       });
 
-      // Immediately save the profile to ensure the avatar is persisted
-      try {
-        const updateResponse = await userService.updateProfile(user.id, {
-          ...formData,
-          avatar: avatarUrl
-        });
-
-        if (updateResponse.success) {
-          console.log("Profile updated with new avatar");
-        }
-      } catch (updateError) {
-        console.error("Error saving avatar to profile:", updateError);
-      }
+      // Update original form data to prevent issues when canceling edit mode
+      setOriginalFormData(prev => ({...prev, avatar: result.avatar}));
 
       toast.success('Avatar uploaded successfully!');
     } catch (error) {
+      console.error('Avatar upload error:', error);
       toast.error(error.message || 'Failed to upload avatar');
     } finally {
       setIsUploading(false);
@@ -390,16 +471,47 @@ const UserProfile = () => {
                     borderColor: 'divider'
                   }}
                 >
-                  <Typography
-                    variant="h6"
-                    sx={{
-                      mb: 3,
-                      fontWeight: 600,
-                      color: 'text.primary'
-                    }}
-                  >
-                    Profile Picture
-                  </Typography>
+                  <Box sx={{ 
+                    display: 'flex', 
+                    justifyContent: 'space-between', 
+                    alignItems: 'center',
+                    mb: 3 
+                  }}>
+                    <Typography
+                      variant="h6"
+                      sx={{
+                        fontWeight: 600,
+                        color: 'text.primary'
+                      }}
+                    >
+                      Profile Picture
+                    </Typography>
+                    
+                    {/* Edit/Save/Cancel buttons for Avatar section */}
+                    {!isEditMode ? (
+                      <Button
+                        variant="outlined"
+                        startIcon={<Edit size={16} />}
+                        onClick={enableEditMode}
+                        color="primary"
+                        sx={{ borderRadius: 2 }}
+                      >
+                        Edit Profile
+                      </Button>
+                    ) : (
+                      <Box sx={{ display: 'flex', gap: 1 }}>
+                        <Button
+                          variant="outlined"
+                          startIcon={<CircleX size={16} />}
+                          onClick={cancelEditMode}
+                          color="error"
+                          sx={{ borderRadius: 2 }}
+                        >
+                          Cancel
+                        </Button>
+                      </Box>
+                    )}
+                  </Box>
 
                   <Grid container spacing={3}>
                     {/* Current Avatar */}
@@ -420,7 +532,9 @@ const UserProfile = () => {
                             height: 120,
                             border: '3px solid white',
                             boxShadow: '0 4px 10px rgba(0,0,0,0.1)',
-                            mb: 3
+                            mb: 3,
+                            opacity: isEditMode ? 1 : 0.85,
+                            transition: 'opacity 0.2s ease'
                           }}
                         />
 
@@ -429,7 +543,12 @@ const UserProfile = () => {
                           startIcon={<Upload size={16} />}
                           onClick={handleUploadClick}
                           color="primary"
-                          sx={{ borderRadius: 2 }}
+                          disabled={!isEditMode}
+                          sx={{ 
+                            borderRadius: 2,
+                            opacity: isEditMode ? 1 : 0.7,
+                            pointerEvents: isEditMode ? 'auto' : 'none'
+                          }}
                         >
                           Upload New Photo
                         </Button>
@@ -440,6 +559,7 @@ const UserProfile = () => {
                           style={{ display: 'none' }}
                           accept="image/jpeg, image/png, image/gif"
                           onChange={handleFileChange}
+                          disabled={!isEditMode}
                         />
 
                         {/* Upload Progress */}
@@ -471,14 +591,20 @@ const UserProfile = () => {
 
                     {/* Default Avatar Selection */}
                     <Grid item xs={12} sm={6}>
-                      <Typography variant="subtitle2" sx={{ mb: 2, fontWeight: 600 }}>
+                      <Typography variant="subtitle2" sx={{ 
+                        mb: 2, 
+                        fontWeight: 600,
+                        color: isEditMode ? 'text.primary' : 'text.secondary' 
+                      }}>
                         Select Default Avatar
                       </Typography>
 
                       <Box sx={{
                         display: 'grid',
                         gridTemplateColumns: 'repeat(auto-fill, minmax(60px, 1fr))',
-                        gap: 1.5
+                        gap: 1.5,
+                        opacity: isEditMode ? 1 : 0.7,
+                        pointerEvents: isEditMode ? 'auto' : 'none'
                       }}>
                         {defaultAvatars.map(avatar => (
                           <Box
@@ -489,14 +615,14 @@ const UserProfile = () => {
                               border: '2px solid',
                               borderColor: selectedAvatar === avatar.id ? 'primary.main' : alpha('#000', 0.06),
                               borderRadius: 2,
-                              cursor: 'pointer',
+                              cursor: isEditMode ? 'pointer' : 'default',
                               position: 'relative',
                               transition: 'all 0.2s ease',
-                              '&:hover': {
+                              '&:hover': isEditMode ? {
                                 borderColor: alpha(theme.palette.primary.main, 0.5),
                                 transform: 'translateY(-2px)',
                                 boxShadow: '0 4px 8px rgba(0,0,0,0.05)'
-                              }
+                              } : {}
                             }}
                           >
                             <Avatar
@@ -551,7 +677,7 @@ const UserProfile = () => {
                   >
                     Personal Information
                   </Typography>
-
+                    
                   <form onSubmit={handleProfileSubmit}>
                     <Grid container spacing={3}>
                       <Grid item xs={12} sm={6}>
@@ -563,8 +689,12 @@ const UserProfile = () => {
                           onChange={handleInputChange}
                           required
                           variant="outlined"
+                          disabled={!isEditMode}
                           InputProps={{
-                            sx: { borderRadius: 1.5 }
+                            sx: { 
+                              borderRadius: 1.5,
+                              bgcolor: !isEditMode ? 'action.disabledBackground' : 'transparent'
+                            }
                           }}
                         />
                       </Grid>
@@ -577,8 +707,12 @@ const UserProfile = () => {
                           onChange={handleInputChange}
                           required
                           variant="outlined"
+                          disabled={!isEditMode}
                           InputProps={{
-                            sx: { borderRadius: 1.5 }
+                            sx: { 
+                              borderRadius: 1.5,
+                              bgcolor: !isEditMode ? 'action.disabledBackground' : 'transparent'
+                            }
                           }}
                         />
                       </Grid>
@@ -592,17 +726,17 @@ const UserProfile = () => {
                           onChange={handleInputChange}
                           required
                           variant="outlined"
-                          disabled // Add this line
+                          disabled // Email always disabled
                           InputProps={{
                             sx: {
                               borderRadius: 1.5,
-                              bgcolor: 'action.disabledBackground', // Add this for better visual feedback
+                              bgcolor: 'action.disabledBackground',
                               '& .MuiInputBase-input.Mui-disabled': {
-                                WebkitTextFillColor: 'text.secondary', // Improves readability of disabled text
+                                WebkitTextFillColor: 'text.secondary',
                               }
                             }
                           }}
-                          helperText="Email cannot be changed" // Optional: Add this for user feedback
+                          helperText="Email cannot be changed"
                         />
                       </Grid>
                     
@@ -616,7 +750,11 @@ const UserProfile = () => {
                             value={formData.gender || 'prefer-not-to-say'}
                             label="Gender"
                             onChange={handleInputChange}
-                            sx={{ borderRadius: 1.5 }}
+                            disabled={!isEditMode}
+                            sx={{ 
+                              borderRadius: 1.5,
+                              bgcolor: !isEditMode ? 'action.disabledBackground' : 'transparent'
+                            }}
                           >
                             {genderOptions.map(option => (
                               <MenuItem key={option.value} value={option.value}>
@@ -632,19 +770,54 @@ const UserProfile = () => {
                           justifyContent: 'flex-end',
                           mt: 2
                         }}>
-                          <Button
-                            type="submit"
-                            variant="contained"
-                            color="primary"
-                            size="large"
-                            sx={{
-                              borderRadius: 2,
-                              px: 4
-                            }}
-                          >
-                            Save Changes
-                          </Button>
+                          {!isEditMode ? (
+                            <Button
+                              type="button"
+                              variant="contained"
+                              color="primary"
+                              size="large"
+                              startIcon={<Edit size={18} />}
+                              onClick={enableEditMode}
+                              sx={{
+                                borderRadius: 2,
+                                px: 4
+                              }}
+                            >
+                              Edit Profile
+                            </Button>
+                          ) : (
+                            <Box sx={{ display: 'flex', gap: 2 }}>
+                              <Button
+                                type="button"
+                                variant="outlined"
+                                color="error"
+                                size="large"
+                                startIcon={<CircleX size={18} />}
+                                onClick={cancelEditMode}
+                                sx={{
+                                  borderRadius: 2,
+                                  px: 3
+                                }}
+                              >
+                                Cancel
+                              </Button>
+                              <Button
+                                type="submit"
+                                variant="contained"
+                                color="primary"
+                                size="large"
+                                startIcon={<Save size={18} />}
+                                sx={{
+                                  borderRadius: 2,
+                                  px: 3
+                                }}
+                              >
+                                Save Changes
+                              </Button>
+                            </Box>
+                          )}
                         </Box>
+                      
                       </Grid>
                     </Grid>
                   </form>
@@ -700,78 +873,144 @@ const UserProfile = () => {
                     </Box>
                   </Box>
                 ) : (
-                  <form onSubmit={handlePasswordSubmit}>
-                    <Grid container spacing={3}>
-                      <Grid item xs={12}>
-                        <TextField
-                          fullWidth
-                          label="Current Password"
-                          name="currentPassword"
-                          type="password"
-                          value={passwordData.currentPassword}
-                          onChange={handlePasswordChange}
-                          required
-                          variant="outlined"
-                          InputProps={{
-                            sx: { borderRadius: 1.5 }
-                          }}
-                        />
-                      </Grid>
-                      <Grid item xs={12} sm={6}>
-                        <TextField
-                          fullWidth
-                          label="New Password"
-                          name="newPassword"
-                          type="password"
-                          value={passwordData.newPassword}
-                          onChange={handlePasswordChange}
-                          required
-                          helperText="Must be at least 8 characters long"
-                          variant="outlined"
-                          InputProps={{
-                            sx: { borderRadius: 1.5 }
-                          }}
-                        />
-                      </Grid>
-                      <Grid item xs={12} sm={6}>
-                        <TextField
-                          fullWidth
-                          label="Confirm New Password"
-                          name="confirmPassword"
-                          type="password"
-                          value={passwordData.confirmPassword}
-                          onChange={handlePasswordChange}
-                          required
-                          error={passwordData.newPassword !== passwordData.confirmPassword && passwordData.confirmPassword !== ''}
-                          helperText={passwordData.newPassword !== passwordData.confirmPassword && passwordData.confirmPassword !== '' ? "Passwords don't match" : ""}
-                          variant="outlined"
-                          InputProps={{
-                            sx: { borderRadius: 1.5 }
-                          }}
-                        />
-                      </Grid>
-                      <Grid item xs={12}>
-                        <Box sx={{
-                          display: 'flex',
-                          justifyContent: 'flex-end',
-                          mt: 2
-                        }}>
-                          <Button
-                            type="submit"
-                            variant="contained"
-                            color="primary"
-                            size="large"
-                            sx={{
-                              borderRadius: 2,
-                              px: 4
-                            }}
-                          >
-                            Update Password
-                          </Button>
-                        </Box>
-                      </Grid>
-                    </Grid>
-                  </form>
+                  <Formik
+                    initialValues={{
+                      currentPassword: '',
+                      newPassword: '',
+                      confirmPassword: ''
+                    }}
+                    validationSchema={Yup.object({
+                      currentPassword: Yup.string()
+                        .required('Current password is required'),
+                      newPassword: Yup.string()
+                        .required('New password is required')
+                        .min(8, 'Password must be at least 8 characters')
+                        .matches(
+                          /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/,
+                          'Password must contain at least one uppercase letter, one lowercase letter, one number, and one special character'
+                        ),
+                      confirmPassword: Yup.string()
+                        .required('Please confirm your password')
+                        .oneOf([Yup.ref('newPassword'), null], "Passwords don't match")
+                    })}
+                    onSubmit={(values, { setSubmitting, resetForm }) => {
+                      // Call the existing handlePasswordSubmit with the form values
+                      const passwordUpdatePromise = userService.changePassword(
+                        user.id, // Pass the correct user ID first
+                        values.currentPassword,
+                        values.newPassword
+                      );
+
+                      passwordUpdatePromise
+                        .then(response => {
+                          if (response.success) {
+                            toast.success(response.message || "Password updated successfully");
+                            resetForm();
+                          } else {
+                            toast.error(response.message || "Failed to update password");
+                          }
+                        })
+                        .catch(error => {
+                          // Handle Google account errors
+                          if (error.message?.includes("Google-authenticated") ||
+                            error.message?.includes("social login") ||
+                            error.message?.includes("Cannot change password for this account type")) {
+                            setIsGoogleAccount(true);
+                            toast.warning(
+                              "Google-authenticated accounts cannot change passwords here. Please use Google's account settings to manage your password.",
+                              { duration: 5000 }
+                            );
+                          } else {
+                            toast.error(error.message || "Failed to update password");
+                          }
+                        })
+                        .finally(() => {
+                          setSubmitting(false);
+                        });
+                    }}
+                  >
+                    {({ isSubmitting, errors, touched }) => (
+                      <Form>
+                        <Grid container spacing={3}>
+                          <Grid item xs={12}>
+                            <Field name="currentPassword">
+                              {({ field }) => (
+                                <TextField
+                                  fullWidth
+                                  label="Current Password"
+                                  type="password"
+                                  {...field}
+                                  error={touched.currentPassword && Boolean(errors.currentPassword)}
+                                  helperText={touched.currentPassword && errors.currentPassword}
+                                  variant="outlined"
+                                  InputProps={{
+                                    sx: { borderRadius: 1.5 }
+                                  }}
+                                />
+                              )}
+                            </Field>
+                          </Grid>
+                          <Grid item xs={12} sm={6}>
+                            <Field name="newPassword">
+                              {({ field }) => (
+                                <TextField
+                                  fullWidth
+                                  label="New Password"
+                                  type="password"
+                                  {...field}
+                                  error={touched.newPassword && Boolean(errors.newPassword)}
+                                  helperText={touched.newPassword && errors.newPassword}
+                                  variant="outlined"
+                                  InputProps={{
+                                    sx: { borderRadius: 1.5 }
+                                  }}
+                                />
+                              )}
+                            </Field>
+                          </Grid>
+                          <Grid item xs={12} sm={6}>
+                            <Field name="confirmPassword">
+                              {({ field }) => (
+                                <TextField
+                                  fullWidth
+                                  label="Confirm New Password"
+                                  type="password"
+                                  {...field}
+                                  error={touched.confirmPassword && Boolean(errors.confirmPassword)}
+                                  helperText={touched.confirmPassword && errors.confirmPassword}
+                                  variant="outlined"
+                                  InputProps={{
+                                    sx: { borderRadius: 1.5 }
+                                  }}
+                                />
+                              )}
+                            </Field>
+                          </Grid>
+                          <Grid item xs={12}>
+                            <Box sx={{
+                              display: 'flex',
+                              justifyContent: 'flex-end',
+                              mt: 2
+                            }}>
+                              <Button
+                                type="submit"
+                                variant="contained"
+                                color="primary"
+                                size="large"
+                                disabled={isSubmitting}
+                                sx={{
+                                  borderRadius: 2,
+                                  px: 4
+                                }}
+                              >
+                                {isSubmitting ? 'Updating...' : 'Update Password'}
+                              </Button>
+                            </Box>
+                          </Grid>
+                        </Grid>
+                      </Form>
+                    )}
+                  </Formik>
                 )}
               </Paper>
             )}

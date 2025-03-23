@@ -8,6 +8,8 @@ import PrivateRoute from './routes/PrivateRoute';
 import { AuthProvider, useAuth } from '@context/AuthContext';
 import DevToolbar from '@config/DevToolbar.jsx';
 import authService from '@services/authService';
+// Import the ProfileProvider
+import { ProfileProvider } from '@context/ProfileContext';
 
 // Create an inner component to use hooks within the auth provider context
 const AppContent = () => {
@@ -142,7 +144,7 @@ const AppContent = () => {
           />
 
 
-          {/* Protected Routes wrapped in Layout */}
+          {/* Protected Routes wrapped in Layout and ProfileProvider for profile-related features */}
           <Route element={<Layout />}>
             {protectedRoutes.map(route => (
               <Route
@@ -150,7 +152,14 @@ const AppContent = () => {
                 path={route.path}
                 element={
                   <PrivateRoute allowedRoles={route.roles}>
-                    {route.component}
+                    {/* Wrap profile-related routes with ProfileProvider */}
+                    {route.path.includes('profile') ? (
+                      <ProfileProvider>
+                        {route.component}
+                      </ProfileProvider>
+                    ) : (
+                      route.component
+                    )}
                   </PrivateRoute>
                 }
               />

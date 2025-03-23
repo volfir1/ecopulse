@@ -48,9 +48,6 @@ const AdminTicketDetail = () => {
         handleAssignTicket
     } = useTicketDetail(id);
 
-    // We don't need a loading state here anymore as we're using the global loader
-    // The component will render its content while loading in the background
-
     if (!ticket) {
         return (
             <div className="container mx-auto px-4 py-6">
@@ -94,120 +91,18 @@ const AdminTicketDetail = () => {
                 </div>
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                {/* Left column - Messages */}
-                <div className="lg:col-span-2">
-                    <Card.Base>
-                        {/* First message / ticket description */}
-                        <Box sx={{ p: 3 }}>
-                            <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-                                <Avatar
-                                    src={ticket.user?.profilePicture}
-                                    sx={{ width: 40, height: 40, mr: 2 }}
-                                >
-                                    {ticket.user?.firstName?.charAt(0) || ticket.user?.email?.charAt(0)}
-                                </Avatar>
-                                <Box>
-                                    <Typography variant="subtitle1" fontWeight="medium">
-                                        {ticket.user?.firstName && ticket.user?.lastName
-                                            ? `${ticket.user.firstName} ${ticket.user.lastName}`
-                                            : ticket.user?.email}
-                                    </Typography>
-                                    <Typography variant="caption" color="text.secondary">
-                                        {formatDate(ticket.createdAt)}
-                                    </Typography>
-                                </Box>
-                            </Box>
-                            <Typography variant="body1" sx={{ mt: 2, whiteSpace: 'pre-wrap' }}>
-                                {ticket.messages?.[0]?.content || 'No description provided'}
-                            </Typography>
-                        </Box>
-
-                        <Divider />
-
-                        {/* Message thread */}
-                        <Box sx={{ maxHeight: '500px', overflow: 'auto', p: 3 }}>
-                            {ticket.messages && ticket.messages.length > 1 ? (
-                                ticket.messages.slice(1).map((message, index) => (
-                                    <Box
-                                        key={index}
-                                        sx={{
-                                            mb: 3,
-                                            p: 2,
-                                            borderRadius: 2,
-                                            backgroundColor: message.isAdmin ? '#F0FDF4' : '#F8F9FA'
-                                        }}
-                                    >
-                                        <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                                            <Avatar
-                                                sx={{
-                                                    width: 32,
-                                                    height: 32,
-                                                    mr: 1,
-                                                    bgcolor: message.isAdmin ? '#16A34A' : '#6B7280'
-                                                }}
-                                            >
-                                                {message.isAdmin ? 'A' : 'U'}
-                                            </Avatar>
-                                            <Box>
-                                                <Typography variant="subtitle2" fontWeight="medium">
-                                                    {message.isAdmin ? 'Support Agent' : 'Customer'}
-                                                </Typography>
-                                                <Typography variant="caption" color="text.secondary">
-                                                    {formatDate(message.createdAt)}
-                                                </Typography>
-                                            </Box>
-                                        </Box>
-                                        <Typography variant="body2" sx={{ mt: 1, whiteSpace: 'pre-wrap' }}>
-                                            {message.content}
-                                        </Typography>
-                                    </Box>
-                                ))
-                            ) : (
-                                <Typography variant="body2" color="text.secondary" align="center">
-                                    No replies yet
-                                </Typography>
-                            )}
-                        </Box>
-
-                        <Divider />
-
-                        {/* Reply form */}
-                        <Box sx={{ p: 3 }}>
-                            <form onSubmit={handleReply}>
-                                <TextArea
-                                    name="replyContent"
-                                    value={replyContent}
-                                    onChange={(e) => setReplyContent(e.target.value)}
-                                    placeholder="Type your reply here..."
-                                    rows={4}
-                                    required
-                                />
-                                <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 2 }}>
-                                    <Button
-                                        type="submit"
-                                        loading={submitting}
-                                        disabled={submitting || !replyContent.trim()}
-                                    >
-                                        Send Reply
-                                    </Button>
-                                </Box>
-                            </form>
-                        </Box>
-                    </Card.Base>
-                </div>
-
-                {/* Right column - Ticket details and actions */}
-                <div>
-                    {/* Ticket Details */}
-                    <Card.Base className="mb-6">
-                        <Box sx={{ p: 3 }}>
+            {/* Three cards in a row at the top - with equal heights */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+                {/* Card 1: Ticket Details */}
+                <div className="h-full">
+                    <Card.Base sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+                        <Box sx={{ p: 3, height: '100%', display: 'flex', flexDirection: 'column' }}>
                             <Typography variant="h6" fontWeight="bold" gutterBottom>
                                 Ticket Details
                             </Typography>
                             <Divider sx={{ my: 2 }} />
 
-                            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, flex: 1 }}>
                                 <Box sx={{ display: 'flex', alignItems: 'center' }}>
                                     <Box sx={{ display: 'flex', alignItems: 'center', width: 100 }}>
                                         <User size={16} className="mr-2" />
@@ -298,10 +193,12 @@ const AdminTicketDetail = () => {
                             </Box>
                         </Box>
                     </Card.Base>
+                </div>
 
-                    {/* Ticket Actions */}
-                    <Card.Base className="mb-6">
-                        <Box sx={{ p: 3 }}>
+                {/* Card 2: Ticket Actions */}
+                <div className="h-full">
+                    <Card.Base sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+                        <Box sx={{ p: 3, height: '100%', display: 'flex', flexDirection: 'column' }}>
                             <Typography variant="h6" fontWeight="bold" gutterBottom>
                                 Ticket Actions
                             </Typography>
@@ -361,10 +258,12 @@ const AdminTicketDetail = () => {
                             </Box>
                         </Box>
                     </Card.Base>
+                </div>
 
-                    {/* Customer Information */}
-                    <Card.Base>
-                        <Box sx={{ p: 3 }}>
+                {/* Card 3: Customer Information */}
+                <div className="h-full">
+                    <Card.Base sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+                        <Box sx={{ p: 3, height: '100%', display: 'flex', flexDirection: 'column' }}>
                             <Typography variant="h6" fontWeight="bold" gutterBottom>
                                 Customer Information
                             </Typography>
@@ -400,18 +299,127 @@ const AdminTicketDetail = () => {
                                 </Box>
                             )}
 
-                            <Box sx={{ mt: 2 }}>
-                                <Button
-                                    variant="outlined"
-                                    fullWidth
-                                    onClick={() => navigate(`/admin/customers/${ticket.user?._id}`)}
-                                >
-                                    View Customer Profile
-                                </Button>
-                            </Box>
+                           
                         </Box>
                     </Card.Base>
                 </div>
+            </div>
+
+            {/* Messages/Conversation section below */}
+            <div>
+                <Card.Base>
+                    {/* First message / ticket description */}
+                    <Box sx={{ p: 3 }}>
+                        <Box 
+                            sx={{ 
+                                display: 'flex', 
+                                alignItems: 'center', 
+                                mb: 2,
+                                py: 1,
+                                px: 1,
+                                gap: 1.5,
+                                borderRadius: 1
+                            }}
+                        >
+                            <Avatar
+                                src={ticket.user?.avatar || ticket.user?.profilePicture}
+                            >
+                                {ticket.user?.firstName?.charAt(0) || ticket.user?.email?.charAt(0)}
+                            </Avatar>
+                            <Box>
+                                <Typography variant="subtitle1" fontWeight="medium">
+                                    {ticket.user?.firstName && ticket.user?.lastName
+                                        ? `${ticket.user.firstName} ${ticket.user.lastName}`
+                                        : ticket.user?.email}
+                                </Typography>
+                                <Typography variant="caption" color="text.secondary">
+                                    {formatDate(ticket.createdAt)}
+                                </Typography>
+                            </Box>
+                        </Box>
+                        <Typography variant="body1" sx={{ mt: 2, whiteSpace: 'pre-wrap' }}>
+                            {ticket.messages?.[0]?.content || 'No description provided'}
+                        </Typography>
+                    </Box>
+
+                    <Divider />
+
+                    {/* Message thread */}
+                    <Box sx={{ maxHeight: '500px', overflow: 'auto', p: 3 }}>
+                        {ticket.messages && ticket.messages.length > 1 ? (
+                            ticket.messages.slice(1).map((message, index) => (
+                                <Box
+                                    key={index}
+                                    sx={{
+                                        mb: 3,
+                                        p: 2,
+                                        borderRadius: 2,
+                                        backgroundColor: message.isAdmin ? '#F0FDF4' : '#F8F9FA'
+                                    }}
+                                >
+                                    <Box 
+                                        sx={{ 
+                                            display: 'flex', 
+                                            alignItems: 'center', 
+                                            mb: 1,
+                                            py: 0.5,
+                                            px: 0.5,
+                                            gap: 1.5
+                                        }}
+                                    >
+                                        <Avatar
+                                            sx={{
+                                                bgcolor: message.isAdmin ? '#16A34A' : '#6B7280'
+                                            }}
+                                        >
+                                            {message.isAdmin ? 'A' : 'U'}
+                                        </Avatar>
+                                        <Box>
+                                            <Typography variant="subtitle2" fontWeight="medium">
+                                                {message.isAdmin ? 'Support Agent' : 'Customer'}
+                                            </Typography>
+                                            <Typography variant="caption" color="text.secondary">
+                                                {formatDate(message.createdAt)}
+                                            </Typography>
+                                        </Box>
+                                    </Box>
+                                    <Typography variant="body2" sx={{ mt: 1, whiteSpace: 'pre-wrap' }}>
+                                        {message.content}
+                                    </Typography>
+                                </Box>
+                            ))
+                        ) : (
+                            <Typography variant="body2" color="text.secondary" align="center">
+                                No replies yet
+                            </Typography>
+                        )}
+                    </Box>
+
+                    <Divider />
+
+                    {/* Reply form */}
+                    <Box sx={{ p: 3 }}>
+                        <form onSubmit={handleReply}>
+                            <TextArea
+                                name="replyContent"
+                                value={replyContent}
+                                onChange={(e) => setReplyContent(e.target.value)}
+                                placeholder="Type your reply here..."
+                                rows={4}
+                                required
+                            />
+                            <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 2 }}>
+                                <Button
+                                    type="submit"
+                                    loading={submitting}
+                                    disabled={submitting || !replyContent.trim()}
+                                >
+                                    Send Reply
+                                </Button>
+                            </Box>
+                        </form>
+                    </Box>
+                </Card.Base>
             </div>
         </div>
     );

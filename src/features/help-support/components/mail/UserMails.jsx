@@ -121,7 +121,7 @@ const UserMails = () => {
         <Button
           variant="contained"
           color="primary"
-          startIcon={<AppIcon name="plus" />}
+          startIcon={<AppIcon name="send" />}
           onClick={() => navigate('/help-support')}
         >
           New Ticket
@@ -168,7 +168,7 @@ const UserMails = () => {
       {/* Tickets List */}
       {error ? (
         <Box sx={{ textAlign: 'center', py: 4 }}>
-          <AppIcon name="alert-triangle" size={40} color="error" />
+          <AppIcon name='alert' size={40} color="error" />
           <Typography color="error" variant="h6" mt={2}>{error}</Typography>
           <Typography variant="body2" color="text.secondary" mt={1}>
             {error?.includes('auth') ? 'Authentication error. Please try logging in again.' : ''}
@@ -184,7 +184,7 @@ const UserMails = () => {
         </Box>
       ) : getFilteredTickets().length === 0 ? (
         <Box sx={{ textAlign: 'center', py: 4 }}>
-          <AppIcon name="inbox" size={40} />
+          <AppIcon name="mails" size={40} />
           <Typography variant="h6" mt={2}>No tickets found</Typography>
           <Typography variant="body1" color="text.secondary" mt={1}>
             {searchTerm 
@@ -196,7 +196,7 @@ const UserMails = () => {
           <Button
             variant="contained"
             onClick={() => navigate('/help-support')}
-            startIcon={<AppIcon name="plus" />}
+            startIcon={<AppIcon name="send" />}
             sx={{ mt: 3 }}
           >
             Submit New Ticket
@@ -225,7 +225,7 @@ const UserMails = () => {
                   <Box sx={{ p: 2 }}>
                     <Box display="flex" justifyContent="space-between" alignItems="center" mb={1}>
                       <Box display="flex" alignItems="center" gap={1}>
-                        <AppIcon name={statusIcon} size={18} />
+                        <AppIcon name='ticket' size={18} />
                         <Typography variant="h6" fontWeight="medium">
                           {ticket.subject || 'No Subject'}
                         </Typography>

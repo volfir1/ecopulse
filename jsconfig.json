@@ -13,7 +13,9 @@
       "@exceptions/*": ["./exceptions/*"],
       "@config/*": ["./config/*"],
       "@services/*": ["./services/*"],
-      "@store/*": ["./store/*"]
-    }
+      "@store/*": ["./store/*"],
+      "@utils/*": ["./utils/*"]
+    },
+    "types": []  // disables automatic type inclusion
   }
 }

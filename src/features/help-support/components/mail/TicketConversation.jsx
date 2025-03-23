@@ -157,7 +157,7 @@ const TicketConversation = () => {
         <Box sx={{ p: 2 }}>
           <Box display="flex" alignItems="center" justifyContent="space-between" mb={2} flexWrap="wrap" gap={1}>
             <Box display="flex" alignItems="center" gap={1}>
-              <AppIcon name={statusIcon} size={20} />
+              <AppIcon name='ticket' size={20} />
               <Typography variant="h6" fontWeight="bold">
                 {formattedTicketNumber}: {ticket.subject}
               </Typography>
@@ -309,17 +309,17 @@ const TicketConversation = () => {
               />
               
               <Box display="flex" justifyContent="space-between" alignItems="center" flexWrap="wrap" gap={2}>
-                {canResolve && (
+                {/* {canResolve && (
                   <Button 
                     variant="outlined"
                     color="success"
-                    startIcon={<AppIcon name="check-circle" />}
+                    startIcon={<AppIcon name="check" />}
                     onClick={markAsResolved}
                   >
                     Mark as Resolved
                   </Button>
                 )}
-                
+                 */}
                 <Box ml="auto">
                   <Button
                     variant="contained"
@@ -345,11 +345,7 @@ const TicketConversation = () => {
               border={1}
               borderColor="divider"
             >
-              <AppIcon 
-                name={ticket.status === 'closed' ? 'lock' : 'check-circle'} 
-                size={32} 
-                color={statusColor}
-              />
+              
               <Typography variant="h6" color="text.secondary" mt={1}>
                 This ticket is {ticket.status === 'closed' ? 'closed' : 'resolved'}
               </Typography>
