@@ -46,7 +46,7 @@
   },
   "scripts": {
     "start": "vite",
-    "build": "vite build",
+     "build": "cross-env CI=false vite build",
     "preview": "vite preview",
     "test": "vitest"
   },
