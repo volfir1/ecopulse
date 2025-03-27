@@ -37,7 +37,7 @@ register: async (userData) => {
     }
   },
 
-  login: async (email, password) => {
+   login: async (email, password) => {
     try {
       console.log('Attempting login for:', email);
       
@@ -685,101 +685,51 @@ initiateGoogleAuth: async () => {
   
   // Email verification function (unchanged)
   verifyEmail: async (userId, verificationCode) => {
-    if (!userId || !verificationCode) {
-      throw new Error("User ID and verification code are required");
-    }
-  
     try {
-      // Debug logging
-      console.log('Verifying email:', {
-        userId,
-        verificationCode: verificationCode.trim(),
-        url: `${API_URL}/auth/verify-email`
-      });
-  
-      // Make sure userId is a string and verification code is trimmed
-      const formattedUserId = userId.toString();
-      const formattedCode = verificationCode.toString().trim();
-  
+      console.log('AuthService: Verifying email with:', { userId, verificationCode });
+      
+      const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
       const response = await fetch(`${API_URL}/auth/verify-email`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Accept": "application/json"
+        headers: { 
+          "Content-Type": "application/json" 
         },
-        body: JSON.stringify({
-          userId: formattedUserId,
-          verificationCode: formattedCode
-        }),
+        body: JSON.stringify({ userId, verificationCode }),
         credentials: "include"
       });
   
-      // Get the raw text response
-      const responseText = await response.text();
-      console.log('Raw server response:', responseText);
+      const data = await response.json();
       
-      // Parse the response
-      let data;
-      try {
-        data = JSON.parse(responseText);
-      } catch (parseError) {
-        console.error('Failed to parse response:', parseError);
-        throw new Error(`Invalid server response format: ${responseText}`);
-      }
-  
-      // Special case: Check if already verified
-      if (data.message && data.message.includes("already verified")) {
-        console.log('User is already verified:', data);
-        
-        // Return success even if it was already verified
-        return {
-          success: true,
-          user: data.user || {},
-          message: "Email already verified",
-          alreadyVerified: true
-        };
-      }
-  
-      // Handle error responses
       if (!response.ok) {
-        console.error('Verification failed with status:', response.status, data);
-        
-        switch (response.status) {
-          case 400:
-            throw new Error(data.message || "Invalid verification code");
-          case 404:
-            throw new Error(data.message || "User not found");
-          case 410:
-            throw new Error(data.message || "Verification code has expired");
-          default:
-            throw new Error(data.message || `Email verification failed (${response.status})`);
-        }
+        console.error('Verification API error:', data);
+        throw new Error(data.message || "Verification failed");
       }
-  
-      // Handle successful verification
-      if (data.user?.accessToken) {
-        localStorage.setItem('authToken', data.user.accessToken);
+      
+      // Log what we're getting from backend
+      console.log('Backend verification response:', data);
+      
+      // Check if the expected fields are present
+      if (!data.token && !data.user?.accessToken) {
+        console.warn('API response missing token:', data);
       }
-  
+      
+      if (!data.user) {
+        console.warn('API response missing user data:', data);
+      }
+      
+      // Match exactly what your backend returns
       return {
         success: true,
-        user: data.user || {},
-        message: data.message || "Email verified successfully"
+        user: data.user,
+        // Don't create a separate token property since backend doesn't
+        // include one - that could cause confusion
+        message: data.message || 'Email verified successfully'
       };
     } catch (error) {
-      // Ensure we're not throwing an error with undefined properties
-      const errorMessage = error.message || "Unknown verification error";
-      
-      console.error("Email verification error:", {
-        error,
-        userId,
-        message: errorMessage
-      });
-      
-      throw new Error(errorMessage);
+      console.error("Verification Error:", error.message);
+      throw error;
     }
   },
-
   // Other methods remain the same...
   resendVerificationCode: async (userId) => {
     if (!userId) throw new Error("User ID is required");
@@ -1209,28 +1159,61 @@ requestReactivation: async (email) => {
     
     console.log('Requesting reactivation for:', email);
     
+    // Add a loading indicator or message here if needed
+    
+    // Send reactivation request to the server
     const response = await fetch(`${API_URL}/auth/request-reactivation`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { 
+        "Content-Type": "application/json",
+        "x-client-type": "web" // Add client identifier
+      },
       body: JSON.stringify({ email }),
       credentials: "include"
     });
 
-    const data = await response.json();
+    // Get the full response text for better debugging
+    const responseText = await response.text();
+    let data;
     
-    // For security, always return success message
+    try {
+      data = JSON.parse(responseText);
+    } catch (parseError) {
+      console.error("Failed to parse reactivation response:", responseText);
+      throw new Error("Invalid server response format");
+    }
+    
+    // Validate the response
+    if (!response.ok) {
+      console.error("Server returned error on reactivation request:", {
+        status: response.status,
+        statusText: response.statusText,
+        data
+      });
+      
+      throw new Error(data.message || `Request failed with status ${response.status}`);
+    }
+    
+    console.log("Reactivation request succeeded:", data);
+    
+    // For security, always return success message for confirmed requests
     return {
       success: true,
+      requested: true,
       message: data.message || "If your account exists and is deactivated, a reactivation email has been sent."
     };
   } catch (error) {
     console.error("Reactivation request error:", error);
+    
+    // Return descriptive error for frontend handling
     return {
       success: false,
-      message: "We encountered an issue processing your request. Please try again later."
+      error: true,
+      message: error.message || "We encountered an issue processing your request. Please try again later.",
+      serverError: error.serverError || false
     };
   }
-},
+}
 };
 
 export default authService;

@@ -15,30 +15,43 @@ export const useYearPicker = ({
   const [error, setError] = useState(false);
 
   const handleStartYearChange = useCallback((newValue) => {
-    if (!newValue || !newValue.isValid()) {
+    const dayjsValue = dayjs.isDayjs(newValue) ? newValue : dayjs(newValue)
+  
+    if (!dayjsValue || !dayjsValue.isValid()) {
       setError(true);
       return;
     }
+    //getYearValue
+    const year = dayjsValue.year()
+
+    setLoading(true);
+    setYearRange(prev => ({ ...prev, startYear: year}))
     setError(false);
-    setStartYear(newValue);
-    onStartYearChange?.(newValue.year());
+    setStartYear(dayjsValue);
+    onStartYearChange?.(year);
   }, [onStartYearChange]);
 
   const handleEndYearChange = useCallback((newValue) => {
-    if (!newValue || !newValue.isValid()) {
+    const dayjsValue = dayjs.isDayjs(newValue) ? newValue : dayjs(newValue);
+
+    if (!dayjsValue || !dayjsValue.isValid()) {
       setError(true);
       return;
     }
     
+    const year = dayjsValue.year()
+
     // Validate that end year is after start year
-    if (newValue.year() < startYear.year()) {
+    if (dayjsValue.year() < startYear.year()) {
       setError(true);
       return;
     }
     
+    setLoading(true)
+    setYearRange(prev => ({ ...prev, endYear: year}))
     setError(false);
-    setEndYear(newValue);
-    onEndYearChange?.(newValue.year());
+    setEndYear(dayjsValue);
+    onEndYearChange?.(year);
   }, [onEndYearChange, startYear]);
 
   // Reset handler - now resets to 2025 and 2030
@@ -46,8 +59,13 @@ export const useYearPicker = ({
     const defaultStartYear = dayjs().year(2025);
     const defaultEndYear = dayjs().year(2030);
     
+    setLoading(true)
     setStartYear(defaultStartYear);
     setEndYear(defaultEndYear);
+    setYearRange({
+      startYear: 2025,
+      endYear: 2030
+    })
     onStartYearChange?.(defaultStartYear.year());
     onEndYearChange?.(defaultEndYear.year());
     setError(false);

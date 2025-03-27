@@ -254,14 +254,7 @@ const RenewableEnergyPage = () => {
             Refresh
           </Button>
           
-          <Button 
-            variant="outlined"
-            color="primary"
-            startIcon={<Download size={18} />}
-            onClick={handleExport}
-          >
-            Export
-          </Button>
+        
           
           <Button 
             variant="contained"

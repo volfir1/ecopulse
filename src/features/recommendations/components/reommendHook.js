@@ -17,7 +17,14 @@ export const useRecommendations = () => {
     const fetchData = async () => {
       setIsLoading(true);
       try {
-        await new Promise(resolve => setTimeout(resolve, 800)); // Simulate API call
+        // Simulate API call - this would be replaced with actual data fetching in production
+        await new Promise(resolve => setTimeout(resolve, 800));
+        
+        // In a real implementation, you would update state with the fetched data
+        // setCityData(response.data.cityData);
+        // setProjections(response.data.projections);
+        // etc.
+        
         setIsLoading(false);
       } catch (error) {
         console.error('Error fetching data:', error);
@@ -38,24 +45,20 @@ export const useRecommendations = () => {
     }));
   };
 
-  const handleBudgetChange = (event) => {
-    const value = event.target.value;
-    if (value === '' || /^\d+$/.test(value)) {
-      setCityData(prev => ({
-        ...prev,
-        budget: value ? `₱${value}` : ''
-      }));
-    }
-  };
-
   const handleDownloadPDF = () => {
     try {
+      setIsLoading(true);
       toast.info('Preparing PDF download...');
-      // Implement PDF generation logic here
-      toast.success('PDF downloaded successfully!');
+      
+      // Simulate PDF generation
+      setTimeout(() => {
+        setIsLoading(false);
+        toast.success('PDF downloaded successfully!');
+      }, 2000);
     } catch (error) {
       console.error('Error downloading PDF:', error);
       toast.error('Failed to download PDF');
+      setIsLoading(false);
     }
   };
 
@@ -67,7 +70,7 @@ export const useRecommendations = () => {
     handleDownloadPDF,
     year,
     handleYearChange,
-    handleBudgetChange,
-    isLoading
+    isLoading,
+    setIsLoading
   };
 };

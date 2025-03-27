@@ -44,6 +44,119 @@ const handleApiError = (error, functionName) => {
 };
 
 export const userService = {
+  // Get current user data (NEW METHOD)
+  getCurrentUser: async () => {
+    try {
+      console.log('Fetching current user data...');
+      const token = getAuthToken();
+      
+      if (!token) {
+        console.warn('No auth token available for getCurrentUser');
+        return null;
+      }
+      
+      // Try to get user from localStorage first
+      const cachedUser = localStorage.getItem('user');
+      if (cachedUser) {
+        try {
+          const userData = JSON.parse(cachedUser);
+          console.log('Retrieved user from localStorage:', userData.id || userData._id);
+          
+          // Return the cached user since we don't have an API endpoint
+          return userData;
+        } catch (parseError) {
+          console.error('Error parsing user from localStorage:', parseError);
+        }
+      }
+      
+      // If we reached here, we couldn't get the user from localStorage
+      // Try an API call if you have a dedicated endpoint:
+      try {
+        const response = await axios.get(`${API_URL}/users/me`, {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+        
+        if (response.data && response.data.user) {
+          const userData = response.data.user;
+          
+          // Update localStorage with fresh data
+          localStorage.setItem('user', JSON.stringify(userData));
+          
+          return userData;
+        } else if (response.data && response.data.success !== false) {
+          // If the data is directly in the response
+          localStorage.setItem('user', JSON.stringify(response.data));
+          return response.data;
+        }
+      } catch (apiError) {
+        console.error('API error in getCurrentUser:', apiError);
+        // Fall back to localStorage if API fails
+      }
+      
+      // If everything fails, return null
+      return null;
+    } catch (error) {
+      console.error('Error in getCurrentUser:', error);
+      return null;
+    }
+  },
+  
+  // Update user profile (NEW METHOD)
+  updateUserProfile: async (userData) => {
+    try {
+      console.log('Updating user profile:', userData);
+      const token = getAuthToken();
+      
+      if (!token) {
+        console.warn('No auth token available for updateUserProfile');
+        return { success: false, message: 'Not authenticated' };
+      }
+      
+      // Handle both cases where userId might be in userData.id or separate
+      const userId = userData.id || userData._id;
+      if (!userId) {
+        return { success: false, message: 'User ID is required' };
+      }
+      
+      const response = await axios.put(
+        `${API_URL}/users/${userId}`,
+        userData,
+        {
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          }
+        }
+      );
+      
+      if (response.data && response.data.success !== false) {
+        // Update user in localStorage
+        try {
+          const cachedUser = localStorage.getItem('user');
+          if (cachedUser) {
+            const currentUser = JSON.parse(cachedUser);
+            const updatedUser = { ...currentUser, ...userData };
+            localStorage.setItem('user', JSON.stringify(updatedUser));
+          }
+        } catch (storageError) {
+          console.error('Error updating user in localStorage:', storageError);
+        }
+        
+        return { 
+          success: true, 
+          message: 'Profile updated successfully',
+          ...response.data
+        };
+      }
+      
+      return response.data;
+    } catch (error) {
+      return handleApiError(error, 'updateUserProfile');
+    }
+  },
+
   // Get all users (admin function)
   getAllUsers: async () => {
     try {
@@ -90,70 +203,6 @@ export const userService = {
       }
     } catch (error) {
       return handleApiError(error, 'getAllUsers');
-    }
-  },
-
-  // Get all users including deleted ones (admin function)
-  getAllUsersWithDeleted: async () => {
-    try {
-      console.log('Fetching all users including deleted ones...');
-      const token = getAuthToken();
-      
-      if (!token) {
-        console.warn('No auth token available for getAllUsersWithDeleted');
-        return { success: false, users: [] };
-      }
-      
-      // More comprehensive parameters to ensure we get all user types
-      const response = await axios.get(
-        `${API_URL}/auth/users`, {
-          params: {
-            includeDeleted: true,
-            includeAutoDeactivated: true,
-            includeInactive: true,
-            all: true
-          },
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
-        }
-      );
-      
-      // Debug the response structure
-      console.log('API response status for getAllUsersWithDeleted:', response.status);
-      if (response.data) {
-        console.log('Response data structure:', Object.keys(response.data));
-        if (response.data.data) {
-          console.log('Response data.data structure:', Object.keys(response.data.data));
-        }
-      }
-      
-      // Handle different data structures with more robust checks
-      let users = [];
-      
-      if (response.data && response.data.data && Array.isArray(response.data.data.users)) {
-        users = response.data.data.users;
-      } else if (response.data && Array.isArray(response.data.users)) {
-        users = response.data.users;
-      } else if (response.data && Array.isArray(response.data)) {
-        users = response.data;
-      } else if (response.data && response.data.data && Array.isArray(response.data.data)) {
-        users = response.data.data;
-      } else {
-        console.warn('Unexpected data structure in getAllUsersWithDeleted:', response.data);
-        users = [];
-      }
-      
-      console.log(`Found ${users.length} total users (including deleted/deactivated)`);
-      
-      // Log a sample user if available
-      if (users.length > 0) {
-        console.log('Sample user from API:', JSON.stringify(users[0], null, 2));
-      }
-      
-      return { success: true, users };
-    } catch (error) {
-      return handleApiError(error, 'getAllUsersWithDeleted');
     }
   },
 
@@ -263,6 +312,225 @@ export const userService = {
   softDeleteUser: async (userId) => {
     console.warn('softDeleteUser is deprecated, use deactivateUser instead');
     return userService.deactivateUser(userId);
+  },
+
+  // Add this function inside your userService export
+  updateProfile: async (userId, profileData) => {
+    try {
+      console.log(`Updating profile for user ${userId}...`);
+      const token = getAuthToken();
+
+      if (!token) {
+        console.warn('No auth token available for updateProfile');
+        return { success: false, message: 'Not authenticated' };
+      }
+
+      const response = await axios.put(
+        `${API_URL}/users/${userId}`, // Matches your backend route (updateUserProfile)
+        profileData,
+        {
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          }
+        }
+      );
+
+      console.log('Profile update response:', response.data);
+      return response.data;
+    } catch (error) {
+      return handleApiError(error, 'updateProfile');
+    }
+  },
+
+  changePassword: async (userId, currentPassword, newPassword) => {
+    try {
+      console.log('Change password request received');
+      
+      // First check parameter types to catch obvious mistakes
+      if (typeof userId !== 'string' || userId.length !== 24 || !/^[0-9a-fA-F]{24}$/.test(userId)) {
+        console.error(`Incorrect userId parameter: "${userId}"`);
+        console.error('The userId parameter must be a 24-character MongoDB ObjectId');
+        return { 
+          success: false, 
+          message: 'Invalid user ID format - must be a MongoDB ObjectId' 
+        };
+      }
+      
+      // Validate password params to catch possible parameter order mistakes
+      if (!currentPassword || typeof currentPassword !== 'string') {
+        console.error('Missing or invalid currentPassword parameter');
+        return {
+          success: false,
+          message: 'Current password is required and must be a string'
+        };
+      }
+      
+      if (!newPassword || typeof newPassword !== 'string') {
+        console.error('Missing or invalid newPassword parameter');
+        return {
+          success: false,
+          message: 'New password is required and must be a string'
+        };
+      }
+      
+      const token = getAuthToken();
+      if (!token) {
+        console.warn('No auth token available for changePassword');
+        return { 
+          success: false, 
+          message: 'Not authenticated' 
+        };
+      }
+
+      // Make the API call - route adjusted to match your backend
+      const response = await axios.put(
+        `${API_URL}/users/${userId}/password`,
+        { currentPassword, newPassword },
+        {
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          }
+        }
+      );
+
+      console.log('Password change response:', response.data);
+      return response.data;
+
+    } catch (error) {
+      return handleApiError(error, 'changePassword');
+    }
+  },
+
+  getDeactivatedUsers: async () => {
+    try {
+      console.log('Explicitly fetching deactivated users...');
+      const token = getAuthToken();
+      
+      if (!token) {
+        console.warn('No auth token available for getDeactivatedUsers');
+        return { success: false, users: [] };
+      }
+
+      // First try the dedicated deactivated endpoint (if it exists)
+      try {
+        const response = await axios.get(
+          `${API_URL}/auth/users/deactivated`,
+          {
+            headers: {
+              'Authorization': `Bearer ${token}`
+            }
+          }
+        );
+        
+        console.log('Deactivated users endpoint response:', {
+          status: response.status,
+          dataKeys: response.data ? Object.keys(response.data) : 'No data'
+        });
+        
+        if (response.data && response.data.success && response.data.users) {
+          console.log(`Found ${response.data.users.length} deactivated users from dedicated endpoint`);
+          return response.data;
+        }
+      } catch (error) {
+        console.log('Dedicated deactivated endpoint not available, trying alternative approach');
+      }
+
+      // If dedicated endpoint failed, try a post request with query
+      try {
+        const response = await axios.post(
+          `${API_URL}/auth/users/query`,
+          {
+            // This explicitly asks for deactivated users only
+            query: { 
+              $or: [
+                { isDeactivated: true },
+                { isAutoDeactivated: true },
+                { status: 'deactivated' },
+                { status: 'deleted' },
+                { status: 'inactive' }
+              ]
+            }
+          },
+          {
+            headers: {
+              'Authorization': `Bearer ${token}`,
+              'Content-Type': 'application/json'
+            }
+          }
+        );
+        
+        if (response.data && response.data.success && response.data.users) {
+          console.log(`Found ${response.data.users.length} deactivated users via query endpoint`);
+          return response.data;
+        }
+      } catch (error) {
+        console.log('Query endpoint not available, falling back to regular endpoint with parameters');
+      }
+      
+      // Last approach - try regular users endpoint with query parameters
+      const response = await axios.get(
+        `${API_URL}/auth/users`,
+        {
+          params: {
+            deactivated: true,
+            isDeactivated: true,
+            includeAll: true,
+            _t: Date.now() // Cache busting
+          },
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        }
+      );
+      
+      console.log('Regular endpoint with parameters response:', {
+        status: response.status,
+        dataKeys: response.data ? Object.keys(response.data) : 'No data'
+      });
+      
+      let deactivatedUsers = [];
+      
+      // Extract users from different response formats
+      if (response.data && Array.isArray(response.data.users)) {
+        deactivatedUsers = response.data.users;
+      } else if (response.data && response.data.data && Array.isArray(response.data.data.users)) {
+        deactivatedUsers = response.data.data.users;
+      } else if (Array.isArray(response.data)) {
+        deactivatedUsers = response.data;
+      } else {
+        console.warn('Unexpected response format for deactivated users');
+        
+        // Try to find any array in the response
+        for (const key in response.data) {
+          if (Array.isArray(response.data[key])) {
+            console.log(`Found array in response.data.${key}`);
+            deactivatedUsers = response.data[key];
+            break;
+          }
+        }
+      }
+      
+      // Filter to ensure we're only getting deactivated users
+      const filteredUsers = deactivatedUsers.filter(user => 
+        user.isDeactivated === true || 
+        user.isAutoDeactivated === true ||
+        user.status === 'deactivated' ||
+        user.status === 'deleted' ||
+        user.status === 'inactive'
+      );
+      
+      console.log(`Found ${filteredUsers.length} deactivated users after filtering`);
+      
+      return { 
+        success: true, 
+        users: filteredUsers 
+      };
+    } catch (error) {
+      console.error('Error fetching deactivated users:', error);
+      return handleApiError(error, 'getDeactivatedUsers');
+    }
   }
 };
 

@@ -10,7 +10,7 @@ export const publicRoutes = {
   Register: lazy(() => import('@features/auth/components/register/Register')),
   VerifyEmail: lazy(() => import('@features/auth/verification/VerifiEmail')),
   ForgotPassword: lazy(() => import('@features/auth/password/ForgotPassword.jsx')),
-  ResetPassword: lazy(() => import('@features/auth/password/resetPassword')),
+  ResetPassword: lazy(() => import('@features/auth/password/ResetPassword.jsx')),
   // New account deactivation routes
   AccountRecovery: lazy(() => import('@features/auth/components/recover.js')),
   Onboarding: lazy(() => import('@features/auth/components/register/onBoarding')),

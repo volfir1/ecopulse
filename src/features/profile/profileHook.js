@@ -1,4 +1,3 @@
-// src/pages/profile/profileHook.js
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@context/AuthContext';
@@ -6,6 +5,7 @@ import { useSnackbar } from '@shared/index';
 import authService from '../../services/authService';
 import userService from '../../services/userService';
 import { validatePassword } from './validation';
+import { Loader } from '@shared/index';
 
 export const useProfile = () => {
   const { user, logout } = useAuth();
@@ -21,6 +21,7 @@ export const useProfile = () => {
     lastName: '',
     email: '',
     phone: '',
+    gender: 'prefer-not-to-say',
     role: ''
   });
 
@@ -39,7 +40,9 @@ export const useProfile = () => {
         lastName: user.lastName || '',
         email: user.email || '',
         phone: user.phone || '',
-        role: user.role || 'user'
+        gender: user.gender || 'prefer-not-to-say',
+        role: user.role || 'user',
+        avatar: user.avatar
       });
 
       // Check if this is a Google account by looking for googleId
@@ -93,7 +96,7 @@ export const useProfile = () => {
     
     if (!user?.id) {
       toast.error("User not authenticated");
-      return;
+      return { success: false, message: "User not authenticated" };
     }
     
     setIsLoading(true);
@@ -102,12 +105,37 @@ export const useProfile = () => {
       const response = await userService.updateProfile(user.id, formData);
       
       if (response.success) {
+        // Update local storage with new user data to keep things in sync
+        try {
+          const userString = localStorage.getItem('user');
+          if (userString) {
+            const userData = JSON.parse(userString);
+            // Merge updated profile data with the existing user data
+            const updatedUserData = {
+              ...userData,
+              ...formData
+            };
+            localStorage.setItem('user', JSON.stringify(updatedUserData));
+          }
+        } catch (localStorageError) {
+          console.error("Error updating localStorage:", localStorageError);
+          // This error is non-critical, so we continue
+        }
+        
         toast.success("Profile updated successfully");
+        
+        // Optionally, refresh the page or re-fetch user data if you have such a function.
+        // For example, if using context, you might call refreshUser();
+        // window.location.reload(); // Uncomment if a full page reload is desired.
+        
+        return response;
       } else {
         toast.error(response.message || "Failed to update profile");
+        return response;
       }
     } catch (error) {
       toast.error(error.message || "An error occurred while updating profile");
+      return { success: false, message: error.message || "An error occurred" };
     } finally {
       setIsLoading(false);
     }
@@ -116,37 +144,39 @@ export const useProfile = () => {
   // Handle password update
   const handlePasswordSubmit = async (e) => {
     e.preventDefault();
-
+  
     // Check if this is a Google account first
     if (isGoogleAccount) {
       toast.warning(
         "Google-authenticated accounts cannot change passwords here. Please use Google's account settings to manage your password.",
-        { duration: 5000 } // Show message for 5 seconds
+        { duration: 5000 }
       );
       return;
     }
-
+  
     // Validate new password
     const validation = validatePassword(passwordData.newPassword);
     if (!validation.isValid) {
       validation.errors.forEach(error => toast.error(error));
       return;
     }
-
+  
     // Check password match
     if (passwordData.newPassword !== passwordData.confirmPassword) {
       toast.error("New passwords don't match");
       return;
     }
-
+  
     setIsLoading(true);
-
+  
     try {
+      // FIX IS HERE: Pass the userId as the first parameter
       const response = await userService.changePassword(
-        passwordData.currentPassword,
-        passwordData.newPassword
+        user.id,                        // The actual user ID from auth context
+        passwordData.currentPassword,   // Current password
+        passwordData.newPassword        // New password
       );
-
+  
       if (response.success) {
         toast.success(response.message);
         setPasswordData({
@@ -154,13 +184,15 @@ export const useProfile = () => {
           newPassword: '',
           confirmPassword: ''
         });
+      } else {
+        toast.error(response.message || "Failed to update password");
       }
     } catch (error) {
       // Handle the specific error from the backend
       if (error.message?.includes("Google-authenticated") ||
         error.message?.includes("social login") ||
         error.message?.includes("Cannot change password for this account type")) {
-        setIsGoogleAccount(true); // Update the state for future attempts
+        setIsGoogleAccount(true);
         toast.warning(
           "Google-authenticated accounts cannot change passwords here. Please use Google's account settings to manage your password.",
           { duration: 5000 }
@@ -210,7 +242,7 @@ export const useProfile = () => {
         return;
       }
 
-      const response = await userService.updatePassword(token, newPassword);
+      const response = await userService.changePassword(token, newPassword);
 
       if (response.success) {
         toast.success(response.message);
@@ -306,6 +338,7 @@ export const useProfile = () => {
       throw error;
     }
   };
+  
   const optimizeImage = async (base64String) => {
     return new Promise((resolve, reject) => {
       const img = new Image();
@@ -337,6 +370,7 @@ export const useProfile = () => {
       img.src = base64String;
     });
   };
+  
   // Helper function to upload default avatar (to be called from UserProfile component)
   const uploadDefaultAvatar = async (avatarId, avatarSrc) => {
     try {
@@ -452,8 +486,8 @@ export const useProfile = () => {
     handleInputChange,
     handlePasswordChange,
     uploadAvatar,
-    uploadDefaultAvatar, // New function for UserProfile component
-    originalHandleProfileSubmit, // Renamed function
+    uploadDefaultAvatar,
+    originalHandleProfileSubmit,
     handlePasswordSubmit,
     handleDeactivateAccount,
     handlePasswordReset

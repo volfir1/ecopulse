@@ -1,52 +1,56 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Box, 
   Typography, 
   Paper,
   Avatar,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  Chip,
-  IconButton,
   Card,
   CardContent,
-  Menu,
-  MenuItem,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogContentText,
-  DialogActions,
-  TextField,
+  Chip,
   Button,
   Tooltip,
-  Tab,
-  Tabs,
-  Divider
+  Divider,
+  FormControl,
+  InputLabel,
+  Select,
+  Stack,
+  MenuItem,
+  TextField
 } from '@mui/material';
 import { 
-  Edit, 
-  Delete, 
   People, 
   TrendingUp, 
   PersonAdd, 
   VerifiedUser, 
-  MoreVert,
-  AdminPanelSettings,
-  RestoreFromTrash,
-  DeleteForever,
   Block,
-  CheckCircle,
-  LockReset,  // NEW: Icon for password reset
-  MailOutline  // NEW: Icon for sending recovery email
+  CalendarMonth,
+  DateRange,
+  FilterAlt
 } from '@mui/icons-material';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend, ResponsiveContainer } from 'recharts';
-
+import { DatePicker } from '@mui/x-date-pickers';
+import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
+import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
+import { format, parseISO, isValid, startOfMonth, endOfMonth, subMonths, isWithinInterval } from 'date-fns';
 import PropTypes from 'prop-types';
+
+// Utility function for parsing dates consistently - reduces code duplication
+const parseAndFormatDate = (dateString, formatString = 'MMM d') => {
+  if (!dateString) return null;
+  
+  // Handle "Feb 19" format
+  if (dateString.includes(' ')) {
+    const [month, day] = dateString.split(' ');
+    const currentYear = new Date().getFullYear();
+    const fullDate = `${month} ${day}, ${currentYear}`;
+    const parsed = new Date(fullDate);
+    return formatString ? format(parsed, formatString) : parsed;
+  }
+  
+  // For ISO strings or other formats
+  const parsed = parseISO(dateString);
+  return isValid(parsed) ? (formatString ? format(parsed, formatString) : parsed) : null;
+};
 
 // Stat Card Component
 export const StatCard = ({ title, value, icon, color }) => {
@@ -77,7 +81,7 @@ export const StatCard = ({ title, value, icon, color }) => {
   );
 };
 
-// User Dashboard Component
+// Enhanced User Dashboard Component with Date Range Selection
 export const UserDashboard = ({ data }) => {
   // Get statistics from data or use defaults
   const stats = data.statistics || {
@@ -89,10 +93,10 @@ export const UserDashboard = ({ data }) => {
   };
 
   // Calculate inactive users by including deleted users
-  const inactiveUsersCount = parseInt(stats.totalUsers) - parseInt(stats.activeUsers);
+  const inactiveUsersCount = parseInt(stats.totalUsers.replace(/,/g, '')) - parseInt(stats.activeUsers.replace(/,/g, ''));
 
   // Format activity data for chart
-  const activityData = data.activityData && data.activityData.length > 0
+  const originalActivityData = data.activityData && data.activityData.length > 0
     ? data.activityData
     : [
         { date: 'Feb 19', totalVisits: 7, activeUsers: 4, newUsers: 2 },
@@ -103,6 +107,112 @@ export const UserDashboard = ({ data }) => {
         { date: 'Feb 24', totalVisits: 10, activeUsers: 4, newUsers: 3 },
         { date: 'Feb 25', totalVisits: 4, activeUsers: 3, newUsers: 0 }
       ];
+      
+  // Default to showing the last 6 months
+  const [dateRange, setDateRange] = useState({
+    startDate: subMonths(new Date(), 6),
+    endDate: new Date()
+  });
+  
+  const [presetRange, setPresetRange] = useState('6months');
+  const [filteredData, setFilteredData] = useState(originalActivityData);
+  const [isCustomRange, setIsCustomRange] = useState(false);
+  
+  // Prepare preset range options
+  const presetRanges = [
+    { value: '30days', label: 'Last 30 Days' },
+    { value: '3months', label: 'Last 3 Months' },
+    { value: '6months', label: 'Last 6 Months' },
+    { value: '1year', label: 'Last Year' },
+    { value: 'custom', label: 'Custom Range' }
+  ];
+  
+  // Simplified date range handler - reduces code duplication
+  const handleDateRangeChange = (type, value) => {
+    if (type === 'preset') {
+      setPresetRange(value);
+      
+      if (value === 'custom') {
+        setIsCustomRange(true);
+        return;
+      }
+      
+      setIsCustomRange(false);
+      
+      const now = new Date();
+      let start = now;
+      
+      // Mapping of preset values to month counts
+      const presetMonths = {
+        '30days': 1,
+        '3months': 3,
+        '6months': 6,
+        '1year': 12
+      };
+      
+      start = subMonths(now, presetMonths[value] || 6);
+      
+      setDateRange({
+        startDate: startOfMonth(start),
+        endDate: endOfMonth(now)
+      });
+    } else if (type === 'start') {
+      setDateRange({ ...dateRange, startDate: startOfMonth(value) });
+    } else if (type === 'end') {
+      setDateRange({ ...dateRange, endDate: endOfMonth(value) });
+    }
+  };
+  
+  // Handle preset range selection - uses the consolidated function
+  const handlePresetChange = (event) => {
+    handleDateRangeChange('preset', event.target.value);
+  };
+  
+  // Filter activity data based on selected date range - cleaned up version
+  useEffect(() => {
+    if (!originalActivityData?.length) return;
+    
+    const filtered = originalActivityData.filter(item => {
+      const itemDate = parseAndFormatDate(item.date, null); // Using our utility function
+      if (!itemDate) return false;
+      
+      return isWithinInterval(itemDate, {
+        start: dateRange.startDate,
+        end: dateRange.endDate
+      });
+    }).sort((a, b) => {
+      const dateA = parseAndFormatDate(a.date, null);
+      const dateB = parseAndFormatDate(b.date, null);
+      if (!dateA || !dateB) return 0;
+      return dateA - dateB;
+    });
+    
+    setFilteredData(filtered);
+  }, [originalActivityData, dateRange]);
+  
+  // Date range display for the chart title
+  const dateRangeDisplay = `${format(dateRange.startDate, 'MMM yyyy')} - ${format(dateRange.endDate, 'MMM yyyy')}`;
+  
+  // Apply filter with custom range
+  const applyCustomRange = () => {
+    if (!dateRange.startDate || !dateRange.endDate) return;
+    
+    // Ensure start date is not after end date
+    if (dateRange.startDate > dateRange.endDate) {
+      const temp = dateRange.startDate;
+      setDateRange({
+        startDate: dateRange.endDate,
+        endDate: temp
+      });
+    }
+  };
+  
+  // Calculate statistics for the selected period
+  const totalVisitsInPeriod = filteredData.reduce((sum, item) => sum + item.totalVisits, 0);
+  const avgActiveUsersInPeriod = filteredData.length > 0 
+    ? Math.round(filteredData.reduce((sum, item) => sum + item.activeUsers, 0) / filteredData.length) 
+    : 0;
+  const totalNewUsersInPeriod = filteredData.reduce((sum, item) => sum + item.newUsers, 0);
 
   return (
     <Box sx={{ mt: 4 }}>
@@ -154,582 +264,167 @@ export const UserDashboard = ({ data }) => {
         </Box>
       </Box>
       
-      {/* User Activity Chart */}
+      {/* Enhanced User Activity Chart */}
       <Paper elevation={1} sx={{ p: 3, borderRadius: '4px', border: '1px dashed #e0e0e0' }}>
-        <Typography variant="h6" sx={{ mb: 3 }}>
-          User Activity
-        </Typography>
-        <Box sx={{ height: 300 }}>
-          <ResponsiveContainer width="100%" height="100%">
-            <LineChart
-              data={activityData}
-              margin={{
-                top: 10,
-                right: 30,
-                left: 0,
-                bottom: 10,
-              }}
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2, flexWrap: 'wrap' }}>
+          <Typography variant="h6">
+            User Activity
+          </Typography>
+          
+          <FormControl size="small" sx={{ minWidth: 180 }}>
+            <InputLabel id="date-range-preset-label">Time Period</InputLabel>
+            <Select
+              labelId="date-range-preset-label"
+              value={presetRange}
+              label="Time Period"
+              onChange={handlePresetChange}
+              startAdornment={<CalendarMonth fontSize="small" sx={{ mr: 1 }} />}
             >
-              <CartesianGrid strokeDasharray="3 3" vertical={false} />
-              <XAxis dataKey="date" />
-              <YAxis />
-              <RechartsTooltip />
-              <Legend wrapperStyle={{ position: 'relative', marginTop: '10px' }} />
-              <Line 
-                type="monotone" 
-                dataKey="totalVisits" 
-                name="Total Visits" 
-                stroke="#2196f3" 
-                strokeWidth={2}
-                activeDot={{ r: 6 }} 
-              />
-              <Line 
-                type="monotone" 
-                dataKey="activeUsers" 
-                name="Active Users" 
-                stroke="#4caf50" 
-                strokeWidth={2}
-              />
-              <Line 
-                type="monotone" 
-                dataKey="newUsers" 
-                name="New Users" 
-                stroke="#ff9800" 
-                strokeWidth={2}
-              />
-            </LineChart>
-          </ResponsiveContainer>
+              {presetRanges.map(option => (
+                <MenuItem key={option.value} value={option.value}>
+                  {option.label}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+        </Box>
+        
+        {isCustomRange && (
+          <Box sx={{ mb: 3, p: 2, bgcolor: '#f9f9f9', borderRadius: 1 }}>
+            <LocalizationProvider dateAdapter={AdapterDateFns}>
+              <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} alignItems="center">
+                <DatePicker
+                  label="Start Month"
+                  views={['year', 'month']}
+                  value={dateRange.startDate}
+                  onChange={(date) => handleDateRangeChange('start', date)}
+                  renderInput={(params) => <TextField size="small" {...params} helperText={null} />}
+                />
+                
+                <DatePicker
+                  label="End Month"
+                  views={['year', 'month']}
+                  value={dateRange.endDate}
+                  onChange={(date) => handleDateRangeChange('end', date)}
+                  renderInput={(params) => <TextField size="small" {...params} helperText={null} />}
+                  minDate={dateRange.startDate}
+                />
+                
+                <Button 
+                  variant="contained" 
+                  color="primary" 
+                  onClick={applyCustomRange}
+                  startIcon={<FilterAlt />}
+                >
+                  Apply
+                </Button>
+              </Stack>
+            </LocalizationProvider>
+          </Box>
+        )}
+        
+        <Divider sx={{ mb: 2 }}>
+          <Chip 
+            icon={<DateRange />} 
+            label={dateRangeDisplay} 
+            color="primary" 
+            variant="outlined" 
+          />
+        </Divider>
+        
+        {/* Period Statistics */}
+        <Box sx={{ display: 'flex', mb: 3, justifyContent: 'space-around', flexWrap: 'wrap' }}>
+          <Typography variant="body2" color="text.secondary">
+            Total Visits: <strong>{totalVisitsInPeriod}</strong>
+          </Typography>
+          <Typography variant="body2" color="text.secondary">
+            Avg. Active Users: <strong>{avgActiveUsersInPeriod}</strong>
+          </Typography>
+          <Typography variant="body2" color="text.secondary">
+            New Users: <strong>{totalNewUsersInPeriod}</strong>
+          </Typography>
+        </Box>
+        
+        {/* Chart Display */}
+        <Box sx={{ height: 300 }}>
+          {filteredData.length > 0 ? (
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart
+                data={filteredData}
+                margin={{
+                  top: 10,
+                  right: 30,
+                  left: 0,
+                  bottom: 10,
+                }}
+              >
+                <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                <XAxis 
+                  dataKey="date" 
+                  tickFormatter={(value) => parseAndFormatDate(value)}
+                />
+                <YAxis />
+                <RechartsTooltip 
+                  formatter={(value, name) => [`${value}`, name]}
+                  labelFormatter={(label) => parseAndFormatDate(label, 'MMM d, yyyy') || label}
+                />
+                <Legend wrapperStyle={{ position: 'relative', marginTop: '10px' }} />
+                <Line 
+                  type="monotone" 
+                  dataKey="totalVisits" 
+                  name="Total Visits" 
+                  stroke="#2196f3" 
+                  strokeWidth={2}
+                  activeDot={{ r: 6 }} 
+                />
+                <Line 
+                  type="monotone" 
+                  dataKey="activeUsers" 
+                  name="Active Users" 
+                  stroke="#4caf50" 
+                  strokeWidth={2}
+                />
+                <Line 
+                  type="monotone" 
+                  dataKey="newUsers" 
+                  name="New Users" 
+                  stroke="#ff9800" 
+                  strokeWidth={2}
+                />
+              </LineChart>
+            </ResponsiveContainer>
+          ) : (
+            <Box sx={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <Typography variant="body1" color="text.secondary">
+                No data available for the selected time period
+              </Typography>
+            </Box>
+          )}
         </Box>
       </Paper>
     </Box>
   );
 };
 
-// Updated UsersList Component
-export const UsersList = ({ 
-  users, 
-  deletedUsers, 
-  handleEdit, 
-  handleSoftDelete, 
-  handleRestore,
-  handleSendRecovery, 
-  handleSendPasswordReset, 
-  updateUserRole 
-}) => {
-  const [anchorEl, setAnchorEl] = useState(null);
-  const [menuUser, setMenuUser] = useState(null);
-  const [roleDialogOpen, setRoleDialogOpen] = useState(false);
-  const [confirmText, setConfirmText] = useState('');
-  const [roleChangeDetails, setRoleChangeDetails] = useState({
-    userId: null,
-    userName: '',
-    currentRole: '',
-    newRole: '',
-    confirmationPhrase: ''
-  });
-  
-  // Action confirmation dialogs
-  const [confirmDialog, setConfirmDialog] = useState({
-    open: false,
-    title: '',
-    message: '',
-    confirmText: '',
-    action: null
-  });
-
-  // Table tabs
-  const [tabValue, setTabValue] = useState(0);
-  
-  const formatDate = (dateString) => {
-    if (!dateString) return 'Never';
-    try {
-      return new Date(dateString).toLocaleString('en-US', {
-        year: 'numeric',
-        month: 'short',
-        day: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit'
-      });
-    } catch (error) {
-      console.error('Date formatting error:', error);
-      return 'Invalid date';
-    }
-  };
-    
-  const handleMenuOpen = (event, user) => {
-    setAnchorEl(event.currentTarget);
-    setMenuUser(user);
-  };
-
-  const handleMenuClose = () => {
-    setAnchorEl(null);
-    setMenuUser(null);
-  };
-
-  const handleRoleChangeRequest = (newRole) => {
-    handleMenuClose();
-    
-    const confirmationPhrase = newRole === 'admin' 
-      ? `make ${menuUser.name} admin` 
-      : `remove admin from ${menuUser.name}`;
-    
-    setRoleChangeDetails({
-      userId: menuUser.id,
-      userName: menuUser.name,
-      currentRole: menuUser.role,
-      newRole,
-      confirmationPhrase
-    });
-    
-    setRoleDialogOpen(true);
-  };
-
-  const handleRoleDialogClose = () => {
-    setRoleDialogOpen(false);
-    setConfirmText('');
-  };
-
-  const handleConfirmRoleChange = async () => {
-    if (confirmText !== roleChangeDetails.confirmationPhrase) {
-      return;
-    }
-
-    try {
-      const result = await updateUserRole(roleChangeDetails.userId, roleChangeDetails.newRole);
-      
-      if (result.success) {
-        handleRoleDialogClose();
-      } else {
-        // Handle error case if needed
-        console.error('Failed to update role:', result.error);
-      }
-    } catch (error) {
-      console.error('Error updating user role:', error);
-    }
-  };
-  
-  // Handle deactivate (soft delete) confirmation
-  const openDeactivateConfirm = (userId, userName) => {
-    setConfirmDialog({
-      open: true,
-      title: 'Confirm User Deactivation',
-      message: `Are you sure you want to deactivate the user "${userName}"? This action can be reversed later.`,
-      confirmText: 'Deactivate',
-      action: () => handleSoftDelete(userId)
-    });
-  };
-  
-  // Handle restore confirmation
-  const openRestoreConfirm = (userId, userName) => {
-    setConfirmDialog({
-      open: true,
-      title: 'Confirm User Restoration',
-      message: `Are you sure you want to restore the user "${userName}"?`,
-      confirmText: 'Restore',
-      action: () => handleRestore(userId)
-    });
-  };
-
-  // Handle send recovery link confirmation
-  const openSendRecoveryConfirm = (email, userName) => {
-    setConfirmDialog({
-      open: true,
-      title: 'Send Recovery Link',
-      message: `Are you sure you want to send a recovery link to "${userName}" (${email})?`,
-      confirmText: 'Send Recovery Link',
-      action: () => handleSendRecovery(email)
-    });
-  };
-
-  // Handle send password reset link confirmation
-  const openSendPasswordResetConfirm = (email, userName) => {
-    setConfirmDialog({
-      open: true,
-      title: 'Send Password Reset Link',
-      message: `Are you sure you want to send a password reset link to "${userName}" (${email})?`,
-      confirmText: 'Send Reset Link',
-      action: () => handleSendPasswordReset(email)
-    });
-  };
-  
-  // Handle confirm dialog actions
-  const handleConfirmAction = async () => {
-    if (confirmDialog.action) {
-      await confirmDialog.action();
-    }
-    setConfirmDialog({ ...confirmDialog, open: false });
-  };
-  
-  // Handle tab change
-  const handleTabChange = (event, newValue) => {
-    setTabValue(newValue);
-  };
-
-  // To filter users
-  const [roleFilter, setRoleFilter] = useState('all');
-
-  const filteredActiveUsers = roleFilter === 'all' 
-    ? users 
-    : users.filter(user => user.role === roleFilter);
-    
-  const currentUsers = tabValue === 0 ? filteredActiveUsers : deletedUsers;
-
-  return (
-    <Box sx={{ mt: 2 }}>
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-        <Typography variant="h6">
-          Users Management
-        </Typography>
-        
-        {/* Role filters - only show for active users tab */}
-        {tabValue === 0 && (
-          <Box>
-            <Button 
-              variant={roleFilter === 'all' ? 'contained' : 'outlined'} 
-              size="small" 
-              onClick={() => setRoleFilter('all')}
-              sx={{ mr: 1 }}
-            >
-              All Users
-            </Button>
-            <Button 
-              variant={roleFilter === 'admin' ? 'contained' : 'outlined'} 
-              size="small" 
-              onClick={() => setRoleFilter('admin')}
-              sx={{ mr: 1 }}
-              color="primary"
-            >
-              <AdminPanelSettings sx={{ mr: 0.5, fontSize: 18 }} />
-              Admins
-            </Button>
-            <Button 
-              variant={roleFilter === 'user' ? 'contained' : 'outlined'} 
-              size="small" 
-              onClick={() => setRoleFilter('user')}
-              color="info"
-            >
-              <People sx={{ mr: 0.5, fontSize: 18 }} />
-              Regular Users
-            </Button>
-          </Box>
-        )}
-      </Box>
-      
-      {/* Tabs for active/deactivated users */}
-      <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 2 }}>
-        <Tabs 
-          value={tabValue} 
-          onChange={handleTabChange}
-          TabIndicatorProps={{
-            style: {
-              height: '3px',
-              backgroundColor: tabValue === 0 ? '#1b5e20' : '#d32f2f'
-            },
-          }}
-        >
-          <Tab 
-            label="Active Users" 
-            icon={<CheckCircle />} 
-            iconPosition="start"
-            sx={{ 
-              fontWeight: tabValue === 0 ? 'bold' : 'normal',
-              color: tabValue === 0 ? '#1b5e20' : 'inherit'
-            }} 
-          />
-          <Tab 
-            label="Deactivated Users" 
-            icon={<Block />}
-            iconPosition="start"
-            sx={{ 
-              fontWeight: tabValue === 1 ? 'bold' : 'normal',
-              color: tabValue === 1 ? '#d32f2f' : 'inherit'
-            }} 
-          />
-        </Tabs>
-      </Box>
-      
-      {/* Users Table */}
-      <TableContainer component={Paper} elevation={0} sx={{ border: '1px solid #e0e0e0' }}>
-        <Table>
-          <TableHead sx={{ backgroundColor: tabValue === 0 ? '#f5f5f5' : '#ffebee' }}>
-            <TableRow>
-              <TableCell>Name</TableCell>
-              <TableCell>Email</TableCell>
-              <TableCell>Role</TableCell>
-              <TableCell>Status</TableCell>
-              {tabValue === 1 && (
-                <TableCell>Deactivated At</TableCell>
-              )}
-              <TableCell>{tabValue === 0 ? 'Last Active' : 'Created At'}</TableCell>
-              <TableCell align="right">Actions</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {currentUsers.map((user) => (
-              <TableRow 
-                key={user.id} 
-                sx={{ 
-                  '&:last-child td, &:last-child th': { border: 0 },
-                  bgcolor: tabValue === 0 && user.role === 'admin' ? 'rgba(27, 94, 32, 0.04)' : 
-                          tabValue === 1 ? 'rgba(211, 47, 47, 0.04)' : 'transparent'
-                }}
-              >
-                <TableCell>{user.name}</TableCell>
-                <TableCell>{user.email}</TableCell>
-                <TableCell>
-                  <Chip 
-                    label={user.role}
-                    color={user.role === 'admin' ? 'primary' : 'default'}
-                    size="small"
-                    sx={{ 
-                      bgcolor: user.role === 'admin' ? '#1b5e20' : 'transparent',
-                      color: user.role === 'admin' ? 'white' : 'inherit',
-                      fontWeight: 500
-                    }}
-                  />
-                </TableCell>
-                <TableCell>
-                  <Chip 
-                    label={user.status}
-                    color={
-                      user.status === 'active' ? 'success' : 
-                      user.status === 'deleted' || user.status === 'deactivated' ? 'error' : 
-                      'warning'
-                    }
-                    size="small"
-                    sx={{ 
-                      bgcolor: 
-                        user.status === 'active' ? '#4caf50' : 
-                        user.status === 'deleted' || user.status === 'deactivated' ? '#d32f2f' :
-                        '#ff9800',
-                      color: 'white',
-                      fontWeight: 500
-                    }}
-                  />
-                </TableCell>
-                {tabValue === 1 && (
-                  <TableCell>{formatDate(user.deletedAt || user.deactivatedAt)}</TableCell>
-                )}
-                <TableCell>{formatDate(tabValue === 0 ? user.lastActive : user.createdAt)}</TableCell>
-                <TableCell align="right">
-                  {tabValue === 0 ? (
-                    // Actions for active users
-                    <>
-                      {/* Password Reset Button - Only for active users */}
-                      <Tooltip title="Send Password Reset Link">
-                        <IconButton 
-                          size="small" 
-                          onClick={() => openSendPasswordResetConfirm(user.email, user.name)}
-                          color="primary"
-                          sx={{ mr: 1 }}
-                        >
-                          <LockReset fontSize="small" />
-                        </IconButton>
-                      </Tooltip>
-                      <Tooltip title="Deactivate User">
-                        <IconButton 
-                          size="small" 
-                          onClick={() => openDeactivateConfirm(user.id, user.name)}
-                          color="error"
-                          sx={{ mr: 1 }}
-                        >
-                          <Delete fontSize="small" />
-                        </IconButton>
-                      </Tooltip>
-                      <Tooltip title="More actions">
-                        <IconButton
-                          size="small"
-                          onClick={(e) => handleMenuOpen(e, user)}
-                        >
-                          <MoreVert fontSize="small" />
-                        </IconButton>
-                      </Tooltip>
-                    </>
-                  ) : (
-                    // Actions for deactivated users
-                    <>
-                      {/* Send Recovery Link Button - Only for deactivated users */}
-                      <Tooltip title="Send Reactivation Link">
-                        <IconButton 
-                          size="small" 
-                          onClick={() => openSendRecoveryConfirm(user.email, user.name)}
-                          color="warning"
-                          sx={{ mr: 1 }}
-                        >
-                          <MailOutline fontSize="small" />
-                        </IconButton>
-                      </Tooltip>
-                      <Tooltip title="Restore User">
-                        <IconButton 
-                          size="small" 
-                          onClick={() => openRestoreConfirm(user.id, user.name)}
-                          color="primary"
-                          sx={{ mr: 1 }}
-                        >
-                          <RestoreFromTrash fontSize="small" />
-                        </IconButton>
-                      </Tooltip>
-                      {/* Password Reset Button also available for deactivated users */}
-                      <Tooltip title="Send Password Reset Link">
-                        <IconButton 
-                          size="small" 
-                          onClick={() => openSendPasswordResetConfirm(user.email, user.name)}
-                          color="primary"
-                        >
-                          <LockReset fontSize="small" />
-                        </IconButton>
-                      </Tooltip>
-                    </>
-                  )}
-                </TableCell>
-              </TableRow>
-            ))}
-            
-            {currentUsers.length === 0 && (
-              <TableRow>
-                <TableCell colSpan={tabValue === 0 ? 6 : 7} align="center" sx={{ py: 3 }}>
-                  <Typography variant="body1" color="textSecondary">
-                    {tabValue === 0 
-                      ? "No active users found" 
-                      : "No deactivated users found"}
-                  </Typography>
-                </TableCell>
-              </TableRow>
-            )}
-          </TableBody>
-        </Table>
-      </TableContainer>
-      
-      {/* Action Menu */}
-      <Menu
-        anchorEl={anchorEl}
-        open={Boolean(anchorEl)}
-        onClose={handleMenuClose}
-      >
-        {/* Make Admin option - Preserved as requested */}
-        {menuUser && menuUser.role !== 'admin' && (
-          <MenuItem onClick={() => handleRoleChangeRequest('admin')}>
-            <AdminPanelSettings fontSize="small" sx={{ mr: 1 }} />
-            Make Admin
-          </MenuItem>
-        )}
-        {menuUser && menuUser.role === 'admin' && (
-          <MenuItem onClick={() => handleRoleChangeRequest('user')}>
-            <People fontSize="small" sx={{ mr: 1 }} />
-            Remove Admin Privileges
-          </MenuItem>
-        )}
-        {/* Password Reset option - Preserved as requested */}
-        {menuUser && (
-          <MenuItem onClick={() => {
-            handleMenuClose();
-            openSendPasswordResetConfirm(menuUser.email, menuUser.name);
-          }}>
-            <LockReset fontSize="small" sx={{ mr: 1 }} />
-            Send Password Reset
-          </MenuItem>
-        )}
-        {/* Deactivate user option */}
-        {menuUser && (
-          <MenuItem onClick={() => {
-            handleMenuClose();
-            openDeactivateConfirm(menuUser.id, menuUser.name);
-          }}>
-            <Delete fontSize="small" sx={{ mr: 1 }} color="error" />
-            Deactivate User
-          </MenuItem>
-        )}
-      </Menu>
-      
-      {/* Role Change Confirmation Dialog */}
-      <Dialog open={roleDialogOpen} onClose={handleRoleDialogClose}>
-        <DialogTitle>
-          {roleChangeDetails.newRole === 'admin' ? 'Grant Admin Privileges' : 'Remove Admin Privileges'}
-        </DialogTitle>
-        <DialogContent>
-          <DialogContentText sx={{ mb: 2 }}>
-            {roleChangeDetails.newRole === 'admin' 
-              ? `You are about to grant admin privileges to ${roleChangeDetails.userName}. This will give them full access to manage users and system settings.` 
-              : `You are about to remove admin privileges from ${roleChangeDetails.userName}.`}
-          </DialogContentText>
-          <DialogContentText sx={{ mb: 2, fontWeight: 'bold' }}>
-            To confirm, please type: <span style={{ color: '#1b5e20' }}>{roleChangeDetails.confirmationPhrase}</span>
-          </DialogContentText>
-          <TextField
-            autoFocus
-            fullWidth
-            value={confirmText}
-            onChange={(e) => setConfirmText(e.target.value)}
-            error={confirmText !== '' && confirmText !== roleChangeDetails.confirmationPhrase}
-            helperText={confirmText !== '' && confirmText !== roleChangeDetails.confirmationPhrase 
-              ? "Text doesn't match" 
-              : null}
-          />
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={handleRoleDialogClose}>Cancel</Button>
-          <Button 
-            onClick={handleConfirmRoleChange} 
-            color="primary"
-            variant="contained"
-            disabled={confirmText !== roleChangeDetails.confirmationPhrase}
-          >
-            Confirm
-          </Button>
-        </DialogActions>
-      </Dialog>
-      
-      {/* Action Confirmation Dialog (Deactivate/Restore/Recovery/Reset) */}
-      <Dialog open={confirmDialog.open} onClose={() => setConfirmDialog({...confirmDialog, open: false})}>
-        <DialogTitle>{confirmDialog.title}</DialogTitle>
-        <DialogContent>
-          <DialogContentText>
-            {confirmDialog.message}
-          </DialogContentText>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setConfirmDialog({...confirmDialog, open: false})}>
-            Cancel
-          </Button>
-          <Button 
-            variant="contained" 
-            color={
-              confirmDialog.confirmText === 'Deactivate' ? 'error' : 
-              confirmDialog.confirmText === 'Send Recovery Link' ? 'warning' :
-              'primary'
-            }
-            onClick={handleConfirmAction}
-          >
-            {confirmDialog.confirmText}
-          </Button>
-        </DialogActions>
-      </Dialog>
-    </Box>
-  );
+// PropTypes validation
+StatCard.propTypes = {
+  title: PropTypes.string.isRequired,
+  value: PropTypes.string.isRequired,
+  icon: PropTypes.node.isRequired,
+  color: PropTypes.string.isRequired
 };
-// Add PropTypes validation
-UsersList.propTypes = {
-  users: PropTypes.arrayOf(PropTypes.shape({
-    id: PropTypes.string.isRequired,
-    name: PropTypes.string.isRequired,
-    email: PropTypes.string.isRequired,
-    role: PropTypes.string.isRequired,
-    status: PropTypes.string.isRequired,
-    lastActive: PropTypes.string 
-  })).isRequired,
-  deletedUsers: PropTypes.arrayOf(PropTypes.shape({
-    id: PropTypes.string.isRequired,
-    name: PropTypes.string.isRequired,
-    email: PropTypes.string.isRequired,
-    role: PropTypes.string.isRequired,
-    status: PropTypes.string.isRequired,
-    deletedAt: PropTypes.string,
-    createdAt: PropTypes.string
-  })),
-  handleEdit: PropTypes.func,
-  handleSoftDelete: PropTypes.func.isRequired,
-  handleRestore: PropTypes.func.isRequired,
-  handleSendRecovery: PropTypes.func.isRequired, // NEW: Added prop validation
-  handleSendPasswordReset: PropTypes.func.isRequired, // NEW: Added prop validation
-  updateUserRole: PropTypes.func.isRequired
+
+UserDashboard.propTypes = {
+  data: PropTypes.shape({
+    statistics: PropTypes.shape({
+      totalUsers: PropTypes.string,
+      activeUsers: PropTypes.string,
+      newUsers: PropTypes.string,
+      verifiedUsers: PropTypes.string,
+      deletedUsers: PropTypes.string
+    }),
+    activityData: PropTypes.array
+  }).isRequired
 };
+
+export default UserDashboard;

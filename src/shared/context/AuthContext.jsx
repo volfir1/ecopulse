@@ -576,7 +576,12 @@ export const AuthProvider = ({ children }) => {
     setError(null);
     
     try {
+      console.log('AuthContext: Calling verifyEmail with:', { userId, verificationCode });
       const result = await authService.verifyEmail(userId, verificationCode);
+      
+      // Add debugging to check what's coming back
+      console.log('Verification response:', result);
+      console.log('Token available?', result.user?.accessToken || 'NO TOKEN');
       
       if (result.success && result.user) {
         // Update user in context
@@ -585,17 +590,30 @@ export const AuthProvider = ({ children }) => {
         
         // Store user in localStorage
         localStorage.setItem('user', JSON.stringify(result.user));
+        console.log('User saved to localStorage:', result.user);
         
-        // Important: Store auth token in localStorage
+        // Important: Store auth token in localStorage - 
+        // Your backend includes it in the user object
         if (result.user.accessToken) {
           localStorage.setItem('authToken', result.user.accessToken);
-        } else if (result.token) {
-          localStorage.setItem('authToken', result.token);
+          console.log('Token saved from user.accessToken:', result.user.accessToken);
+        } else {
+          console.warn('No accessToken found in user object');
         }
+        
+        // Verify storage was successful
+        const storedToken = localStorage.getItem('authToken');
+        const storedUser = localStorage.getItem('user');
+        
+        console.log('Storage verification:', {
+          tokenSaved: !!storedToken,
+          userSaved: !!storedUser
+        });
       }
       
       return result;
     } catch (err) {
+      console.error('Auth context verifyEmail error:', err);
       setError(err.message);
       throw err;
     } finally {
