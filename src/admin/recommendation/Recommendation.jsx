@@ -202,12 +202,20 @@ const RecommendationAdminPrototype = () => {
       const response = await api.post('/api/add/recommendations', payload);
       
       if (response.data.status === 'success') {
+        // Show success notification
         setNotification({
           open: true,
           message: 'Recommendation created successfully!',
           type: 'success'
         });
-        closeAddModal();
+        
+        // Clear the form fields but keep the modal open
+        setSelectedRecord({
+          Year: addModalYear,
+          "Solar Cost (PHP/W)": "",
+          "MERALCO Rate (PHP/kWh)": ""
+        });
+        
         // Refresh data after successful save
         fetchRecommendationData();
       } else {
