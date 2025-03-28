@@ -86,9 +86,9 @@ const RenewableEnergyPage = () => {
             population: item['Population (in millions)'] 
               ? parseFloat(item['Population (in millions)']) 
               : null,
-            gdp: item['Gross Domestic Product'] === null 
-              ? null 
-              : parseFloat(item['Gross Domestic Product']),
+            gdp: item['Gross Domestic Product'] !== undefined && item['Gross Domestic Product'] !== null
+              ? parseFloat(item['Gross Domestic Product'])
+              : null,
             isPredicted: false, // These are actual records
             dateAdded: item.createdAt || new Date().toISOString(),
             isDeleted: item.isDeleted || false
@@ -149,9 +149,9 @@ const RenewableEnergyPage = () => {
                 population: item['Population (in millions)'] 
                   ? parseFloat(item['Population (in millions)']) 
                   : null,
-                gdp: item['Gross Domestic Product'] === null 
-                  ? null 
-                  : parseFloat(item['Gross Domestic Product']),
+                gdp: item['Gross Domestic Product'] !== undefined && item['Gross Domestic Product'] !== null
+                  ? parseFloat(item['Gross Domestic Product'])
+                  : null,
                 isPredicted: false,
                 dateAdded: item.createdAt || new Date().toISOString(),
                 isDeleted: item.isDeleted || false
