@@ -32,7 +32,7 @@ export const getTableColumns = (handleEdit, handleDelete, handleRecover, data) =
     format: (_, row) => {
       // Only show actions if isPredicted is explicitly false
       if (row.isPredicted === false && !row.isDeleted) {
-        return <ActionButtons row={row} onEdit={handleEdit} onDelete={handleDelete} />;
+        return <ActionButtons row={row} onEdit={handleEdit} />; // Removed onDelete prop
       } else if (row.isPredicted === false && row.isDeleted === true) {
         return <ActionButtons row={row} onRecover={handleRecover} />;
       }

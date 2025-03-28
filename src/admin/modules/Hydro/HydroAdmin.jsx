@@ -7,7 +7,9 @@ import {
   DialogActions,
   IconButton,
   Typography,
-  Box
+  Box,
+  Snackbar, 
+  Alert 
 } from '@mui/material';
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
 import { Droplets, X } from 'lucide-react';
@@ -47,6 +49,14 @@ const GeothermalAdmin = () => {
     wellPerformance,
     chartRef
   } = useGeothermalAnalytics();
+
+  const [notification, setNotification] = useState({
+    open: false,
+    message: '',
+    severity: 'success' // 'success', 'error', 'warning', 'info'
+  });
+  
+  const [isUpdating, setIsUpdating] = useState(false);
 
   // State for modal
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -135,6 +145,7 @@ const GeothermalAdmin = () => {
     }
   
     try {
+      setIsUpdating(true); // Start loading
       setIsModalOpen(false);
       
       const payload = {
@@ -147,13 +158,33 @@ const GeothermalAdmin = () => {
   
       if (isEditing) {
         await updateRecord(selectedYear, payload);
+        setNotification({
+          open: true,
+          message: 'Record updated successfully!',
+          severity: 'success'
+        });
       } else {
-        await addRecord(selectedYear, payload['Geothermal (GWh)']);
+        await addRecord(selectedYear, payload['Solar (GWh)']);
+        setNotification({
+          open: true,
+          message: 'Record added successfully!',
+          severity: 'success'
+        });
       }
+      
+      // Refresh the table data
+      await handleRefresh();
     } catch (error) {
       console.error('Error saving data:', error);
+      setNotification({
+        open: true,
+        message: 'Error saving data. Please try again.',
+        severity: 'error'
+      });
+    } finally {
+      setIsUpdating(false); // End loading
     }
-  }, [selectedYear, generationValue, nonRenewableEnergy, population, gdp, isEditing, updateRecord, addRecord]);
+  }, [selectedYear, generationValue, nonRenewableEnergy, population, gdp, isEditing, updateRecord, addRecord, handleRefresh]);
 
   // Export data handler - DEFINED BEFORE IT'S USED
   const handleExportData = useCallback(() => {
@@ -291,6 +322,16 @@ const GeothermalAdmin = () => {
 
   return (
     <div className="p-6 max-w-7xl mx-auto">
+       {isUpdating && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                  <div className="bg-white p-6 rounded-lg shadow-lg flex flex-col items-center">
+                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-red-500 mb-4"></div>
+                    <Typography variant="h6" className="text-gray-800">
+                      Updating data...
+                    </Typography>
+                  </div>
+                </div>
+              )}
       {/* Header */}
       <div className="flex justify-between items-center mb-6">
         <div className="flex items-center gap-2">
@@ -369,7 +410,7 @@ const GeothermalAdmin = () => {
         title={`Hydro Power Generation Records (${yearRange.startYear} - ${yearRange.endYear})`}
         columns={tableColumns}
         data={tableData}
-        loading={tableLoading}
+        loading={tableLoading || isUpdating} // Combine both loading states
         selectable={true}
         searchable={true}
         exportable={true}
@@ -383,8 +424,8 @@ const GeothermalAdmin = () => {
           headerCell: "bg-gray-50",
           row: "hover:bg-red-50"
         }}
-        emptyMessage={`No geothermal generation data available for years ${yearRange.startYear} - ${yearRange.endYear}`}
-      />
+        emptyMessage={`No solar generation data available for years ${yearRange.startYear} - ${yearRange.endYear}`}
+/>
 
       {/* Add/Edit Modal */}
       <Dialog open={isModalOpen} onClose={handleCloseModal} maxWidth="sm" fullWidth>
@@ -540,6 +581,25 @@ const GeothermalAdmin = () => {
           </Button>
         </DialogActions>
       </Dialog>
+        <Snackbar
+          open={notification.open}
+          autoHideDuration={3000}
+          onClose={() => setNotification({...notification, open: false})}
+          anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
+          sx={{
+            '& .MuiSnackbar-root': {
+              top: '80px' // Adjust this value based on your header height
+            }
+          }}
+        >
+          <Alert 
+            onClose={() => setNotification({...notification, open: false})}
+            severity={notification.severity}
+            sx={{ width: '100%' }}
+          >
+            {notification.message}
+          </Alert>
+        </Snackbar>
     </div>
   );
 };
