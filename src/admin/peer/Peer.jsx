@@ -46,23 +46,40 @@ const Card = ({ children, className }) => (
   </div>
 );
 
-// Prototype NumberBox component
-const NumberBox = ({ label, value, placeholder, disabled, onChange }) => (
-  <div className="mb-4">
-    <label className="block text-sm font-medium text-gray-700 mb-1">
-      {label}
-    </label>
-    <input
-      type="text"
-      className={`border rounded-md p-2 w-full ${disabled ? 'bg-gray-100' : ''}`}
-      placeholder={placeholder}
-      value={value || ''}
-      disabled={disabled}
-      readOnly={disabled}
-      onChange={onChange}
-    />
-  </div>
-);
+// Enhanced NumberBox component with validation
+const NumberBox = ({ label, value, placeholder, disabled, onChange }) => {
+  const [error, setError] = useState(false);
+  
+  const handleChange = (e) => {
+    const inputValue = e.target.value;
+    // Allow empty string or numbers (including decimals)
+    const isValid = inputValue === '' || /^-?\d*\.?\d*$/.test(inputValue);
+    
+    setError(!isValid);
+    if (isValid) {
+      onChange(e);
+    }
+  };
+
+  return (
+    <div className="mb-4">
+      <label className="block text-sm font-medium text-gray-700 mb-1">
+        {label}
+      </label>
+      <input
+        type="text"
+        className={`border rounded-md p-2 w-full ${disabled ? 'bg-gray-100' : ''} 
+                   ${error ? 'border-red-500 focus:ring-red-500' : 'focus:ring-blue-500 focus:border-blue-500'}`}
+        placeholder={placeholder}
+        value={value || ''}
+        disabled={disabled}
+        readOnly={disabled}
+        onChange={handleChange}
+      />
+      {error && <p className="mt-1 text-xs text-red-500">Please enter a valid number</p>}
+    </div>
+  );
+};
 
 // Add this component to highlight search results
 const HighlightText = ({ text, highlight }) => {
@@ -409,12 +426,42 @@ const PeerToPeerAdminPrototype = () => {
     setFormValue('year', year);
   }, [setFormValue]);
 
+  // Updated input change handler with additional validation
   const handleInputChange = useCallback((field, event) => {
-    setFormValue(field, event.target.value);
+    const value = event.target.value;
+    
+    // Additional validation could be done here if needed
+    // For now we're relying on the NumberBox component's validation
+    setFormValue(field, value);
   }, [setFormValue]);
 
   // Updated handleSaveRecord function to correctly handle MongoDB records
   const handleSaveRecord = useCallback(async () => {
+    // Check for any invalid fields (empty required fields or non-numeric values)
+    const requiredFields = [
+      "Cebu Total Non-Renewable Energy (GWh)",
+      "Negros Total Non-Renewable Energy (GWh)",
+      "Panay Total Non-Renewable Energy (GWh)",
+      "Leyte-Samar Total Non-Renewable (GWh)",
+      "Bohol Total Non-Renewable (GWh)",
+      "Visayas Total Power Consumption (GWh)"
+    ];
+    
+    // Validate required fields are numbers
+    const invalidFields = requiredFields.filter(field => {
+      const value = formValues[field];
+      return value === '' || (isNaN(Number(value)) && value !== undefined);
+    });
+    
+    if (invalidFields.length > 0) {
+      setNotification({
+        open: true,
+        message: `Please enter valid numeric values for all required fields`,
+        type: 'error'
+      });
+      return;
+    }
+    
     setIsLoading(true);
     
     try {
@@ -812,12 +859,6 @@ const PeerToPeerAdminPrototype = () => {
                       Visayas Consumption {getSortIcon('visayasConsumption')}
                     </div>
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Solar Cost
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    MERALCO Rate
-                  </th>
                   <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Actions
                   </th>
@@ -850,24 +891,12 @@ const PeerToPeerAdminPrototype = () => {
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                       <HighlightText text={row.visayasConsumption.toFixed(2)} highlight={searchQuery} />
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {row.solarCost.toFixed(2)}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {row.meralcoRate.toFixed(2)}
-                    </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                       <button 
-                        className="text-blue-600 hover:text-blue-900 mr-3 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 rounded transition duration-150"
+                        className="text-blue-600 hover:text-blue-900 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 rounded transition duration-150"
                         onClick={() => openModal(row)}
                       >
                         Edit
-                      </button>
-                      <button 
-                        className="text-red-600 hover:text-red-900 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 rounded transition duration-150"
-                        onClick={() => handleDeleteRecord(row._id)}
-                      >
-                        Delete
                       </button>
                     </td>
                   </tr>
